@@ -13,11 +13,8 @@ async function run() {
 
     const installerScriptPath = initialInstallerScriptPath + ".qs";
     fs.renameSync(initialInstallerScriptPath, installerScriptPath);
-    
-    console.log("Installer path:", installerPath);
-    console.log("installer script path", installerScriptPath);
 
-    await exec.exec(`"${installerPath}"`, ['--verbose', `--script "${installerScriptPath}"`])
+    await exec.exec(`"${installerPath}"`, ['--verbose', `--script ${installerScriptPath}`])
   
   } catch (error) {
     core.setFailed(error.message);
