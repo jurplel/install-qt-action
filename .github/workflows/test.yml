@@ -1,0 +1,12 @@
+name: Test Installing Qt
+
+on: [push]
+
+jobs:
+  windows:
+    name: Windows
+    runs-on: windows-latest
+
+    steps:
+    - name: Install Qt
+      uses: ./
