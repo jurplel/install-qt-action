@@ -4,7 +4,7 @@ author: 'jurplel'
 inputs:
   version:
     description: 'Version of Qt to install'
-    default: '5.12.5'
+    default: '0'
 runs:
   using: 'node12'
   main: 'lib/main.js'
