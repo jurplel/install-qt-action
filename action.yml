@@ -1,10 +1,10 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Install Qt'
+description: 'Install Qt5 without pulling your hair out'
+author: 'jurplel'
 inputs:
-  myInput:              # change this
-    description: 'input description here'
-    default: 'default value if applicable'
+  version:
+    description: 'Version of Qt to install'
+    default: '5.12.5'
 runs:
   using: 'node12'
   main: 'lib/main.js'
