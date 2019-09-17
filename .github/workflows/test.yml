@@ -9,6 +9,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    
+
+    - name: "npm ci"
+      run: npm ci
+
+    - name: "npm run build"
+      run: npm run build
+
+    - name: "npm run test"
+      run: npm run test
+      
     - name: Install Qt
       uses: ./
