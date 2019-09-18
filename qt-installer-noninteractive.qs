@@ -21,20 +21,20 @@ Controller.prototype.IntroductionPageCallback = function() {
 
 Controller.prototype.TargetDirectoryPageCallback = function()
 {
-	var path = installer.value("InstallerDirPath", "C:") + "\\Qt";
+	var path = installer.value("HomeDir", "C:") + "\\Qt";
     gui.currentPageWidget().TargetDirectoryLineEdit.setText(path);
     gui.clickButton(buttons.NextButton);
 }
 
 Controller.prototype.ComponentSelectionPageCallback = function() {
     function list_packages() {
-      var components = installer.components();
-      console.log("Available components: " + components.length);
-      var packages = ["Packages: "];
-      for (var i = 0 ; i < components.length ;i++) {
-          packages.push(components[i].name);
-      }
-      console.log(packages.join(" "));
+        var components = installer.components();
+        console.log("Available components: " + components.length);
+        var packages = ["Packages: "];
+        for (var i = 0 ; i < components.length ;i++) {
+            packages.push(components[i].name);
+        }
+        console.log(packages.join(" "));
     }
 
     list_packages();
@@ -64,9 +64,9 @@ Controller.prototype.ReadyForInstallationPageCallback = function()
 }
 
 Controller.prototype.FinishedPageCallback = function() {
-var checkBoxForm = gui.currentPageWidget().LaunchQtCreatorCheckBoxForm
-if (checkBoxForm && checkBoxForm.launchQtCreatorCheckBox) {
-    checkBoxForm.launchQtCreatorCheckBox.checked = false;
-}
+    var checkBoxForm = gui.currentPageWidget().LaunchQtCreatorCheckBoxForm
+    if (checkBoxForm && checkBoxForm.launchQtCreatorCheckBox) {
+        checkBoxForm.launchQtCreatorCheckBox.checked = false;
+    }
     gui.clickButton(buttons.FinishButton);
 }
