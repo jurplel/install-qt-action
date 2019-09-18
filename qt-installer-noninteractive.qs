@@ -21,7 +21,7 @@ Controller.prototype.IntroductionPageCallback = function() {
 
 Controller.prototype.TargetDirectoryPageCallback = function()
 {
-	var path = installer.value("HomeDir", "C:") + "\\Qt";
+	var path = installer.value("HomeDir", "C:") + "/Qt";
     gui.currentPageWidget().TargetDirectoryLineEdit.setText(path);
     gui.clickButton(buttons.NextButton);
 }
