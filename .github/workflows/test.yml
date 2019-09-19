@@ -21,3 +21,9 @@ jobs:
       
     - name: Install Qt
       uses: ./
+
+    - name: Check for Qt installation
+      run: |
+        dir %GITHUB_WORKSPACE%
+        echo %Qt5_DIR%
+        echo %PATH%
