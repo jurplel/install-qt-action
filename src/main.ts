@@ -12,6 +12,8 @@ async function run() {
     let target = core.getInput("target");
     let arch = core.getInput("arch");
 
+    console.log(process.env);
+
     if (!host) {
       switch(process.platform) {
         case "win32": {
