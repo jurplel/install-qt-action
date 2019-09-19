@@ -1,21 +1,14 @@
 import * as fs from "fs";
+import * as process from "process";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as toolCache from '@actions/tool-cache';
 
 async function run() {
   try {
-    const initialInstallerPath = await toolCache.downloadTool("http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe");
-    const initialInstallerScriptPath = await toolCache.downloadTool("https://raw.githubusercontent.com/jurplel/install-qt-action/master/qt-installer-noninteractive.qs");
-    
-    const installerPath = initialInstallerPath + ".exe";
-    fs.renameSync(initialInstallerPath, installerPath);
+    await exec.exec("pip install aqtinstall")
+    await exec.exec("aqt install -O " + process.env.GITHUB_WORKSPACE + " 5.12.5 windows desktop")
 
-    const installerScriptPath = initialInstallerScriptPath + ".qs";
-    fs.renameSync(initialInstallerScriptPath, installerScriptPath);
-
-    await exec.exec(installerPath, ["--verbose", "--script", installerScriptPath])
-  
   } catch (error) {
     core.setFailed(error.message);
   }
