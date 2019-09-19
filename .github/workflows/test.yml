@@ -27,3 +27,4 @@ jobs:
         dir %GITHUB_WORKSPACE%
         echo %Qt5_DIR%
         echo %PATH%
+        qmake
