@@ -6,7 +6,7 @@ import * as toolCache from '@actions/tool-cache';
 
 async function run() {
   try {
-    const home = process.env.HOME
+    const home = core.getInput("dir") || process.env.HOMEPATH;
     const version = core.getInput("version");
     let host = core.getInput("host");
     let target = core.getInput("target");
