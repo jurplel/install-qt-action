@@ -7,9 +7,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, macOS-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v1
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
 
       - name: "npm ci"
         run: npm ci
@@ -17,14 +21,7 @@ jobs:
       - name: "npm run build"
         run: npm run build
 
-      - name: "npm run test"
-        run: npm run test
-        
       - name: Install Qt
         uses: ./
 
-      - name: Check for Qt installation
-        run: |
-          dir ${GITHUB_WORKSPACE}
-          echo ${Qt5_DIR}
-          echo ${PATH}
+      - uses: hmarr/debug-action
