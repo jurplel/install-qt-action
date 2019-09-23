@@ -4,7 +4,12 @@ import * as exec from '@actions/exec';
 
 async function run() {
   try {
-    await exec.exec("pip3 install aqtinstall")
+    // 7-zip is required, and not included on macOS
+    if (process.platform == "darwin") {
+      await exec.exec("brew install p7zip")
+    }
+
+    await exec.exec("pip3 install aqtinstall");
 
     const home = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
     const version = core.getInput("version");
@@ -48,7 +53,7 @@ async function run() {
     //accomodate for differences in python 3 executable name
     let pythonName = "python3";
     if (process.platform == "win32") {
-      pythonName = "python"
+      pythonName = "python";
     }
 
     //run aqtinstall with args
