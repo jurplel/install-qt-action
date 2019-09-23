@@ -3,21 +3,28 @@ name: Test Installing Qt
 on: [push]
 
 jobs:
-  windows:
-    name: Windows
-    runs-on: windows-latest
-
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest]
     steps:
-    - uses: actions/checkout@v1
+      - uses: actions/checkout@v1
 
-    - name: "npm ci"
-      run: npm ci
+      - name: "npm ci"
+        run: npm ci
 
-    - name: "npm run build"
-      run: npm run build
+      - name: "npm run build"
+        run: npm run build
 
-    - name: "npm run test"
-      run: npm run test
-      
-    - name: Install Qt
-      uses: ./
+      - name: "npm run test"
+        run: npm run test
+        
+      - name: Install Qt
+        uses: ./
+
+      - name: Check for Qt installation
+        run: |
+          dir %GITHUB_WORKSPACE%
+          echo %Qt5_DIR%
+          echo %PATH%

@@ -1,21 +1,52 @@
 import * as fs from "fs";
+import * as process from "process";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as toolCache from '@actions/tool-cache';
 
 async function run() {
   try {
-    const initialInstallerPath = await toolCache.downloadTool("http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe");
-    const initialInstallerScriptPath = await toolCache.downloadTool("https://raw.githubusercontent.com/jurplel/install-qt-action/master/qt-installer-noninteractive.qs");
+    const home = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
+    const version = core.getInput("version");
+    let host = core.getInput("host");
+    let target = core.getInput("target");
+    let arch = core.getInput("arch");
+
+    console.log(process.env);
+
+    if (!host) {
+      switch(process.platform) {
+        case "win32": {
+            host = "windows";
+            break;
+        }
+        case "darwin": {
+            host = "mac";
+            break;
+        }
+        default: {
+            host = "linux";
+            break;
+        }
+      }
+    }
     
-    const installerPath = initialInstallerPath + ".exe";
-    fs.renameSync(initialInstallerPath, installerPath);
+    if (!arch) {
+      if (host == "windows") {
+        arch = "win64_msvc2017_64";
+      } else if (host == "android") {
+        arch = "android_armv7";
+      }
+    }
 
-    const installerScriptPath = initialInstallerScriptPath + ".qs";
-    fs.renameSync(initialInstallerScriptPath, installerScriptPath);
+    await exec.exec("pip install aqtinstall")
+    await exec.exec("python -m aqt install", ["-O", `${home}`, `${version}`, `${host}`, `${target}`, `${arch}`]);
 
-    await exec.exec(installerPath, ["--verbose", "--script", installerScriptPath])
-  
+    let qtPath = home + "/Qt" + version + "/" + version + "/msvc2017_64";
+
+    core.exportVariable('Qt5_Dir', qtPath);
+    core.addPath(qtPath + "/bin");
+    
   } catch (error) {
     core.setFailed(error.message);
   }
