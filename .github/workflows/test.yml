@@ -25,6 +25,6 @@ jobs:
 
       - name: Check for Qt installation
         run: |
-          dir %GITHUB_WORKSPACE%
-          echo %Qt5_DIR%
-          echo %PATH%
+          dir ${GITHUB_WORKSPACE}
+          echo ${Qt5_DIR}
+          echo ${PATH}
