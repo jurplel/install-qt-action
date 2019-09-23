@@ -1,8 +1,6 @@
-import * as fs from "fs";
 import * as process from "process";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
-import * as toolCache from '@actions/tool-cache';
 
 async function run() {
   try {
@@ -40,7 +38,7 @@ async function run() {
     }
 
     await exec.exec("pip install aqtinstall")
-    await exec.exec("python -m aqt install", ["-O", `${home}`, `${version}`, `${host}`, `${target}`, `${arch}`]);
+    await exec.exec("python3 -m aqt install", ["-O", `${home}`, `${version}`, `${host}`, `${target}`, `${arch}`]);
 
     let qtPath = home + "/Qt" + version + "/" + version + "/msvc2017_64";
 
