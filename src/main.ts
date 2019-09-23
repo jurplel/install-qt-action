@@ -42,7 +42,7 @@ async function run() {
       args.push(`${arch}`);
     }
     await exec.exec("pip3 install aqtinstall")
-    await exec.exec("python3 -m aqt install", args);
+    await exec.exec("aqt install", args);
 
     let qtPath = home + "/Qt" + version + "/" + version + "/msvc2017_64";
 
