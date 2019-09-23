@@ -4,14 +4,15 @@ import * as exec from '@actions/exec';
 
 async function run() {
   try {
+    await exec.exec("pip3 install aqtinstall")
+
     const home = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
     const version = core.getInput("version");
     let host = core.getInput("host");
     let target = core.getInput("target");
     let arch = core.getInput("arch");
 
-    console.log(process.env);
-
+    //set host automatically if omitted
     if (!host) {
       switch(process.platform) {
         case "win32": {
@@ -28,7 +29,8 @@ async function run() {
         }
       }
     }
-    
+
+    //set arch automatically if omitted
     if (!arch) {
       if (host == "windows") {
         arch = "win64_msvc2017_64";
@@ -37,13 +39,22 @@ async function run() {
       }
     }
 
+    //set args
     let args = ["-O", `${home}`, `${version}`, `${host}`, `${target}`];
     if (arch) {
       args.push(`${arch}`);
     }
-    await exec.exec("pip3 install aqtinstall")
-    await exec.exec("python -m aqt install", args);
 
+    //accomodate for differences in python 3 executable name
+    let pythonName = "python3";
+    if (process.platform == "win32") {
+      pythonName = "python"
+    }
+
+    //run aqtinstall with args
+    await exec.exec(`${pythonName} -m aqt install`, args);
+
+    //set environment variables
     let qtPath = home + "/Qt" + version + "/" + version + "/msvc2017_64";
 
     core.exportVariable('Qt5_Dir', qtPath);
