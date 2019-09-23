@@ -23,5 +23,3 @@ jobs:
 
       - name: Install Qt
         uses: ./
-
-      - uses: hmarr/debug-action@v1.0.0
