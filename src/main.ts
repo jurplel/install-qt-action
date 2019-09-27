@@ -1,4 +1,5 @@
 import * as process from "process";
+import * as glob from "glob";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 
@@ -60,8 +61,9 @@ async function run() {
     await exec.exec(`${pythonName} -m aqt install`, args);
 
     //set environment variables
-    let qtPath = dir + "/Qt" + version + "/" + version + "/msvc2017_64";
-
+    let qtPath = dir + "/Qt" + version + "/" + version;
+    qtPath += glob.sync(qtPath + '/**/*').first();
+    console.log(qtPath);
     core.exportVariable('Qt5_Dir', qtPath);
     core.addPath(qtPath + "/bin");
     
