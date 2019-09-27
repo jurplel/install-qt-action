@@ -39,7 +39,7 @@ Default: `desktop`
 ### `arch`
 This is the target architecture that your program will be built for. This is only used for Windows and Android.
 
-**Linux x86 packages are supported by this action.** Qt does not offer pre-built Linux x86 packages. Please consider using your distro's repository or building it manually.
+**Linux x86 packages are not supported by this action.** Qt does not offer pre-built Linux x86 packages. Please consider using your distro's repository or building it manually.
 
 **Possible values:**
 
