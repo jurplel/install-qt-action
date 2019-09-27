@@ -11,7 +11,7 @@ async function run() {
 
     await exec.exec("pip3 install aqtinstall");
 
-    const home = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
+    const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
     const version = core.getInput("version");
     let host = core.getInput("host");
     let target = core.getInput("target");
@@ -45,7 +45,7 @@ async function run() {
     }
 
     //set args
-    let args = ["-O", `${home}`, `${version}`, `${host}`, `${target}`];
+    let args = ["-O", `${dir}`, `${version}`, `${host}`, `${target}`];
     if (arch) {
       args.push(`${arch}`);
     }
@@ -60,7 +60,7 @@ async function run() {
     await exec.exec(`${pythonName} -m aqt install`, args);
 
     //set environment variables
-    let qtPath = home + "/Qt" + version + "/" + version + "/msvc2017_64";
+    let qtPath = dir + "/Qt" + version + "/" + version + "/msvc2017_64";
 
     core.exportVariable('Qt5_Dir', qtPath);
     core.addPath(qtPath + "/bin");

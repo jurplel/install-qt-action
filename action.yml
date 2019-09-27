@@ -1,5 +1,5 @@
 name: 'Install Qt'
-description: 'Install Qt on your Github workflows with just one simple action'
+description: 'Install Qt on your Github Actions workflows with just one simple action'
 author: 'jurplel'
 branding:
   icon: 'package'
