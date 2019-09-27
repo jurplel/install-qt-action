@@ -1,34 +1,24 @@
 {
-  "name": "javascript-template-action",
+  "name": "install-qt-action",
   "version": "0.0.0",
   "private": true,
-  "description": "JavaScript template action",
+  "description": "Install qt action for github actions",
   "main": "lib/main.js",
   "scripts": {
-    "build": "tsc",
-    "test": "jest"
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/javascript-template.git"
+    "url": "git+https://github.com/jurplel/install-qt-action.git"
   },
-  "keywords": [
-    "actions",
-    "node",
-    "setup"
-  ],
-  "author": "YourNameOrOrganization",
+  "author": "jurplel",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.0.0",
     "@actions/exec": "^1.0.0"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.13",
     "@types/node": "^12.0.4",
-    "jest": "^24.8.0",
-    "jest-circus": "^24.7.1",
-    "ts-jest": "^24.0.2",
     "typescript": "^3.5.1"
   }
 }
