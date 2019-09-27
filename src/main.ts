@@ -62,8 +62,8 @@ async function run() {
 
     //set environment variables
     let qtPath = dir + "/Qt" + version + "/" + version;
-    qtPath += glob.sync(qtPath + '/**/*')[0];
-    console.log(qtPath);
+    qtPath = glob.sync(qtPath + '/**/*')[0];
+
     core.exportVariable('Qt5_Dir', qtPath);
     core.addPath(qtPath + "/bin");
     
