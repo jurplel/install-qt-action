@@ -10,7 +10,7 @@ async function run() {
       await exec.exec("brew install p7zip")
     }
 
-    await exec.exec("pip3 install aqtinstall");
+    await exec.exec("pip3 install 'aqtinstall<1.4.0'");
 
     const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
     const version = core.getInput("version");
