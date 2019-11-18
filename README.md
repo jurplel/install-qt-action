@@ -15,7 +15,7 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-Default: `5.12.5` (Latest LTS at the time of writing)
+Default: `5.12.6` (Latest LTS at the time of writing)
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
@@ -56,7 +56,7 @@ Android: `android_armv7`
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `/example/`, your bin folder will be located at `/example/Qt5.12.5/5.12.5/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_Dir` environment variable.
+For example, if you set dir to `/example/`, your bin folder will be located at `/example/Qt5.12.6/5.12.56/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_Dir` environment variable.
 
 Default: `${RUNNER_WORKSPACE}` (this is one above the starting directory)
 
