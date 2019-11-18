@@ -10,9 +10,10 @@ async function run() {
       await exec.exec("brew install p7zip")
     }
 
-    await exec.exec("pip3 install \"aqtinstall==0.4.*\"");
+    await exec.exec("pip3 install setuptools wheel");
+    await exec.exec("pip3 install \"aqtinstall==0.5.*\"");
 
-    const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
+    const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
     const version = core.getInput("version");
     let host = core.getInput("host");
     let target = core.getInput("target");
@@ -61,7 +62,7 @@ async function run() {
     await exec.exec(`${pythonName} -m aqt install`, args);
 
     //set environment variables
-    let qtPath = dir + "/Qt" + version + "/" + version;
+    let qtPath = dir + "/" + version;
     qtPath = glob.sync(qtPath + '/**/*')[0];
 
     core.exportVariable('Qt5_Dir', qtPath);
