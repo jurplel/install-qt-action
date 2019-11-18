@@ -70,6 +70,7 @@ async function run() {
     core.exportVariable('Qt5_Dir', qtPath);
     core.addPath(qtPath + "/bin");
     
+    console.log(process.env);
   } catch (error) {
     core.setFailed(error.message);
   }
