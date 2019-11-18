@@ -10,7 +10,7 @@ async function run() {
       await exec.exec("brew install p7zip")
     }
 
-    await exec.exec("pip3 install setuptools");
+    await exec.exec("pip3 install setuptools wheel");
     await exec.exec("pip3 install \"aqtinstall==0.5.*\"");
 
     const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
