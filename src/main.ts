@@ -63,15 +63,11 @@ async function run() {
 
     //set environment variables
     let qtPath = dir + "/" + version;
-    console.log(qtPath);
-    await exec.exec("ls " + qtPath);
-    console.log(dir);
     qtPath = glob.sync(qtPath + '/**/*')[0];
 
     core.exportVariable('Qt5_Dir', qtPath);
     core.addPath(qtPath + "/bin");
     
-    console.log(process.env);
   } catch (error) {
     core.setFailed(error.message);
   }
