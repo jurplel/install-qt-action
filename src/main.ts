@@ -64,6 +64,7 @@ async function run() {
     //set environment variables
     let qtPath = dir + "/Qt/" + version;
     console.log(qtPath);
+    await exec.exec("ls + " + qtPath);
     console.log(dir);
     qtPath = glob.sync(qtPath + '/**/*')[0];
 
