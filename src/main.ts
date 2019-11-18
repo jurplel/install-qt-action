@@ -62,9 +62,9 @@ async function run() {
     await exec.exec(`${pythonName} -m aqt install`, args);
 
     //set environment variables
-    let qtPath = dir + "/Qt/" + version;
+    let qtPath = dir + "/" + version;
     console.log(qtPath);
-    await exec.exec("ls " + dir);
+    await exec.exec("ls " + qtPath);
     console.log(dir);
     qtPath = glob.sync(qtPath + '/**/*')[0];
 
