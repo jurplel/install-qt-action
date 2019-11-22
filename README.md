@@ -60,6 +60,11 @@ For example, if you set dir to `/example/`, your bin folder will be located at `
 
 Default: `${RUNNER_WORKSPACE}` (this is one folder above the starting directory)
 
+### `install-deps`
+Whether or not to automatically install Qt dependencies on Linux (you probably want to leave this on).
+
+Default: `true`
+
 ## More info
 
 The Qt bin directory is added to your `path` environment variable. `Qt5_Dir` is also set appropriately for cmake. 

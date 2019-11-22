@@ -12,7 +12,7 @@ async function run() {
 
     // Qt installer assumes basic requirements that are not installed by
     // default on Ubuntu.
-    if (process.platform == "linux") {
+    if (process.platform == "linux" && core.getInput("install-deps") == "true") {
       await exec.exec("sudo apt-get install build-essential libgl1-mesa-dev -y")
     }
 
