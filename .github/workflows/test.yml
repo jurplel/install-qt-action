@@ -23,3 +23,5 @@ jobs:
 
       - name: Install Qt
         uses: ./
+        with:
+          install-deps: 'false'
