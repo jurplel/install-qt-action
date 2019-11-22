@@ -17,6 +17,10 @@ inputs:
     default: 'desktop'
   arch:
     description: 'Architecture for Windows/Android'
+  install-deps:
+    description: 'Whether or not to install Qt dependencies on Linux'
+    default: 'true'
+
 runs:
   using: 'node12'
   main: 'lib/main.js'

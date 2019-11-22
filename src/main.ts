@@ -10,6 +10,12 @@ async function run() {
       await exec.exec("brew install p7zip")
     }
 
+    // Qt installer assumes basic requirements that are not installed by
+    // default on Ubuntu.
+    if (process.platform == "linux" && core.getInput("install-deps") == "true") {
+      await exec.exec("sudo apt-get install build-essential libgl1-mesa-dev -y")
+    }
+
     await exec.exec("pip3 install setuptools wheel");
     await exec.exec("pip3 install \"aqtinstall==0.5.*\"");
 
