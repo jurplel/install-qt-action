@@ -26,7 +26,6 @@ Possible values: `windows`, `mac`, or `linux`
 
 Defaults to the current platform it is being run on.
 
-
 ### `target`
 This is the target platform that you will be building for. You will want to set this if you are building for iOS or Android. 
 
@@ -64,6 +63,9 @@ Default: `${RUNNER_WORKSPACE}` (this is one folder above the starting directory)
 Whether or not to automatically install Qt dependencies on Linux (you probably want to leave this on).
 
 Default: `true`
+
+### `module`
+Additional Qt modules can be added via, e.g., `--module qtcharts`.
 
 ## More info
 
