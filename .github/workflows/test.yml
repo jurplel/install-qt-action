@@ -1,6 +1,6 @@
 name: Test Installing Qt
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   test:
