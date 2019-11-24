@@ -64,8 +64,13 @@ Whether or not to automatically install Qt dependencies on Linux (you probably w
 
 Default: `true`
 
-### `module`
-Additional Qt modules can be added via, e.g., `--module qtcharts`.
+### `modules`
+List of additional addon modules to install, with each entry seperated by a space. If you need one of these, you'll know it.
+
+Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`, `qtwebengine`, `qtnetworkauth`, `qtwebglplugin`, `qtscript`, `debug_info`, possibly others
+
+Default: none
+
 
 ## More info
 
