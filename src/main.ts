@@ -17,14 +17,14 @@ async function run() {
     }
 
     await exec.exec("pip3 install setuptools wheel");
-    await exec.exec("pip3 install aqtinstall --pre");
+    await exec.exec("pip3 install \"aqtinstall==0.6.*\" --pre");
 
     const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
     const version = core.getInput("version");
     let host = core.getInput("host");
     let target = core.getInput("target");
     let arch = core.getInput("arch");
-    let module = core.getInput("module");
+    let modules = core.getInput("modules");
 
     //set host automatically if omitted
     if (!host) {
@@ -58,8 +58,8 @@ async function run() {
     if (arch) {
       args.push(`${arch}`);
     }
-    if (module) {
-      args.push(`--module ${module}`);
+    if (modules) {
+      args.push(`-m ${modules}`);
     }
 
     //accomodate for differences in python 3 executable name
