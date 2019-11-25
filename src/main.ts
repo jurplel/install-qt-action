@@ -78,6 +78,22 @@ async function run() {
     core.exportVariable('Qt5_Dir', qtPath);
     core.addPath(qtPath + "/bin");
     
+    // If on windows automatically download and setup jom compiler
+    if (process.platform == "win32") {
+      await exec.exec("npm install download-file --save");
+
+      var download = require('download-file') 
+      var url = "http://download.qt.io/official_releases/jom/jom.zip"      
+      var options = {
+          directory: qtPath + "\bin",
+          filename: "jom.zip"
+      }      
+      download(url, options, function(err){
+          if (err) throw err
+          console.log("Download jom.zip")
+      }) 
+      await exec.exec('expand-archive -path "$Env:Qt5_Dir\jom.zip" -destinationpath "$Env:Qt5_Dir\bin"')
+    }
   } catch (error) {
     core.setFailed(error.message);
   }
