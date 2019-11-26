@@ -16,9 +16,7 @@
   "dependencies": {
     "@actions/core": "^1.0.0",
     "@actions/exec": "^1.0.0",
-    "glob": "^7.0.0",
-    "download-file": "0.1.5",
-    "extract-zip": "1.6.7"
+    "glob": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^12.0.4",
