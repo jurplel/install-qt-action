@@ -78,25 +78,16 @@ async function run() {
     core.exportVariable('Qt5_Dir', qtPath);
     core.addPath(qtPath + "/bin");
     
-    // If on windows automatically download and setup jom compiler
-    if (process.platform == "win32") {
-      var download = require('download-file') 
-      var url = "http://download.qt.io/official_releases/jom/jom.zip"      
-      var options = {
-        directory: qtPath + "\bin",
-        filename: "jom.zip"
-      }      
-      download(url, options, function(err){
-        if (err) throw err
-        console.log("Download jom.zip")
-      }) 
-
-      var extract = require('extract-zip')
-      extract(qtPath + "\bin\jom.zip", {dir: qtPath + "\bin"}, function (err) {
-        if (err) throw err
-        console.log("Extracting jom.zip")
-      })
-      //await exec.exec('expand-archive -path "$Env:Qt5_Dir\jom.zip" -destinationpath "$Env:Qt5_Dir\bin"')
+    // On Windows, jom isn't necessary a dependency to Qt, but most
+    // users will want it.
+    if (process.platform == "win32" && core.getInput("install-deps") == "true") {
+      const download = require('download')
+      var url = "http://download.qt.io/official_releases/jom/jom.zip"
+      download(url, qtPath + "\bin", {
+        extract: true
+      }).then(() => {
+        console.log('Downloaded and extracted jom!');
+      });
     }
   } catch (error) {
     core.setFailed(error.message);
