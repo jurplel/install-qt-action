@@ -82,7 +82,7 @@ async function run() {
     // users will want it.
     if (process.platform == "win32" && core.getInput("install-deps") == "true") {
       const download = require('download')
-      var url = "http://download.qt.io/official_releases/jom/jom.zip"
+      var url = "https://download.qt.io/official_releases/jom/jom.zip"
       download(url, qtPath + "\bin", {
         extract: true
       }).then(() => {
