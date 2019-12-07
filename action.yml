@@ -20,7 +20,8 @@ inputs:
   install-deps:
     description: 'Whether or not to install Qt dependencies on Linux'
     default: 'true'
-
+  modules:
+    description: 'Additional Qt modules to install'
 runs:
   using: 'node12'
   main: 'lib/main.js'

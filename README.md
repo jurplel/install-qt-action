@@ -26,7 +26,6 @@ Possible values: `windows`, `mac`, or `linux`
 
 Defaults to the current platform it is being run on.
 
-
 ### `target`
 This is the target platform that you will be building for. You will want to set this if you are building for iOS or Android. 
 
@@ -64,6 +63,14 @@ Default: `${RUNNER_WORKSPACE}` (this is one folder above the starting directory)
 Whether or not to automatically install Qt dependencies on Linux (you probably want to leave this on).
 
 Default: `true`
+
+### `modules`
+List of additional addon modules to install, with each entry seperated by a space. If you need one of these, you'll know it.
+
+Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`, `qtwebengine`, `qtnetworkauth`, `qtwebglplugin`, `qtscript`, `debug_info`, possibly others
+
+Default: none
+
 
 ## More info
 
