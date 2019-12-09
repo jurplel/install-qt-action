@@ -35,7 +35,7 @@ jobs:
           qmake
           
       - name: Configure test project on unix
-        if: !startsWith(matrix.os, 'windows')
+        if: (!startsWith(matrix.os, 'windows'))
         run: |
           cd tests/TestWithModules
           ls $Qt5_Dir/lib/cmake
