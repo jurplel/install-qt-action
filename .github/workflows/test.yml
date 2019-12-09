@@ -26,7 +26,16 @@ jobs:
         with:
           modules: qtcharts qtwebengine
 
-      - name: Configure test project
+      - name: Configure test project on windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          cd tests/TestWithModules
+          call "%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          dir %Qt5_Dir%/lib/cmake
+          qmake
+          
+      - name: Configure test project on unix
+        if: !startsWith(matrix.os, 'windows')
         run: |
           cd tests/TestWithModules
           ls $Qt5_Dir/lib/cmake
