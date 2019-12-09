@@ -30,6 +30,8 @@ jobs:
         run: |
           cd tests/TestWithModules
           ls $Qt5_Dir/lib/cmake
+          python3 -m aqt install -O yo 5.12.6 mac desktop -m qtcharts qtwebengine
+          ls yo/5.12.6/clang_64/lib/cmake/
           qmake .
           make
           ls
