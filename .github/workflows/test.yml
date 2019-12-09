@@ -29,6 +29,7 @@ jobs:
       - name: Build test project
         run: |
           cd tests/TestWithModules
+          ls $Qt5_Dir/lib
           qmake .
           make
           ls
