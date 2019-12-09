@@ -69,7 +69,8 @@ async function run() {
     }
 
     //run aqtinstall with args
-    await exec.exec(`${pythonName} -m aqt install`, args);
+    await exec.exec(`${pythonName} -m aqt install -O yo 5.12.6 mac desktop -m qtcharts qtwebengine`);
+    
 
     //set environment variables
     let qtPath = dir + "/" + version;
