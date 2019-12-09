@@ -28,7 +28,7 @@ jobs:
 
       - name: Build test project
         run: |
-          cd tests
+          cd tests/TestWithModules
           qmake .
           make
           ls
