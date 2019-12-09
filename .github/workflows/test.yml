@@ -26,6 +26,11 @@ jobs:
         with:
           modules: qtcharts qtwebengine
 
+      - name: run on mac
+        if: startsWith(matrix.os, 'windows')
+        run: echo "::add-path::%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\16.0.28625.61\bin\Hostx64\x64\"
+        shell: bash
+          
       - name: Build test project
         run: |
           cd tests/TestWithModules
