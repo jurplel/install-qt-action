@@ -24,7 +24,7 @@ async function run() {
     let host = core.getInput("host");
     let target = core.getInput("target");
     let arch = core.getInput("arch");
-    let modules = core.getInput("modules");
+    let modules = core.getInput("modules").split(" ");
 
     //set host automatically if omitted
     if (!host) {
@@ -59,7 +59,10 @@ async function run() {
       args.push(`${arch}`);
     }
     if (modules) {
-      args.push(`-m ${modules}`);
+      args.push("-m");
+      modules.forEach(function(currentValue) {
+        args.push(currentValue);
+      });
     }
 
     //accomodate for differences in python 3 executable name
