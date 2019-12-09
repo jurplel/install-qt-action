@@ -23,3 +23,14 @@ jobs:
 
       - name: Install Qt
         uses: ./
+        with:
+          modules: qtcharts qtwebengine
+
+      - name: Build test project
+        run: |
+          cd tests
+          qmake .
+          make
+          ls
+        shell: bash
+
