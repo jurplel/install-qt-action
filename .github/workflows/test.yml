@@ -33,6 +33,7 @@ jobs:
           call "%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           dir %Qt5_Dir%/lib/cmake
           qmake
+        shell: cmd
           
       - name: Configure test project on unix
         if: (!startsWith(matrix.os, 'windows'))
