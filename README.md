@@ -26,7 +26,7 @@ Possible values: `windows`, `mac`, or `linux`
 
 Defaults to the current platform it is being run on. 
 
-On `windows` the jom compiler will also be installed automatically to the Qt bin folder.
+On `windows` the jom compiler will be installed automatically to the Qt bin folder.
 
 ### `target`
 This is the target platform that you will be building for. You will want to set this if you are building for iOS or Android. 
