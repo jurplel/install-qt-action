@@ -18,7 +18,7 @@ async function run() {
     }
 
     await exec.exec("pip3 install setuptools wheel");
-    await exec.exec("pip3 install \"aqtinstall==0.7.*\" --pre");
+    await exec.exec("pip3 install \"aqtinstall==0.7.*\"");
 
     const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
     const version = core.getInput("version");
