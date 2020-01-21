@@ -13,11 +13,12 @@ async function run() {
     // Qt installer assumes basic requirements that are not installed by
     // default on Ubuntu.
     if (process.platform == "linux" && core.getInput("install-deps") == "true") {
+      await exec.exec("sudo apt-get update")
       await exec.exec("sudo apt-get install build-essential libgl1-mesa-dev -y")
     }
 
     await exec.exec("pip3 install setuptools wheel");
-    await exec.exec("pip3 install \"aqtinstall==0.6.*\"");
+    await exec.exec("pip3 install \"aqtinstall==0.7.*\"");
 
     const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
     const version = core.getInput("version");
