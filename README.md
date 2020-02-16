@@ -92,7 +92,7 @@ It can be used with [actions/cache](https://github.com/actions/cache), for examp
 
 ### `aqtversion`
 
-Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the form used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.x`.
+Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the form used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`.
 
 ## More info
 
