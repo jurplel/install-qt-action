@@ -57,7 +57,7 @@ async function run() {
 
       //set args
       let args = ["-O", `${dir}`, `${version}`, `${host}`, `${target}`];
-      if (arch) {
+      if (arch && (host == "windows" || host == "android")) {
         args.push(`${arch}`);
       }
       if (modules) {
