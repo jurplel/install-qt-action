@@ -24,6 +24,7 @@ jobs:
       - name: Install Qt
         uses: ./
         with:
+          aqtversion: "==0.7.1"
           modules: qtcharts qtwebengine
 
       - name: Configure test project on windows
