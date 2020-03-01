@@ -71,6 +71,28 @@ Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`,
 
 Default: none
 
+### `cached`
+If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
+
+It can be used with [actions/cache](https://github.com/actions/cache), for example:
+
+```
+- name: Cache Qt
+  id: cache-qt
+  uses: actions/cache@v1
+  with:
+    path: ../Qt
+    key: QtCache
+
+- name: Install Qt
+  uses: jurplel/install-qt-action@v2
+  with:
+    cached: ${{ steps.cache-qt.outputs.cache-hit }}
+```
+
+### `aqtversion`
+
+Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the form used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`.
 
 ## More info
 
