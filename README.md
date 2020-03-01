@@ -90,9 +90,13 @@ It can be used with [actions/cache](https://github.com/actions/cache), for examp
     cached: ${{ steps.cache-qt.outputs.cache-hit }}
 ```
 
+Default: `false`
+
 ### `aqtversion`
 
-Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the form used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`.
+Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`.
+
+Default: `==0.7.1`
 
 ## More info
 

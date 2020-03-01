@@ -22,6 +22,12 @@ inputs:
     default: 'true'
   modules:
     description: 'Additional Qt modules to install'
+  cached:
+    description: "Whether or not to actually download Qt"
+    default: 'false'
+  aqtversion:
+    description: "Version of aqtinstall to use in case of issues"
+    default: '==0.7.1'
 runs:
   using: 'node12'
   main: 'lib/main.js'
