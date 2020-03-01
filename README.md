@@ -15,7 +15,7 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-Default: `5.12.6` (Latest LTS at the time of writing)
+Default: `5.12.7` (Latest LTS at the time of writing)
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
@@ -55,7 +55,7 @@ Android: `android_armv7`
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `/example/`, your bin folder will be located at `/example/Qt/5.12.6/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_Dir` environment variable.
+For example, if you set dir to `/example/`, your bin folder will be located at `/example/Qt/5.12.7/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_Dir` environment variable.
 
 Default: `${RUNNER_WORKSPACE}` (this is one folder above the starting directory)
 
@@ -71,6 +71,32 @@ Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`,
 
 Default: none
 
+### `cached`
+If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
+
+It can be used with [actions/cache](https://github.com/actions/cache), for example:
+
+```
+- name: Cache Qt
+  id: cache-qt
+  uses: actions/cache@v1
+  with:
+    path: ../Qt
+    key: QtCache
+
+- name: Install Qt
+  uses: jurplel/install-qt-action@v2
+  with:
+    cached: ${{ steps.cache-qt.outputs.cache-hit }}
+```
+
+Default: `false`
+
+### `aqtversion`
+
+Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`.
+
+Default: `==0.7.1`
 
 ## More info
 
