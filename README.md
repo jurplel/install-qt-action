@@ -94,9 +94,32 @@ Default: `false`
 
 ### `aqtversion`
 
-Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`.
+Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.7.1`
+Default: `==0.8a1`
+
+### `py7zrversion`
+Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
+
+Default: `==0.6b6`
+
+## Example with all arguments
+
+```yml
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: '5.12.7'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2017_64'
+        dir: '/example/'
+        install-deps: 'true'
+        modules: 'qtcharts qtwebengine'
+        cached: 'false'
+        aqtversion: '==0.8a1'
+        py7zrversion: '==0.6b6'
+```
 
 ## More info
 

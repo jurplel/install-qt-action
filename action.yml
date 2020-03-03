@@ -27,7 +27,11 @@ inputs:
     default: 'false'
   aqtversion:
     description: "Version of aqtinstall to use in case of issues"
-    default: '==0.7.1'
+    default: '==0.8a1'
+  py7zrversion:
+    description: "Version of py7zr to use in case of issues"
+    default: '==0.6b6'
+
 runs:
   using: 'node12'
   main: 'lib/main.js'
