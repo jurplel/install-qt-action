@@ -22,7 +22,7 @@ async function run() {
       }
 
       await exec.exec("pip3 install setuptools wheel");
-      await exec.exec("pip3 install \"py7zr ==0.6b6\"");
+      await exec.exec("pip3 install \"py7zr" + core.getInput("py7zrversion") + "\"");
       await exec.exec("pip3 install \"aqtinstall" + core.getInput("aqtversion") + "\"");
       let host = core.getInput("host");
       let target = core.getInput("target");

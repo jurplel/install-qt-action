@@ -94,9 +94,14 @@ Default: `false`
 
 ### `aqtversion`
 
-Version of [aqtinstall](https://github.com/miurahr/aqtinstall), in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`.
+Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.7.1`
+Default: `==0.8a1`
+
+### `py7zr`
+Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
+
+Default: `==0.6b6`
 
 ## More info
 
