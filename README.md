@@ -98,7 +98,7 @@ Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in 
 
 Default: `==0.8a1`
 
-### `py7zr`
+### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
 Default: `==0.6b6`
