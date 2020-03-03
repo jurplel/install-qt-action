@@ -103,6 +103,24 @@ Version of py7zr in the same style as the aqtversion and intended to be used for
 
 Default: `==0.6b6`
 
+## Example with all arguments
+
+```yml
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: '5.12.7'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2017_64'
+        dir: '/example/'
+        install-deps: 'true'
+        modules: 'qtcharts qtwebengine'
+        cached: 'false'
+        aqtversion: '==0.8a1'
+        py7zrversion: '==0.6b6'
+```
+
 ## More info
 
 The Qt bin directory is added to your `path` environment variable. `Qt5_Dir` is also set appropriately for cmake. 
