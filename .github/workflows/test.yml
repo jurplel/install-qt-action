@@ -24,7 +24,9 @@ jobs:
       - name: Install Qt
         uses: ./
         with:
-          modules: qtcharts qtwebengine
+          modules: 'qtcharts qtwebengine'
+          mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
+
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')

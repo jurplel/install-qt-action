@@ -123,6 +123,7 @@ Default: `==0.6b6`
         dir: '/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
+        mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
         aqtversion: '==0.8a1'
         py7zrversion: '==0.6b6'
