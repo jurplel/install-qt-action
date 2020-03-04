@@ -71,6 +71,13 @@ Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`,
 
 Default: none
 
+### `mirror`
+Forces a different Qt mirror in case there is a problem with the default.
+
+If you have problems, you can try: `http://mirrors.ocf.berkeley.edu/qt/`
+
+Default: none
+
 ### `cached`
 If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
 
@@ -96,7 +103,7 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.8a1`
+Default: `==0.8a2`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
@@ -116,6 +123,7 @@ Default: `==0.6b6`
         dir: '/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
+        mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
         aqtversion: '==0.8a1'
         py7zrversion: '==0.6b6'
