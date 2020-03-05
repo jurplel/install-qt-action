@@ -29,7 +29,7 @@ inputs:
     default: 'false'
   aqtversion:
     description: "Version of aqtinstall to use in case of issues"
-    default: '==0.8a1'
+    default: '==0.8a3'
   py7zrversion:
     description: "Version of py7zr to use in case of issues"
     default: '==0.6b6'
