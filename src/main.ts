@@ -87,7 +87,8 @@ async function run() {
     let qtPath = dir + "/" + version;
     qtPath = glob.sync(qtPath + '/**/*')[0];
 
-    core.exportVariable('Qt5_Dir', qtPath);
+    core.exportVariable('Qt5_Dir', qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
+    core.exportVariable('Qt5_DIR', qtPath);
     core.addPath(qtPath + "/bin");
   } catch (error) {
     core.setFailed(error.message);
