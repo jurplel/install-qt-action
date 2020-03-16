@@ -55,9 +55,9 @@ Android: `android_armv7`
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `/example/`, your bin folder will be located at `/example/Qt/5.12.7/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_Dir` environment variable.
+For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.7/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
 
-Default: `${RUNNER_WORKSPACE}` (this is one folder above the starting directory)
+Default: `$HOME` (this is one folder above the starting directory)
 
 ### `install-deps`
 Whether or not to automatically install Qt dependencies on Linux (you probably want to leave this on).
@@ -120,7 +120,7 @@ Default: `==0.6b8`
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2017_64'
-        dir: '/example/'
+        dir: '${{ github.workspace }}/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
         mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
@@ -131,7 +131,7 @@ Default: `==0.6b8`
 
 ## More info
 
-The Qt bin directory is added to your `path` environment variable. `Qt5_Dir` is also set appropriately for cmake. 
+The Qt bin directory is added to your `path` environment variable. `Qt5_DIR` is also set appropriately for cmake. 
 
 Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developers for making this easy. Please go support them, they did all of the hard work here.
 

@@ -5,7 +5,7 @@ import * as exec from '@actions/exec';
 
 async function run() {
   try {
-    const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
+    const dir = (core.getInput("dir") || process.env.HOME) + "/Qt";
     const version = core.getInput("version");
 
     // Qt installer assumes basic requirements that are not installed by
@@ -87,7 +87,7 @@ async function run() {
     let qtPath = dir + "/" + version;
     qtPath = glob.sync(qtPath + '/**/*')[0];
 
-    core.exportVariable('Qt5_Dir', qtPath);
+    core.exportVariable('Qt5_DIR', qtPath);
     core.addPath(qtPath + "/bin");
   } catch (error) {
     core.setFailed(error.message);
