@@ -57,7 +57,7 @@ This is the directory prefix that Qt will be installed to.
 
 For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.7/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
 
-Default: `$HOME` (this is one folder above the starting directory)
+Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
 ### `install-deps`
 Whether or not to automatically install Qt dependencies on Linux (you probably want to leave this on).

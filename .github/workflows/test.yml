@@ -25,6 +25,7 @@ jobs:
         uses: ./
         with:
           modules: 'qtcharts qtwebengine'
+          dir: '${{ github.workspace }}'
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')
