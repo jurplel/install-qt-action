@@ -5,7 +5,7 @@ import * as exec from '@actions/exec';
 
 async function run() {
   try {
-    const dir = (core.getInput("dir") || process.env.HOME) + "/Qt";
+    const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
     const version = core.getInput("version");
 
     // Qt installer assumes basic requirements that are not installed by
