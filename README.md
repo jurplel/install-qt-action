@@ -89,7 +89,7 @@ It can be used with [actions/cache](https://github.com/actions/cache), for examp
   uses: actions/cache@v1
   with:
     path: ../Qt
-    key: QtCache
+    key: ${{ runner.os }}-QtCache
 
 - name: Install Qt
   uses: jurplel/install-qt-action@v2
