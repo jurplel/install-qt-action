@@ -63,18 +63,18 @@ async function run() {
       if (arch && (host == "windows" || target == "android")) {
         args.push(`${arch}`);
       }
-      if (modules) {
-        args.push("-m");
-        modules.forEach(function(currentModule) {
-          args.push(currentModule);
-        });
-      }
       if (mirror) {
         args.push("-b");
         args.push(mirror);
       }
       if (extra) {
         args.push(extra);
+      }
+      if (modules) {
+        args.push("-m");
+        modules.forEach(function(currentModule) {
+          args.push(currentModule);
+        });
       }
 
       //accomodate for differences in python 3 executable name
