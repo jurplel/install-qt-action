@@ -15,7 +15,7 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-Default: `5.12.7` (Latest LTS at the time of writing)
+Default: `5.12.8` (Latest LTS at the time of writing)
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
@@ -89,7 +89,7 @@ It can be used with [actions/cache](https://github.com/actions/cache), for examp
   uses: actions/cache@v1
   with:
     path: ../Qt
-    key: QtCache
+    key: ${{ runner.os }}-QtCache
 
 - name: Install Qt
   uses: jurplel/install-qt-action@v2
@@ -103,12 +103,17 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.8a4`
+Default: `==0.8`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.6b8`
+Default: `==0.6`
+
+### `extra`
+This input can be used to append arguments to the end of the aqtinstall command in case of special needs.
+
+Example value: `--external 7z`
 
 ## Example with all arguments
 
@@ -116,7 +121,7 @@ Default: `==0.6b8`
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: '5.12.7'
+        version: '5.12.8'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2017_64'
@@ -125,8 +130,9 @@ Default: `==0.6b8`
         modules: 'qtcharts qtwebengine'
         mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
-        aqtversion: '==0.8a4'
-        py7zrversion: '==0.6b8'
+        aqtversion: '==0.8'
+        py7zrversion: '==0.6'
+        extra: '--external 7z'
 ```
 
 ## More info

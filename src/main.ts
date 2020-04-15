@@ -29,6 +29,7 @@ async function run() {
       let arch = core.getInput("arch");
       let modules = core.getInput("modules").split(" ");
       let mirror = core.getInput("mirror");
+      let extra = core.getInput("extra").split(" ");;
 
       //set host automatically if omitted
       if (!host) {
@@ -62,15 +63,20 @@ async function run() {
       if (arch && (host == "windows" || target == "android")) {
         args.push(`${arch}`);
       }
+      if (mirror) {
+        args.push("-b");
+        args.push(mirror);
+      }
+      if (extra) {
+        extra.forEach(function(string) {
+          args.push(string);
+        });
+      }
       if (modules) {
         args.push("-m");
         modules.forEach(function(currentModule) {
           args.push(currentModule);
         });
-      }
-      if (mirror) {
-        args.push("-b");
-        args.push(mirror);
       }
 
       //accomodate for differences in python 3 executable name
