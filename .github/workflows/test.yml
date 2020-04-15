@@ -21,9 +21,6 @@ jobs:
       - name: "npm run build"
         run: npm run build
 
-      - name: Install Qt without options
-        uses: ./
-
       - name: Install Qt with options
         uses: ./
         with:
