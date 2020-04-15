@@ -68,7 +68,9 @@ async function run() {
         args.push(mirror);
       }
       if (extra) {
-        args.push(extra);
+        modules.forEach(function(string) {
+          args.push(string);
+        });
       }
       if (modules) {
         args.push("-m");
