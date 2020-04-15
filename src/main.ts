@@ -68,7 +68,7 @@ async function run() {
         args.push(mirror);
       }
       if (extra) {
-        modules.forEach(function(string) {
+        extra.forEach(function(string) {
           args.push(string);
         });
       }
