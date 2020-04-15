@@ -28,11 +28,11 @@ async function run() {
         await exec.exec("pip3 install \"py7zr" + core.getInput("py7zrversion") + "\"");
         await exec.exec("pip3 install \"aqtinstall" + core.getInput("aqtversion") + "\"");
         let host = core.getInput("host");
-        let target = core.getInput("target");
+        const target = core.getInput("target");
         let arch = core.getInput("arch");
-        let modules = core.getInput("modules").split(" ");
-        let mirror = core.getInput("mirror");
-        let extra = core.getInput("extra").split(" ");;
+        const mirror = core.getInput("mirror");
+        const extra = core.getInput("extra");
+        const modules = core.getInput("modules");
 
         //set host automatically if omitted
         if (!host) {
@@ -71,13 +71,13 @@ async function run() {
           args.push(mirror);
         }
         if (extra) {
-          extra.forEach(function(string) {
+          extra.split(" ").forEach(function(string) {
             args.push(string);
           });
         }
         if (modules) {
           args.push("-m");
-          modules.forEach(function(currentModule) {
+          modules.split(" ").forEach(function(currentModule) {
             args.push(currentModule);
           });
         }
