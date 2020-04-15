@@ -25,6 +25,7 @@ jobs:
         uses: ./
         with:
           modules: 'qtcharts qtwebengine'
+          extra: '--external 7z'
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')

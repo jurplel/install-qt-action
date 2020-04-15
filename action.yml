@@ -33,7 +33,8 @@ inputs:
   py7zrversion:
     description: "Version of py7zr to use in case of issues"
     default: '==0.6b8'
-
+  extra:
+    description: "Any extra arguments to append to the back"
 runs:
   using: 'node12'
   main: 'lib/main.js'

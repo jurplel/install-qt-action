@@ -29,6 +29,7 @@ async function run() {
       let arch = core.getInput("arch");
       let modules = core.getInput("modules").split(" ");
       let mirror = core.getInput("mirror");
+      let extra = core.getInput("extra");
 
       //set host automatically if omitted
       if (!host) {
@@ -71,6 +72,9 @@ async function run() {
       if (mirror) {
         args.push("-b");
         args.push(mirror);
+      }
+      if (extra) {
+        args.push(extra);
       }
 
       //accomodate for differences in python 3 executable name

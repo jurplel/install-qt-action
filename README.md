@@ -110,6 +110,11 @@ Version of py7zr in the same style as the aqtversion and intended to be used for
 
 Default: `==0.6b8`
 
+### `extra`
+This input can be used to append arguments to the end of the aqtinstall command in case of special needs.
+
+Example value: `--external 7z`
+
 ## Example with all arguments
 
 ```yml
@@ -127,6 +132,7 @@ Default: `==0.6b8`
         cached: 'false'
         aqtversion: '==0.8a4'
         py7zrversion: '==0.6b8'
+        extra: '--external 7z'
 ```
 
 ## More info
