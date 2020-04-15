@@ -29,7 +29,7 @@ async function run() {
       let arch = core.getInput("arch");
       let modules = core.getInput("modules").split(" ");
       let mirror = core.getInput("mirror");
-      let extra = core.getInput("extra");
+      let extra = core.getInput("extra").split(" ");;
 
       //set host automatically if omitted
       if (!host) {
