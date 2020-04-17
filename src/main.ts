@@ -4,9 +4,6 @@ import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 
 async function run() {
-  let tries = 0;
-  while (true)
-  {
     try {
       const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
       const version = core.getInput("version");
@@ -99,15 +96,9 @@ async function run() {
       core.exportVariable('Qt5_Dir', qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
       core.exportVariable('Qt5_DIR', qtPath);
       core.addPath(qtPath + "/bin");
-      break;
     } catch (error) {
-      tries++;
-      if (tries >= 3) {
-        core.setFailed(error.message);
-        return;
-      }
+      core.setFailed(error.message);
     }
-  }
 }
 
 run();

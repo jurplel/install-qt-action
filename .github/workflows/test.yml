@@ -27,7 +27,6 @@ jobs:
           modules: 'qtcharts qtwebengine'
           mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
           extra: '--external 7z'
-          arch: 'win64_mingw73'
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')
