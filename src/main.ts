@@ -12,7 +12,7 @@ async function run() {
       // default on Ubuntu.
       if (process.platform == "linux" && core.getInput("install-deps") == "true") {
         await exec.exec("sudo apt-get update")
-        await exec.exec("sudo apt-get install build-essential libgl1-mesa-dev -y")
+        await exec.exec("sudo apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 -y")
       }
 
       if (core.getInput("cached") != "true") {
