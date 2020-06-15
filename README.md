@@ -15,7 +15,7 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-Default: `5.12.8` (Latest LTS at the time of writing)
+Default: `5.12.9` (Latest LTS at the time of writing)
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
@@ -55,7 +55,7 @@ Android: `android_armv7`
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.7/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
+For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.9/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
 
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
@@ -121,7 +121,7 @@ Example value: `--external 7z`
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: '5.12.8'
+        version: '5.12.9'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2015_64'
