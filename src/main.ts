@@ -52,7 +52,7 @@ async function run() {
         //set arch automatically if omitted
         if (!arch) {
           if (host == "windows") {
-            arch = "win64_msvc2017_64";
+            arch = "win64_msvc2015_64";
           } else if (host == "android") {
             arch = "android_armv7";
           }

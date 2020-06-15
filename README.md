@@ -48,7 +48,7 @@ Android: `android_x86`, `android_armv7`
 
 **Default values:**
 
-Windows: `win64_msvc2017_64`
+Windows: `win64_msvc2015_64`
 
 Android: `android_armv7`
 
@@ -124,7 +124,7 @@ Example value: `--external 7z`
         version: '5.12.8'
         host: 'windows'
         target: 'desktop'
-        arch: 'win64_msvc2017_64'
+        arch: 'win64_msvc2015_64'
         dir: '${{ github.workspace }}/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
