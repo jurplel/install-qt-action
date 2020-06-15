@@ -1,5 +1,6 @@
 import * as process from "process";
 import * as glob from "glob";
+import * as semver from "semver";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 
@@ -52,7 +53,10 @@ async function run() {
         //set arch automatically if omitted
         if (!arch) {
           if (host == "windows") {
-            arch = "win64_msvc2015_64";
+            arch = "win64_msvc2017_64";
+            if (semver.gte(version, '5.15.0')) { // if version is greater than or equal to 5.15.0
+              arch = "win64_msvc2019_64";
+            }
           } else if (host == "android") {
             arch = "android_armv7";
           }
