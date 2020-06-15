@@ -15,7 +15,7 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-Default: `5.12.8` (Latest LTS at the time of writing)
+Default: `5.12.9` (Latest LTS at the time of writing)
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
@@ -48,14 +48,16 @@ Android: `android_x86`, `android_armv7`
 
 **Default values:**
 
-Windows: `win64_msvc2017_64`
+Windows w/ Qt < 5.15: `win64_msvc2017_64`
+
+Windows w/ Qt >= 5.15: `win64_msvc2019_64`
 
 Android: `android_armv7`
 
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.7/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
+For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.9/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
 
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
@@ -103,12 +105,12 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.8`
+Default: `==0.9`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.6`
+Default: `==0.7`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command in case of special needs.
@@ -121,7 +123,7 @@ Example value: `--external 7z`
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: '5.12.8'
+        version: '5.12.9'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2017_64'
@@ -130,8 +132,8 @@ Example value: `--external 7z`
         modules: 'qtcharts qtwebengine'
         mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
-        aqtversion: '==0.8'
-        py7zrversion: '==0.6'
+        aqtversion: '==0.9'
+        py7zrversion: '==0.7'
         extra: '--external 7z'
 ```
 
