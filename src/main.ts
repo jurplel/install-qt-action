@@ -7,7 +7,7 @@ import * as exec from '@actions/exec';
 async function run() {
     try {
       const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
-      const version = core.getInput("version");
+      let version = core.getInput("version");
 
       // Qt installer assumes basic requirements that are not installed by
       // default on Ubuntu.
@@ -31,6 +31,13 @@ async function run() {
         const mirror = core.getInput("mirror");
         const extra = core.getInput("extra");
         const modules = core.getInput("modules");
+
+        //fix errenous versions
+        if (semver.lt(version, '5.10.0')) { // if version is less than 5.10.0
+          if (semver.patch(version)) { // if patch number is 0
+            version = version.substring(0, version.length-2); // remove last 2 digits
+          }
+        }
 
         //set host automatically if omitted
         if (!host) {
