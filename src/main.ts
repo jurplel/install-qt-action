@@ -34,7 +34,7 @@ async function run() {
 
         //fix errenous versions
         if (semver.lt(version, '5.10.0')) { // if version is less than 5.10.0
-          if (semver.patch(version)) { // if patch number is 0
+          if (semver.patch(version) == 0) { // if patch number is 0
             version = version.substring(0, version.length-2); // remove last 2 digits
           }
         }
