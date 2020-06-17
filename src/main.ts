@@ -1,6 +1,6 @@
 import * as process from "process";
 import * as glob from "glob";
-import * as semver from "semver";
+import * as compareVersions from "compare-versions";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 
@@ -54,7 +54,7 @@ async function run() {
         if (!arch) {
           if (host == "windows") {
             arch = "win64_msvc2017_64";
-            if (semver.gte(version, '5.15.0')) { // if version is greater than or equal to 5.15.0
+            if (compareVersions.compare(version, '5.15.0', '>=')) { // if version is greater than or equal to 5.15.0
               arch = "win64_msvc2019_64";
             }
           } else if (host == "android") {
