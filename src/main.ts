@@ -99,6 +99,8 @@ async function run() {
 
       core.exportVariable('Qt5_Dir', qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
       core.exportVariable('Qt5_DIR', qtPath);
+      core.exportVariable('QT_PLUGIN_PATH', qtPath + '/plugins');
+      core.exportVariable('QML2_IMPORT_PATH', qtPath + '/qml');
       core.addPath(qtPath + "/bin");
     } catch (error) {
       core.setFailed(error.message);
