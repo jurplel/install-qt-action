@@ -1,5 +1,5 @@
 QT -= gui
-QT += charts webengine
+QT += webengine
 
 CONFIG += c++11 console
 CONFIG -= app_bundle
