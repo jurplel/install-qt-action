@@ -56,6 +56,8 @@ async function run() {
             arch = "win64_msvc2017_64";
             if (compareVersions.compare(version, '5.15.0', '>=')) { // if version is greater than or equal to 5.15.0
               arch = "win64_msvc2019_64";
+            } else if (compareVersions.compare(version, '5.9.0', '<')) { // if version is earlier than 5.9
+              arch = "win64_msvc2015_64";
             }
           } else if (host == "android") {
             arch = "android_armv7";
