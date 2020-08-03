@@ -48,7 +48,11 @@ Android: `android_x86`, `android_armv7`
 
 **Default values:**
 
-Windows w/ Qt < 5.15: `win64_msvc2017_64`
+Windows w/ Qt < 5.6: `win64_msvc2013_64`
+
+Windows w/ Qt >= 5.6 && Qt < 5.9: `win64_msvc2015_64`
+
+Windows w/ Qt >= 5.9 && Qt < 5.15: `win64_msvc2017_64`
 
 Windows w/ Qt >= 5.15: `win64_msvc2019_64`
 
