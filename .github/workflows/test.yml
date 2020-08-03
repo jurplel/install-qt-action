@@ -26,8 +26,6 @@ jobs:
         uses: ./
         with:
           modules: 'qtcharts qtwebengine'
-          mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
-          extra: '--external 7z'
           version: ${{ matrix.version }}
 
       - name: Configure test project on windows
