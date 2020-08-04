@@ -69,7 +69,7 @@ async function run() {
 
         //set args
         let args = ["-O", `${dir}`, `${version}`, `${host}`, `${target}`];
-        if (arch && (host == "windows" || target == "android")) {
+        if (arch && ((host == "windows" || target == "android") || arch == "wasm_32")) {
           args.push(`${arch}`);
         }
         if (mirror) {
