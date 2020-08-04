@@ -25,7 +25,6 @@ jobs:
       - name: Install Qt with options
         uses: ./
         with:
-          modules: 'qtwebengine'
           version: ${{ matrix.version }}
 
       - name: Configure test project on windows
