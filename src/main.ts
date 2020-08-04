@@ -53,9 +53,14 @@ async function run() {
         //set arch automatically if omitted
         if (!arch) {
           if (host == "windows") {
-            arch = "win64_msvc2017_64";
             if (compareVersions.compare(version, '5.15.0', '>=')) { // if version is greater than or equal to 5.15.0
               arch = "win64_msvc2019_64";
+            } else if (compareVersions.compare(version, '5.6.0', '<')) { // if version earlier than 5.6
+              arch = "win64_msvc2013_64";
+            } else if (compareVersions.compare(version, '5.9.0', '<')) { // if version is earlier than 5.9
+              arch = "win64_msvc2015_64";
+            } else { // otherwise
+              arch = "win64_msvc2017_64";
             }
           } else if (host == "android") {
             arch = "android_armv7";
@@ -64,7 +69,7 @@ async function run() {
 
         //set args
         let args = ["-O", `${dir}`, `${version}`, `${host}`, `${target}`];
-        if (arch && (host == "windows" || target == "android")) {
+        if (arch && ((host == "windows" || target == "android") || arch == "wasm_32")) {
           args.push(`${arch}`);
         }
         if (mirror) {
@@ -97,8 +102,13 @@ async function run() {
       let qtPath = dir + "/" + version;
       qtPath = glob.sync(qtPath + '/**/*')[0];
 
-      core.exportVariable('Qt5_Dir', qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-      core.exportVariable('Qt5_DIR', qtPath);
+      // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+      if (compareVersions.compare(version, '6.0.0', '<')) {
+        core.exportVariable('Qt5_Dir', qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
+        core.exportVariable('Qt5_DIR', qtPath);
+      } else {
+        core.exportVariable('Qt6_DIR', qtPath);
+      }
       core.exportVariable('QT_PLUGIN_PATH', qtPath + '/plugins');
       core.exportVariable('QML2_IMPORT_PATH', qtPath + '/qml');
       core.addPath(qtPath + "/bin");

@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macOS-latest, ubuntu-latest, ubuntu-16.04]
-        version: ['5.9', '5.12.0', '5.15.0']
+        version: ['5.7', '5.9', '5.12.0', '5.15.1']
     steps:
       - uses: actions/checkout@v1
 
@@ -25,9 +25,7 @@ jobs:
       - name: Install Qt with options
         uses: ./
         with:
-          modules: 'qtcharts qtwebengine'
-          mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
-          extra: '--external 7z'
+          modules: 'qtwebengine'
           version: ${{ matrix.version }}
 
       - name: Configure test project on windows
