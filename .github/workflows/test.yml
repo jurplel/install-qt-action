@@ -25,6 +25,7 @@ jobs:
       - name: Install Qt with options
         uses: ./
         with:
+          arch: 'wasm_32'
           modules: 'qtwebengine'
           version: ${{ matrix.version }}
 
