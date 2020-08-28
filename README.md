@@ -42,7 +42,7 @@ This is the target architecture that your program will be built for. This is onl
 
 **Possible values:**
 
-Windows: `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win32_mingw53`, or `win64_mingw73`
+Windows: `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win32_mingw53`, `win64_mingw73` or `win64_mingw81`
 
 Android: `android_x86`, `android_armv7`
 
