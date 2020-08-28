@@ -46,6 +46,9 @@ Windows: `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win32_ming
 
 Android: `android_x86`, `android_armv7`
 
+You can find a full list of architectures by checking the Updates.xml for your version/platform.
+For Qt 5.12.9 on windows: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt5_5129/Updates.xml
+
 **Default values:**
 
 Windows w/ Qt < 5.6: `win64_msvc2013_64`
