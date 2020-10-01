@@ -14,7 +14,7 @@
   "author": "jurplel",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.0.0",
+    "@actions/core": "^1.2.6",
     "@actions/exec": "^1.0.0",
     "glob": "^7.0.0",
     "compare-versions": "^3.6.0"
