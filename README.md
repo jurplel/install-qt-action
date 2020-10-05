@@ -112,12 +112,12 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.9.4`
+Default: `==0.9.7`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.9.1`
+Default: `==0.10.1`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command in case of special needs.
@@ -139,8 +139,8 @@ Example value: `--external 7z`
         modules: 'qtcharts qtwebengine'
         mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
-        aqtversion: '==0.9.4'
-        py7zrversion: '==0.9.1'
+        aqtversion: '==0.9.7'
+        py7zrversion: '==0.10.1'
         extra: '--external 7z'
 ```
 
