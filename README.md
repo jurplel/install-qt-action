@@ -42,9 +42,12 @@ This is the target architecture that your program will be built for. This is onl
 
 **Possible values:**
 
-Windows: `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win32_mingw53`, or `win64_mingw73`
+Windows: `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win32_mingw53`, `win64_mingw73` or `win64_mingw81`
 
 Android: `android_x86`, `android_armv7`
+
+You can find a full list of architectures by checking the Updates.xml for your version/platform.
+For Qt 5.12.9 on windows: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt5_5129/Updates.xml
 
 **Default values:**
 
@@ -109,12 +112,12 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.9.4`
+Default: `==0.9.7`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.9.1`
+Default: `==0.10.1`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command in case of special needs.
@@ -136,8 +139,8 @@ Example value: `--external 7z`
         modules: 'qtcharts qtwebengine'
         mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
-        aqtversion: '==0.9.4'
-        py7zrversion: '==0.9.1'
+        aqtversion: '==0.9.7'
+        py7zrversion: '==0.10.1'
         extra: '--external 7z'
 ```
 
