@@ -27,6 +27,7 @@ jobs:
         with:
           modules: 'qtwebengine'
           version: ${{ matrix.version }}
+          tools: 'tools_ifw,4.0,qt.tools.ifw.40'
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')

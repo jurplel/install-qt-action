@@ -27,6 +27,11 @@ inputs:
   cached:
     description: "Whether or not to actually download Qt"
     default: 'false'
+  tools:
+    description: "Qt tools to download--specify comma-separated argument lists which are themselves separated by spaces: <tool_name>,<tool_version>,<tool_arch>"
+  tools-only:
+    description: "Whether or not to actually install Qt or just the tools from the tools argument"
+    default: 'false'
   aqtversion:
     description: "Version of aqtinstall to use in case of issues"
     default: '==0.9.7'
