@@ -100,12 +100,6 @@ async function run() {
 
         args.push(extraArgs);
 
-        //accomodate for differences in python 3 executable name
-        let pythonName = "python3";
-        if (process.platform == "win32") {
-          pythonName = "python";
-        }
-
         //run aqtinstall with args, and install tools if requested
         if (core.getInput("tools-only") != "true") {
           await exec.exec(`${pythonName} -m aqt install`, args);
