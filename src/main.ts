@@ -80,6 +80,13 @@ async function run() {
           args.push(`${arch}`);
         }
 
+        if (modules) {
+          args.push("-m");
+          modules.split(" ").forEach(function(currentModule) {
+            args.push(currentModule);
+          });
+        }
+
         let extraArgs = ["-O", `${dir}`]
 
         if (mirror) {
@@ -89,12 +96,6 @@ async function run() {
         if (extra) {
           extra.split(" ").forEach(function(string) {
             extraArgs.push(string);
-          });
-        }
-        if (modules) {
-          extraArgs.push("-m");
-          modules.split(" ").forEach(function(currentModule) {
-            extraArgs.push(currentModule);
           });
         }
 
@@ -107,7 +108,7 @@ async function run() {
         if (tools) {
           tools.split(" ").forEach(async element => {
             let elements = element.split(",");
-            await exec.exec(`${pythonName} -m aqt tool ${host} ${element[0]} ${element[1]} ${element[2]}`, extraArgs);
+            await exec.exec(`${pythonName} -m aqt tool ${host} ${elements[0]} ${elements[1]} ${elements[2]}`, extraArgs);
           });
         }
       }
