@@ -98,14 +98,14 @@ async function run() {
           });
         }
 
-        args.push(extraArgs);
+        args = args.concat(extraArgs);
 
         //run aqtinstall with args, and install tools if requested
         if (core.getInput("tools-only") != "true") {
           await exec.exec(`${pythonName} -m aqt install`, args);
         }
         if (tools) {
-          tools.split(" ").forEach(element => {
+          tools.split(" ").forEach(async element => {
             let elements = element.split(",");
             await exec.exec(`${pythonName} -m aqt tool ${host} ${element[0]} ${element[1]} ${element[2]}`, extraArgs);
           });
