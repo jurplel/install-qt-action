@@ -107,7 +107,7 @@ async function run() {
         }
 
         //run aqtinstall with args, and install tools if requested
-        if (core.getInput("tools-only") != "true")
+        if (core.getInput("tools-only") != "true") {
           await exec.exec(`${pythonName} -m aqt install`, args);
         }
         if (tools) {
