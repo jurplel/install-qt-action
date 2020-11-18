@@ -161,6 +161,8 @@ Example value: `--external 7z`
 
 ## More info
 
+If you are using a self-hosted runner, make sure to install python and pip >=3.6 and have python in path.
+
 The Qt bin directory is added to your `path` environment variable. `Qt5_DIR` is also set appropriately for cmake. 
 
 Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developers for making this easy. Please go support them, they did all of the hard work here.
