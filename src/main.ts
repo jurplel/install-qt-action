@@ -22,15 +22,22 @@ async function run() {
           await exec.exec("brew install p7zip")
         }
 
-        await exec.exec("pip3 install setuptools wheel");
-        await exec.exec("pip3 install \"py7zr" + core.getInput("py7zrversion") + "\"");
-        await exec.exec("pip3 install \"aqtinstall" + core.getInput("aqtversion") + "\"");
+        //accomodate for differences in python 3 executable name
+        let pythonName = "python3";
+        if (process.platform == "win32") {
+          pythonName = "python";
+        }
+
+        await exec.exec(pythonName + " -m pip install setuptools wheel");
+        await exec.exec(pythonName + " -m pip install \"py7zr" + core.getInput("py7zrversion") + "\"");
+        await exec.exec(pythonName + " -m pip install \"aqtinstall" + core.getInput("aqtversion") + "\"");
         let host = core.getInput("host");
         const target = core.getInput("target");
         let arch = core.getInput("arch");
         const mirror = core.getInput("mirror");
         const extra = core.getInput("extra");
         const modules = core.getInput("modules");
+        const tools = core.getInput("tools");
 
         //set host automatically if omitted
         if (!host) {
@@ -68,19 +75,11 @@ async function run() {
         }
 
         //set args
-        let args = ["-O", `${dir}`, `${version}`, `${host}`, `${target}`];
+        let args = [`${version}`, `${host}`, `${target}`];
         if (arch && ((host == "windows" || target == "android") || arch == "wasm_32")) {
           args.push(`${arch}`);
         }
-        if (mirror) {
-          args.push("-b");
-          args.push(mirror);
-        }
-        if (extra) {
-          extra.split(" ").forEach(function(string) {
-            args.push(string);
-          });
-        }
+
         if (modules) {
           args.push("-m");
           modules.split(" ").forEach(function(currentModule) {
@@ -88,14 +87,30 @@ async function run() {
           });
         }
 
-        //accomodate for differences in python 3 executable name
-        let pythonName = "python3";
-        if (process.platform == "win32") {
-          pythonName = "python";
+        let extraArgs = ["-O", `${dir}`]
+
+        if (mirror) {
+          extraArgs.push("-b");
+          extraArgs.push(mirror);
+        }
+        if (extra) {
+          extra.split(" ").forEach(function(string) {
+            extraArgs.push(string);
+          });
         }
 
-        //run aqtinstall with args
-        await exec.exec(`${pythonName} -m aqt install`, args);
+        args = args.concat(extraArgs);
+
+        //run aqtinstall with args, and install tools if requested
+        if (core.getInput("tools-only") != "true") {
+          await exec.exec(`${pythonName} -m aqt install`, args);
+        }
+        if (tools) {
+          tools.split(" ").forEach(async element => {
+            let elements = element.split(",");
+            await exec.exec(`${pythonName} -m aqt tool ${host} ${elements[0]} ${elements[1]} ${elements[2]}`, extraArgs);
+          });
+        }
       }
 
       //set environment variables

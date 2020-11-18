@@ -108,6 +108,19 @@ It can be used with [actions/cache](https://github.com/actions/cache), for examp
 
 Default: `false`
 
+### `tools`
+
+Qt "tools" to be installed. I would recommend looking at [aqtinstall](https://github.com/miurahr/aqtinstall)'s instructions for this, as it is an experimental feature.
+Specify the tool name, tool version, and arch separated by commas, and separate multiple tools with spaces.
+
+Example value: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
+
+### `tools-only`
+
+Set this to true if you only want to install tools, and not Qt.
+
+Default: `false`
+
 ### `aqtversion`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
@@ -139,12 +152,16 @@ Example value: `--external 7z`
         modules: 'qtcharts qtwebengine'
         mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
+        tools: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
+        tools-only: 'false'
         aqtversion: '==0.9.7'
         py7zrversion: '==0.10.1'
         extra: '--external 7z'
 ```
 
 ## More info
+
+If you are using a self-hosted runner, make sure to install python and pip >=3.6 and have python in path.
 
 The Qt bin directory is added to your `path` environment variable. `Qt5_DIR` is also set appropriately for cmake. 
 
