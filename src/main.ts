@@ -29,6 +29,7 @@ async function run() {
         }
 
         await exec.exec(pythonName + " -m pip install setuptools wheel");
+        await exec.exec(pythonName + " -m pip install importlib-metadata==2.1.0"); // importlib_metadata issue #259 temporary workaround!
         await exec.exec(pythonName + " -m pip install \"py7zr" + core.getInput("py7zrversion") + "\"");
         await exec.exec(pythonName + " -m pip install \"aqtinstall" + core.getInput("aqtversion") + "\"");
         let host = core.getInput("host");
