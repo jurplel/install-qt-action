@@ -5,7 +5,7 @@
   "description": "Install qt action for github actions",
   "main": "lib/main.js",
   "scripts": {
-    "build-setup-python": "npm install --prefix node_modules/setup_python && npm run build --prefix node_modules/setup_python",
+    "build-setup-python": "npm install --prefix node_modules/setup-python && npm run build --prefix node_modules/setup-python",
     "build": "tsc"
   },
   "repository": {
