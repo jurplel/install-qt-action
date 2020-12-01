@@ -20,7 +20,9 @@ jobs:
         run: npm ci
 
       - name: "npm run build"
-        run: npm run build
+        run: |
+          npm run build-setup-python
+          npm run build
 
       - name: Install Qt with options
         uses: ./

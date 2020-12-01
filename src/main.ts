@@ -3,9 +3,14 @@ import * as glob from "glob";
 import * as compareVersions from "compare-versions";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
+import * as setupPython from 'setup-python/lib/find-python'
 
 async function run() {
     try {
+      // Use setup-python to ensure that python >3.6 is installed
+      const installed = await setupPython.findPythonVersion('>=3.6', 'x64')
+      core.info(`Successfully setup ${installed.impl} (${installed.version})`)
+
       const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
       let version = core.getInput("version");
 
