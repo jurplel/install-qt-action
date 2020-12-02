@@ -15,7 +15,7 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-Default: `5.12.9` (Latest LTS at the time of writing)
+Default: `5.15.2` (Latest LTS at the time of writing)
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
@@ -125,15 +125,15 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==0.9.7`
+Default: `==0.10.0`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.10.1`
+Default: `==0.11.0`
 
 ### `extra`
-This input can be used to append arguments to the end of the aqtinstall command in case of special needs.
+This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
 
 Example value: `--external 7z`
 
@@ -143,7 +143,7 @@ Example value: `--external 7z`
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: '5.12.9'
+        version: '5.15.2'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2017_64'
@@ -154,15 +154,12 @@ Example value: `--external 7z`
         cached: 'false'
         tools: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
         tools-only: 'false'
-        aqtversion: '==0.9.7'
-        py7zrversion: '==0.10.1'
+        aqtversion: '==0.10.0'
+        py7zrversion: '==0.11.0'
         extra: '--external 7z'
 ```
 
 ## More info
-
-If you are using a self-hosted runner, make sure to install python and pip >=3.6 and have python in path.
-
 The Qt bin directory is added to your `path` environment variable. `Qt5_DIR` is also set appropriately for cmake. 
 
 Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developers for making this easy. Please go support them, they did all of the hard work here.
