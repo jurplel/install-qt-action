@@ -108,6 +108,12 @@ It can be used with [actions/cache](https://github.com/actions/cache), for examp
 
 Default: `false`
 
+### `setup-python`
+
+Set this to false if you want to skip using setup-python to find/download a valid python version. If you are experiencing errors installing or upgrading Python, try setting this to false.
+
+Default: `true`
+
 ### `tools`
 
 Qt "tools" to be installed. I would recommend looking at [aqtinstall](https://github.com/miurahr/aqtinstall)'s instructions for this, as it is an experimental feature.
@@ -152,6 +158,7 @@ Example value: `--external 7z`
         modules: 'qtcharts qtwebengine'
         mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
+        setup-python: 'true'
         tools: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
         tools-only: 'false'
         aqtversion: '==0.10.0'
