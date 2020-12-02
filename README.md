@@ -110,7 +110,7 @@ Default: `false`
 
 ### `setup-python`
 
-Set this to false if you want to skip using setup-python to find/download a valid python version. If you are experiencing errors installing or upgrading Python, try setting this to false.
+Set this to false if you want to skip using setup-python to find/download a valid python version. If you are on a self-hosted runner, you will probably need to set this to false because setup-python [requires a very specific environment to work](https://github.com/actions/setup-python#using-setup-python-with-a-self-hosted-runner).
 
 Default: `true`
 
