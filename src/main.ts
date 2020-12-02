@@ -7,9 +7,11 @@ import * as setupPython from 'setup-python/lib/find-python'
 
 async function run() {
     try {
-      // Use setup-python to ensure that python >3.6 is installed
-      const installed = await setupPython.findPythonVersion('>=3.6', 'x64')
-      core.info(`Successfully setup ${installed.impl} (${installed.version})`)
+      if (core.getInput("setup-python") == "true") {
+        // Use setup-python to ensure that python >=3.6 is installed
+        const installed = await setupPython.findPythonVersion('>=3.6', 'x64')
+        core.info(`Successfully setup ${installed.impl} (${installed.version})`)
+      }
 
       const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
       let version = core.getInput("version");
