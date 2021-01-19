@@ -121,6 +121,11 @@ Specify the tool name, tool version, and arch separated by commas, and separate 
 
 Example value: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
 
+### `set-env`
+Set this to false if you want to avoid setting environment variables for whatever reason.
+
+Default: `true`
+
 ### `tools-only`
 
 Set this to true if you only want to install tools, and not Qt.
@@ -160,6 +165,7 @@ Example value: `--external 7z`
         cached: 'false'
         setup-python: 'true'
         tools: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
+        set-env: 'false'
         tools-only: 'false'
         aqtversion: '==0.10.1'
         py7zrversion: '==0.11.1'
