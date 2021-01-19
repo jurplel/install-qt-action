@@ -124,6 +124,16 @@ async function run() {
       let qtPath = dir + "/" + version;
       qtPath = glob.sync(qtPath + '/**/*')[0];
 
+      if (tools) {
+          core.exportVariable('iqta_tools', dir + /Tools);
+      }
+      if (process.platform == "linux") {
+          if (process.env.LD_LIBRARY_PATH) {
+              core.exportVariable('LD_LIBRARY_PATH', process.env.LD_LIBRARY_PATH + ";" + qtPath + "/lib");
+          } else {
+              core.exportVariable('LD_LIBRARY_PATH', qtPath + "/lib");
+          }
+      }
       // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
       if (compareVersions.compare(version, '6.0.0', '<')) {
         core.exportVariable('Qt5_Dir', qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
