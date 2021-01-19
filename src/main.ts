@@ -125,7 +125,7 @@ async function run() {
       qtPath = glob.sync(qtPath + '/**/*')[0];
 
       if (tools) {
-          core.exportVariable('iqta_tools', dir + /Tools);
+          core.exportVariable('IQTA_TOOLS', dir + /Tools);
       }
       if (process.platform == "linux") {
           if (process.env.LD_LIBRARY_PATH) {
