@@ -167,7 +167,8 @@ Example value: `--external 7z`
 ```
 
 ## More info
-The Qt bin directory is added to your `path` environment variable. `Qt5_DIR` is also set appropriately for cmake. 
+The Qt bin directory is appended to your `path` environment variable. `Qt5_DIR`/`Qt6_DIR` is also set appropriately for cmake.
+In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, and `LD_LIBRARY_PATH` are set accordingly. `IQTA_TOOLS` is set to the "Tools" directory if tools are installed as wlel.
 
 Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developers for making this easy. Please go support them, they did all of the hard work here.
 
