@@ -15,6 +15,7 @@ async function run() {
 
       const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
       let version = core.getInput("version");
+      const tools = core.getInput("tools");
 
       // Qt installer assumes basic requirements that are not installed by
       // default on Ubuntu.
@@ -44,7 +45,6 @@ async function run() {
         const mirror = core.getInput("mirror");
         const extra = core.getInput("extra");
         const modules = core.getInput("modules");
-        const tools = core.getInput("tools");
 
         //set host automatically if omitted
         if (!host) {
@@ -125,7 +125,7 @@ async function run() {
       qtPath = glob.sync(qtPath + '/**/*')[0];
 
       if (tools) {
-          core.exportVariable('IQTA_TOOLS', dir + /Tools);
+          core.exportVariable('IQTA_TOOLS', dir + "/Tools");
       }
       if (process.platform == "linux") {
           if (process.env.LD_LIBRARY_PATH) {
