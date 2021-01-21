@@ -22,8 +22,6 @@ inputs:
     default: 'true'
   modules:
     description: 'Additional Qt modules to install'
-  mirror:
-    description: 'Force a Qt mirror in case the default is not working'
   cached:
     description: "Whether or not to actually download Qt"
     default: 'false'

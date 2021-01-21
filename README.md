@@ -80,13 +80,6 @@ Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`,
 
 Default: none
 
-### `mirror`
-Forces a different Qt mirror in case there is a problem with the default.
-
-If you have problems, you can try: `http://mirrors.ocf.berkeley.edu/qt/`
-
-Default: none
-
 ### `cached`
 If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
 

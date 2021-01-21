@@ -43,7 +43,6 @@ async function run() {
         let host = core.getInput("host");
         const target = core.getInput("target");
         let arch = core.getInput("arch");
-        const mirror = core.getInput("mirror");
         const extra = core.getInput("extra");
         const modules = core.getInput("modules");
 
@@ -97,10 +96,6 @@ async function run() {
 
         let extraArgs = ["-O", `${dir}`]
 
-        if (mirror) {
-          extraArgs.push("-b");
-          extraArgs.push(mirror);
-        }
         if (extra) {
           extra.split(" ").forEach(function(string) {
             extraArgs.push(string);
