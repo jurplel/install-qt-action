@@ -154,7 +154,6 @@ Example value: `--external 7z`
         dir: '${{ github.workspace }}/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
-        mirror: 'http://mirrors.ocf.berkeley.edu/qt/'
         cached: 'false'
         setup-python: 'true'
         tools: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
