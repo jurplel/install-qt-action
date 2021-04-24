@@ -20,9 +20,16 @@ async function run() {
 
       // Qt installer assumes basic requirements that are not installed by
       // default on Ubuntu.
-      if (process.platform == "linux" && core.getInput("install-deps") == "true") {
-        await exec.exec("sudo apt-get update")
-        await exec.exec("sudo apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev -y")
+      if (process.platform == "linux") {
+        let cmd0 = "apt-get update"
+        let cmd1 = "apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev -y"
+        if (core.getInput("install-deps") == "true") {
+            await exec.exec("sudo " + cmd0)
+            await exec.exec("sudo " + cmd0)
+        } else if (core.getInput("install-deps") == "nosudo") {
+            await exec.exec(cmd0)
+            await exec.exec(cmd1)
+        }
       }
 
       if (core.getInput("cached") != "true") {

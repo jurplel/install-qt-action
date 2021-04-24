@@ -70,6 +70,7 @@ Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
 ### `install-deps`
 Whether or not to automatically install Qt dependencies on Linux (you probably want to leave this on).
+Can be set to `nosudo` to stop it from using sudo, for example on a docker container where the user already has sufficient privileges.
 
 Default: `true`
 
