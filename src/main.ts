@@ -25,7 +25,7 @@ async function run() {
         let cmd1 = "apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev -y"
         if (core.getInput("install-deps") == "true") {
             await exec.exec("sudo " + cmd0)
-            await exec.exec("sudo " + cmd0)
+            await exec.exec("sudo " + cmd1)
         } else if (core.getInput("install-deps") == "nosudo") {
             await exec.exec(cmd0)
             await exec.exec(cmd1)
