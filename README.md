@@ -42,7 +42,7 @@ This is the target architecture that your program will be built for. This is onl
 
 **Possible values:**
 
-Windows: `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win32_mingw53`, `win64_mingw73` or `win64_mingw81`
+Windows: `win64_msvc2019_64`, `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win32_mingw53`, `win64_mingw73` or `win64_mingw81`
 
 Android: `android_x86`, `android_armv7`
 
@@ -70,6 +70,7 @@ Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
 ### `install-deps`
 Whether or not to automatically install Qt dependencies on Linux (you probably want to leave this on).
+Can be set to `nosudo` to stop it from using sudo, for example on a docker container where the user already has sufficient privileges.
 
 Default: `true`
 
