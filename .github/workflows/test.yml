@@ -16,8 +16,8 @@ jobs:
         with:
           node-version: '10.x'
 
-      - name: "npm ci"
-        run: npm ci
+      - name: "npm install"
+        run: npm install
 
       - name: "npm run build"
         run: |
