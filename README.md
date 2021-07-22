@@ -75,7 +75,7 @@ Can be set to `nosudo` to stop it from using sudo, for example on a docker conta
 Default: `true`
 
 ### `modules`
-List of additional addon modules to install, with each entry seperated by a space. If you need one of these, you'll know it.
+String with whitespace delimited list of additional addon modules to install, with each entry seperated by a space. If you need one of these, you'll know it.
 
 Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`, `qtwebengine`, `qtnetworkauth`, `qtwebglplugin`, `qtscript`, `debug_info`, possibly others
 
