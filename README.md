@@ -130,12 +130,12 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==1.1.3`
+Default: `==1.2.4`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.14.0`
+Default: `==0.16.1`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
@@ -160,8 +160,8 @@ Example value: `--external 7z`
         tools: 'tools_ifw,4.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
         set-env: 'false'
         tools-only: 'false'
-        aqtversion: '==1.1.3'
-        py7zrversion: '==0.14.0'
+        aqtversion: '==1.2.4'
+        py7zrversion: '==0.16.1'
         extra: '--external 7z'
 ```
 
