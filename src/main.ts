@@ -22,7 +22,7 @@ async function run() {
       // default on Ubuntu.
       if (process.platform == "linux") {
         let cmd0 = "apt-get update"
-        let cmd1 = "apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev -y"
+        let cmd1 = "apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev libxcb-util1 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-xinerama0 libxcb-xinput0 libxcb1 -y"
         if (core.getInput("install-deps") == "true") {
             await exec.exec("sudo " + cmd0)
             await exec.exec("sudo " + cmd1)
