@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-18.04, ubuntu-16.04, windows-2019, macos-10.15]
-        version: ['5.9.0', '5.15.1']
+        version: ['5.9.0', '5.15.1', '6.2.0']
     steps:
       - uses: actions/checkout@v1
 
@@ -29,7 +29,7 @@ jobs:
         with:
           modules: 'qtwebengine'
           version: ${{ matrix.version }}
-          tools: 'tools_ifw,4.0.0,qt.tools.ifw.40'
+          tools: 'tools_ifw,4.0.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')
