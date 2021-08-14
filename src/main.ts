@@ -124,6 +124,12 @@ async function run() {
       }
 
       //set environment variables
+
+      // Weird naming scheme exception for qt 5.9
+      if (version == '5.9.0') {
+        version = '5.9'
+      }
+      
       let qtPath = dir + "/" + version;
       qtPath = glob.sync(qtPath + '/**/*')[0];
       if (setEnv == "true") {
