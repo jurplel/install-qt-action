@@ -118,7 +118,7 @@ async function run() {
         if (tools) {
           tools.split(" ").forEach(async element => {
             let elements = element.split(",");
-            await exec.exec(`${pythonName} -m aqt tool ${host} ${elements[0]} ${elements[1]} ${elements[2]}`, extraArgs);
+            await exec.exec(`${pythonName} -m aqt install-tool ${host} ${elements[0]} ${elements[1]} ${elements[2]}`, extraArgs);
           });
         }
       }
