@@ -151,7 +151,7 @@ Example value: `--external 7z`
         version: '5.15.2'
         host: 'windows'
         target: 'desktop'
-        arch: 'win64_msvc2017_64'
+        arch: 'win64_msvc2019_64'
         dir: '${{ github.workspace }}/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
