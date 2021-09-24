@@ -84,12 +84,12 @@ Default: none
 ### `cached`
 If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
 
-It can be used with [actions/cache](https://github.com/actions/cache), for example:
+It can be used with [actions/cache@v1](https://github.com/actions/cache/tree/releases/v1), for example:
 
 ```
 - name: Cache Qt
   id: cache-qt
-  uses: actions/cache@v1
+  uses: actions/cache@v1  # not v2!
   with:
     path: ../Qt
     key: ${{ runner.os }}-QtCache
