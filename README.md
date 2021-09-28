@@ -64,7 +64,7 @@ Android: `android_armv7`
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.9/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
+For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.9/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` or `Qt6_DIR` environment variable.
 
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
