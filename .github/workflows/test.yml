@@ -48,18 +48,22 @@ jobs:
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')
+        env:
+          QT_VERSION: ${{ matrix.version }}
         run: |
           cd tests/TestWithModules
           call "%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          IF exist %Qt5_DIR%/lib/cmake ( dir %Qt5_DIR%/lib/cmake ) ELSE ( dir %Qt6_DIR%/lib/cmake )
+          IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR%/lib/cmake ) ELSE ( dir %Qt6_DIR%/lib/cmake )
           qmake
         shell: cmd
 
       - name: Configure test project on unix
         if: (!startsWith(matrix.os, 'windows'))
+        env:
+          QT_VERSION: ${{ matrix.version }}
         run: |
           cd tests/TestWithModules
-          if [ -d "$Qt6_DIR/lib/cmake" ]; then
+          if [[ $QT_VERSION == 6* ]]; then
             ls "$Qt6_DIR/lib/cmake"
           else
             ls "$Qt5_DIR/lib/cmake"
