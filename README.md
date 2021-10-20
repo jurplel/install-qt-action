@@ -113,7 +113,7 @@ Default: `true`
 Qt "tools" to be installed. I would recommend looking at [aqtinstall](https://github.com/miurahr/aqtinstall)'s instructions for this, as it is an experimental feature.
 Specify the tool name, tool version, and arch separated by commas, and separate multiple tools with spaces.
 
-Example value: 'tools_ifw,4.0.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
+Example value: 'tools_ifw,4.1.1,qt.tools.ifw.41 tools_qtcreator,5.0.2-0,qt.tools.qtcreator'
 
 ### `set-env`
 Set this to false if you want to avoid setting environment variables for whatever reason.
@@ -157,7 +157,7 @@ Example value: `--external 7z`
         modules: 'qtcharts qtwebengine'
         cached: 'false'
         setup-python: 'true'
-        tools: 'tools_ifw,4.1.1,qt.tools.ifw.41 tools_qtcreator,5.0.1-0,qt.tools.qtcreator'
+        tools: 'tools_ifw,4.1.1,qt.tools.ifw.41 tools_qtcreator,5.0.2-0,qt.tools.qtcreator'
         set-env: 'false'
         tools-only: 'false'
         aqtversion: '==1.2.5'
