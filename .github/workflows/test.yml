@@ -53,7 +53,7 @@ jobs:
         run: |
           cd tests/TestWithModules
           call "%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR%/lib/cmake ) ELSE ( dir %Qt6_DIR%/lib/cmake )
+          IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR%\lib\cmake ) ELSE ( dir %Qt6_DIR%\lib\cmake )
           qmake
         shell: cmd
 
