@@ -52,6 +52,7 @@ async function run() {
         let arch = core.getInput("arch");
         const extra = core.getInput("extra");
         const modules = core.getInput("modules");
+        const archives = core.getInput("archives");
 
         //set host automatically if omitted
         if (!host) {
@@ -98,6 +99,13 @@ async function run() {
           args.push("-m");
           modules.split(" ").forEach(function(currentModule) {
             args.push(currentModule);
+          });
+        }
+
+        if (archives) {
+          args.push("--archives");
+          archives.split(" ").forEach(function(currentArchive) {
+            args.push(currentArchive);
           });
         }
 

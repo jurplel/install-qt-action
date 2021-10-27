@@ -22,6 +22,8 @@ inputs:
     default: 'true'
   modules:
     description: 'Additional Qt modules to install'
+  archives:
+    description: 'Specify which Qt archive to install'
   cached:
     description: "Whether or not to actually download Qt"
     default: 'false'
