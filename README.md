@@ -111,9 +111,13 @@ Default: `true`
 ### `tools`
 
 Qt "tools" to be installed. I would recommend looking at [aqtinstall](https://github.com/miurahr/aqtinstall)'s instructions for this, as it is an experimental feature.
-Specify the tool name, tool version, and arch separated by commas, and separate multiple tools with spaces.
+Specify the tool name and tool variant name separated by commas, and separate multiple tools with spaces.
+If you wish to install all tools available for a given tool name, you can leave off the tool variant name.
 
-Example value: 'tools_ifw,4.1.1,qt.tools.ifw.41 tools_qtcreator,5.0.2-0,qt.tools.qtcreator'
+For example, this value will install the most recent versions of QtIFW and QtCreator: 
+```
+    tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
+```
 
 ### `set-env`
 Set this to false if you want to avoid setting environment variables for whatever reason.
@@ -130,7 +134,7 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==1.2.5`
+Default: `==2.0.0`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
@@ -157,10 +161,10 @@ Example value: `--external 7z`
         modules: 'qtcharts qtwebengine'
         cached: 'false'
         setup-python: 'true'
-        tools: 'tools_ifw,4.1.1,qt.tools.ifw.41 tools_qtcreator,5.0.2-0,qt.tools.qtcreator'
+        tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'false'
         tools-only: 'false'
-        aqtversion: '==1.2.5'
+        aqtversion: '==2.0.0'
         py7zrversion: '==0.16.1'
         extra: '--external 7z'
 ```

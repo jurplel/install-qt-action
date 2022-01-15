@@ -89,7 +89,7 @@ async function run() {
         }
 
         //set args
-        let args = [`${version}`, `${host}`, `${target}`];
+        let args = [`${host}`, `${target}`, `${version}`];
         if (arch && ((host == "windows" || target == "android") || arch == "wasm_32")) {
           args.push(`${arch}`);
         }
@@ -113,12 +113,14 @@ async function run() {
 
         //run aqtinstall with args, and install tools if requested
         if (core.getInput("tools-only") != "true") {
-          await exec.exec(`${pythonName} -m aqt install`, args);
+          await exec.exec(`${pythonName} -m aqt install-qt`, args);
         }
         if (tools) {
           tools.split(" ").forEach(async element => {
-            let elements = element.split(",");
-            await exec.exec(`${pythonName} -m aqt tool ${host} ${elements[0]} ${elements[1]} ${elements[2]}`, extraArgs);
+            const elements = element.split(",");
+            const toolName = elements[0];
+            const variantName = elements.length > 1 ? elements[elements.length - 1] : "";
+            await exec.exec(`${pythonName} -m aqt install-tool ${host} ${target} ${toolName} ${variantName}`, extraArgs);
           });
         }
       }
