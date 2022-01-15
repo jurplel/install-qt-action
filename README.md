@@ -17,6 +17,8 @@ The desired version of Qt to install.
 
 Default: `5.15.2` (Latest LTS at the time of writing)
 
+**Please note that for Linux builds, Qt 6+ requires Ubuntu 20.04 or later.**
+
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
 
