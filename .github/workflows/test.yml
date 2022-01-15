@@ -36,7 +36,7 @@ jobs:
         run: |
           cd tests/TestWithModules
           call "%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          dir %Qt5_DIR%/lib/cmake
+          dir %Qt5_DIR%\lib\cmake
           qmake
         shell: cmd
           

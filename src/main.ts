@@ -4,6 +4,9 @@ import * as compareVersions from "compare-versions";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as setupPython from 'setup-python/lib/find-python'
+import path from 'path';
+
+const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
 
 async function run() {
     try {
@@ -133,23 +136,23 @@ async function run() {
       }
       
       let qtPath = dir + "/" + version;
-      qtPath = glob.sync(qtPath + '/**/*')[0];
+      qtPath = nativePath(glob.sync(qtPath + '/**/*')[0]);
       if (setEnv == "true") {
         if (tools) {
-            core.exportVariable('IQTA_TOOLS', dir + "/Tools");
+            core.exportVariable('IQTA_TOOLS', nativePath(dir + "/Tools"));
         }
         if (process.platform == "linux") {
             if (process.env.LD_LIBRARY_PATH) {
-                core.exportVariable('LD_LIBRARY_PATH', process.env.LD_LIBRARY_PATH + ":" + qtPath + "/lib");
+                core.exportVariable('LD_LIBRARY_PATH', nativePath(process.env.LD_LIBRARY_PATH + ":" + qtPath + "/lib"));
             } else {
-                core.exportVariable('LD_LIBRARY_PATH', qtPath + "/lib");
+                core.exportVariable('LD_LIBRARY_PATH', nativePath(qtPath + "/lib"));
             }
         }
         if (process.platform != "win32") {
           if (process.env.PKG_CONFIG_PATH) {
-              core.exportVariable('PKG_CONFIG_PATH', process.env.PKG_CONFIG_PATH + ":" + qtPath + "/lib/pkgconfig");
+              core.exportVariable('PKG_CONFIG_PATH', nativePath(process.env.PKG_CONFIG_PATH + ":" + qtPath + "/lib/pkgconfig"));
           } else {
-              core.exportVariable('PKG_CONFIG_PATH', qtPath + "/lib/pkgconfig");
+              core.exportVariable('PKG_CONFIG_PATH', nativePath(qtPath + "/lib/pkgconfig"));
           }
       }
         // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
@@ -159,9 +162,9 @@ async function run() {
         } else {
           core.exportVariable('Qt6_DIR', qtPath);
         }
-        core.exportVariable('QT_PLUGIN_PATH', qtPath + '/plugins');
-        core.exportVariable('QML2_IMPORT_PATH', qtPath + '/qml');
-        core.addPath(qtPath + "/bin");
+        core.exportVariable('QT_PLUGIN_PATH', nativePath(qtPath + '/plugins'));
+        core.exportVariable('QML2_IMPORT_PATH', nativePath(qtPath + '/qml'));
+        core.addPath(nativePath(qtPath + "/bin"));
       }
     } catch (error) {
       core.setFailed(error.message);
