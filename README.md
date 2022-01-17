@@ -83,6 +83,13 @@ Possible values: `qtcharts`, `qtdatavis3d`, `qtpurchasing`, `qtvirtualkeyboard`,
 
 Default: none
 
+### `archives`
+String with whitespace delimited list of Qt archives to install, with each entry seperated by a space. Typically you don't need this unless you are aiming for bare minimum installation.
+
+Example values: `qtbase`, `qtsvg`, `qtdeclarative`, `qtgamepad`, `qtgraphicaleffects`, `qtimageformats`, `qtlocation`, possibly others
+
+Default: none
+
 ### `cached`
 If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
 
