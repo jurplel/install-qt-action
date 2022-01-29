@@ -24,7 +24,7 @@ jobs:
       - name: "npm ci"
         run: npm ci
 
-      - name: "npm run build"
+      - name: "npm: build dependencies and this action"
         run: |
           npm run build-setup-python
           npm run build
