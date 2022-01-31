@@ -21,13 +21,9 @@ jobs:
         with:
           node-version: '10.x'
 
-      - name: "npm ci"
-        run: npm ci
+      - run: npm ci
 
-      - name: "npm run build"
-        run: |
-          npm run build-setup-python
-          npm run build
+      - run: npm run build
 
       - name: Install Qt5 with options
         if: startsWith(matrix.version, '5')

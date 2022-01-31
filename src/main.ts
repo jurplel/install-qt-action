@@ -3,7 +3,7 @@ import * as glob from "glob";
 import * as compareVersions from "compare-versions";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
-import * as setupPython from 'setup-python/lib/find-python'
+import * as setupPython from 'setup-python/dist'
 import path from 'path';
 
 const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;

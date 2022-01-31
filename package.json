@@ -19,7 +19,7 @@
     "@actions/exec": "^1.0.0",
     "compare-versions": "^3.6.0",
     "glob": "^7.0.0",
-    "setup-python": "github:actions/setup-python#v2"
+    "setup-python": "github:actions/setup-python#v2.3.1"
   },
   "devDependencies": {
     "@types/node": "^12.12.31",
