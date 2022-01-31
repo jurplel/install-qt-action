@@ -175,7 +175,11 @@ async function run() {
         core.addPath(nativePath(qtPath + "/bin"));
       }
     } catch (error) {
-      core.setFailed(error.message);
+      if (error instanceof Error) {
+        core.setFailed(error);
+      } else {
+        core.setFailed(`unknown error: ${error}`);
+      }
     }
 }
 
