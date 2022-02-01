@@ -126,24 +126,24 @@ async function run() {
 
       if (modules) {
         args.push("-m");
-        modules.split(" ").forEach(function (currentModule) {
+        for (const currentModule of modules.split(" ")) {
           args.push(currentModule);
-        });
+        }
       }
 
       if (archives) {
         args.push("--archives");
-        archives.split(" ").forEach(function (currentArchive) {
+        for (const currentArchive of archives.split(" ")) {
           args.push(currentArchive);
-        });
+        }
       }
 
       let extraArgs = ["-O", `${dir}`];
 
       if (extra) {
-        extra.split(" ").forEach(function (string) {
+        for (const string of extra.split(" ")) {
           extraArgs.push(string);
-        });
+        }
       }
 
       args = args.concat(extraArgs);
@@ -153,7 +153,7 @@ async function run() {
         await exec.exec(`${pythonName} -m aqt install-qt`, args);
       }
       if (tools) {
-        tools.split(" ").forEach(async (element) => {
+        for (const element of tools.split(" ")) {
           const elements = element.split(",");
           const toolName = elements[0];
           const variantName = elements.length > 1 ? elements[elements.length - 1] : "";
@@ -161,7 +161,7 @@ async function run() {
             `${pythonName} -m aqt install-tool ${host} ${target} ${toolName} ${variantName}`,
             extraArgs
           );
-        });
+        }
       }
     }
 
