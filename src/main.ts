@@ -26,54 +26,191 @@ const execPython = async (command: string, args: string[]) => {
   await exec(`${python} -m ${command} ${args.join(" ")}`);
 };
 
+class Inputs {
+  host: "windows" | "mac" | "linux";
+  target: "desktop" | "android" | "ios";
+  version: string;
+  arch: string;
+  dir: string;
+  modules: string[];
+  archives: string[];
+  tools: string[];
+  extra: string[];
+
+  setupPython: boolean;
+  installDeps: boolean | "nosudo";
+  cached: boolean;
+  toolsOnly: boolean;
+  setEnv: boolean;
+
+  aqtVersion: string;
+  py7zrVersion: string;
+
+  public get versionDir(): string {
+    // Weird naming scheme exception for qt 5.9
+    const version = this.version == "5.9.0" ? "5.9" : this.version;
+    return nativePath(`${this.dir}/${version}`);
+  }
+
+  constructor() {
+    const host = core.getInput("host");
+    // set host automatically if omitted
+    if (!host) {
+      switch (process.platform) {
+        case "win32": {
+          this.host = "windows";
+          break;
+        }
+        case "darwin": {
+          this.host = "mac";
+          break;
+        }
+        default: {
+          this.host = "linux";
+          break;
+        }
+      }
+    } else {
+      // make sure host is one of the allowed values
+      if (host == "windows" || host == "mac" || host == "linux") {
+        this.host = host;
+      } else {
+        throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux"`);
+      }
+    }
+
+    const target = core.getInput("target");
+    // make sure target is one of the allowed values
+    if (target == "desktop" || target == "android" || target == "ios") {
+      this.target = target;
+    } else {
+      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
+    }
+
+    this.version = core.getInput("version");
+
+    this.arch = core.getInput("arch");
+    // set arch automatically if omitted
+    if (!this.arch) {
+      if (this.host == "windows") {
+        if (compareVersions(this.version, ">=", "5.15.0")) {
+          this.arch = "win64_msvc2019_64";
+        } else if (compareVersions(this.version, "<", "5.6.0")) {
+          this.arch = "win64_msvc2013_64";
+        } else if (compareVersions(this.version, "<", "5.9.0")) {
+          this.arch = "win64_msvc2015_64";
+        } else {
+          this.arch = "win64_msvc2017_64";
+        }
+      } else if (this.target == "android") {
+        this.arch = "android_armv7";
+      }
+    }
+
+    const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
+    this.dir = `${dir}/Qt`;
+
+    const modules = core.getInput("modules");
+    if (modules) {
+      this.modules = modules.split(" ");
+    } else {
+      this.modules = [];
+    }
+
+    const archives = core.getInput("archives");
+    if (archives) {
+      this.archives = archives.split(" ");
+    } else {
+      this.archives = [];
+    }
+
+    const tools = core.getInput("tools");
+    if (tools) {
+      this.tools = [];
+      for (const tool of tools.split(" ")) {
+        // the tools inputs have the tool name and tool variant delimited by a comma
+        // aqt needs a space instead
+        this.tools.push(tool.replace(/,/g, " "));
+      }
+    } else {
+      this.tools = [];
+    }
+
+    const extra = core.getInput("extra");
+    if (extra) {
+      this.extra = extra.split(" ");
+    } else {
+      this.extra = [];
+    }
+
+    this.setupPython = core.getInput("setup-python") == "true";
+
+    const installDeps = core.getInput("install-deps");
+    if (installDeps == "nosudo") {
+      this.installDeps = "nosudo";
+    } else {
+      this.installDeps = installDeps == "true";
+    }
+
+    this.cached = core.getInput("cached") == "true";
+
+    this.toolsOnly = core.getInput("tools-only") == "true";
+
+    this.setEnv = core.getInput("set-env") == "true";
+
+    this.aqtVersion = core.getInput("aqtversion");
+
+    this.py7zrVersion = core.getInput("py7zrversion");
+  }
+}
+
 async function run() {
   try {
-    if (core.getInput("setup-python") == "true") {
+    const inputs = new Inputs();
+
+    if (inputs.setupPython) {
       // Use @actions/setup-python to ensure that python >=3.6 is installed
       const installed = await setupPython(">=3.6", "x64");
       core.info(`Successfully setup ${installed.impl} (${installed.version})`);
     }
 
-    const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
-    let version = core.getInput("version");
-    const tools = core.getInput("tools");
-    const setEnv = core.getInput("set-env");
-
     // Qt installer assumes basic requirements that are not installed by
     // default on Ubuntu.
     if (process.platform == "linux") {
-      const dependencies = [
-        "build-essential",
-        "libgl1-mesa-dev",
-        "libpulse-dev",
-        "libxcb-glx0",
-        "libxcb-icccm4",
-        "libxcb-image0",
-        "libxcb-keysyms1",
-        "libxcb-randr0",
-        "libxcb-render-util0",
-        "libxcb-render0",
-        "libxcb-shape0",
-        "libxcb-shm0",
-        "libxcb-sync1",
-        "libxcb-util1",
-        "libxcb-xfixes0",
-        "libxcb-xinerama0",
-        "libxcb1",
-        "libxkbcommon-x11-0",
-      ].join(" ");
-      const updateCommand = "apt-get update";
-      const installCommand = `apt-get install ${dependencies} -y`;
-      if (core.getInput("install-deps") == "true") {
-        await exec(`sudo ${updateCommand}`);
-        await exec(`sudo ${installCommand}`);
-      } else if (core.getInput("install-deps") == "nosudo") {
-        await exec(updateCommand);
-        await exec(installCommand);
+      if (inputs.installDeps) {
+        const dependencies = [
+          "build-essential",
+          "libgl1-mesa-dev",
+          "libpulse-dev",
+          "libxcb-glx0",
+          "libxcb-icccm4",
+          "libxcb-image0",
+          "libxcb-keysyms1",
+          "libxcb-randr0",
+          "libxcb-render-util0",
+          "libxcb-render0",
+          "libxcb-shape0",
+          "libxcb-shm0",
+          "libxcb-sync1",
+          "libxcb-util1",
+          "libxcb-xfixes0",
+          "libxcb-xinerama0",
+          "libxcb1",
+          "libxkbcommon-x11-0",
+        ].join(" ");
+        const updateCommand = "apt-get update";
+        const installCommand = `apt-get install ${dependencies} -y`;
+        if (inputs.installDeps == "nosudo") {
+          await exec(updateCommand);
+          await exec(installCommand);
+        } else {
+          await exec(`sudo ${updateCommand}`);
+          await exec(`sudo ${installCommand}`);
+        }
       }
     }
 
-    if (core.getInput("cached") != "true") {
+    if (!inputs.cached) {
       // 7-zip is required, and not included on macOS
       if (process.platform == "darwin") {
         await exec("brew install p7zip");
@@ -82,108 +219,52 @@ async function run() {
       await execPython("pip install", [
         "setuptools",
         "wheel",
-        `"py7zr${core.getInput("py7zrversion")}"`,
-        `"aqtinstall${core.getInput("aqtversion")}"`,
+        `"py7zr${inputs.py7zrVersion}"`,
+        `"aqtinstall${inputs.aqtVersion}"`,
       ]);
 
-      let host = core.getInput("host");
-      const target = core.getInput("target");
-      let arch = core.getInput("arch");
-      const extra = core.getInput("extra");
-      const modules = core.getInput("modules");
-      const archives = core.getInput("archives");
-
-      // set host automatically if omitted
-      if (!host) {
-        switch (process.platform) {
-          case "win32": {
-            host = "windows";
-            break;
-          }
-          case "darwin": {
-            host = "mac";
-            break;
-          }
-          default: {
-            host = "linux";
-            break;
-          }
-        }
-      }
-
-      // set arch automatically if omitted
-      if (!arch) {
-        if (host == "windows") {
-          if (compareVersions(version, ">=", "5.15.0")) {
-            arch = "win64_msvc2019_64";
-          } else if (compareVersions(version, "<", "5.6.0")) {
-            arch = "win64_msvc2013_64";
-          } else if (compareVersions(version, "<", "5.9.0")) {
-            arch = "win64_msvc2015_64";
-          } else {
-            arch = "win64_msvc2017_64";
-          }
-        } else if (target == "android") {
-          arch = "android_armv7";
-        }
-      }
-
       // set args
-      let args = [host, target, version];
-      if (arch && (host == "windows" || target == "android" || arch == "wasm_32")) {
-        args.push(arch);
+      let args = [inputs.host, inputs.target, inputs.version];
+
+      if (inputs.arch) {
+        args.push(inputs.arch);
       }
 
-      if (modules) {
+      if (inputs.modules.length) {
         args.push("-m");
-        for (const currentModule of modules.split(" ")) {
+        for (const currentModule of inputs.modules) {
           args.push(currentModule);
         }
       }
 
-      if (archives) {
+      if (inputs.archives.length) {
         args.push("--archives");
-        for (const currentArchive of archives.split(" ")) {
+        for (const currentArchive of inputs.archives) {
           args.push(currentArchive);
         }
       }
 
-      const extraArgs = ["-O", dir];
+      const extraArgs = ["-O", inputs.dir];
 
-      if (extra) {
-        for (const string of extra.split(" ")) {
-          extraArgs.push(string);
-        }
-      }
+      extraArgs.push(...inputs.extra);
 
       args = args.concat(extraArgs);
 
       // run aqtinstall with args, and install tools if requested
-      if (core.getInput("tools-only") != "true") {
+      if (!inputs.toolsOnly) {
         await execPython("aqt install-qt", args);
       }
-      if (tools) {
-        for (const currentTool of tools.split(" ")) {
-          // the tools inputs have the tool name and tool variant delimited by a comma
-          // aqt needs a space instead
-          const tool = currentTool.replace(",", " ");
-          await execPython("aqt install-tool", [host, target, tool, ...extraArgs]);
-        }
+      for (const tool of inputs.tools) {
+        await execPython("aqt install-tool", [inputs.host, inputs.target, tool, ...extraArgs]);
       }
     }
 
     // set environment variables
 
-    // Weird naming scheme exception for qt 5.9
-    if (version == "5.9.0") {
-      version = "5.9";
-    }
-
-    let qtPath = dir + "/" + version;
-    qtPath = nativePath(glob.sync(qtPath + "/**/*")[0]);
-    if (setEnv == "true") {
-      if (tools) {
-        core.exportVariable("IQTA_TOOLS", nativePath(dir + "/Tools"));
+    const qtPath = nativePath(glob.sync(inputs.versionDir + "/**/*")[0]);
+    if (inputs.setEnv) {
+      if (inputs.tools) {
+        core.exportVariable("IQTA_TOOLS", nativePath(inputs.dir + "/Tools"));
       }
       if (process.platform == "linux") {
         setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(qtPath + "/lib"));
@@ -192,7 +273,7 @@ async function run() {
         setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(qtPath + "/lib/pkgconfig"));
       }
       // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
-      if (compareVersions(version, "<", "6.0.0")) {
+      if (compareVersions(inputs.version, "<", "6.0.0")) {
         core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
         core.exportVariable("Qt5_DIR", qtPath);
       } else {
