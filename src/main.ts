@@ -110,7 +110,7 @@ async function run() {
           } else {
             arch = "win64_msvc2017_64";
           }
-        } else if (host == "android") {
+        } else if (target == "android") {
           arch = "android_armv7";
         }
       }
