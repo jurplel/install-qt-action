@@ -1,6 +1,9 @@
+import * as crypto from "crypto";
+import * as os from "os";
 import * as path from "path";
 import * as process from "process";
 
+import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 import { exec } from "@actions/exec";
 import { findPythonVersion as setupPython } from /* @actions/ */ "setup-python/lib/find-python";
@@ -39,18 +42,14 @@ class Inputs {
 
   setupPython: boolean;
   installDeps: boolean | "nosudo";
-  cached: boolean;
+  cache: boolean;
+  cacheKeyPrefix: string;
+  manuallyCached: boolean;
   toolsOnly: boolean;
   setEnv: boolean;
 
   aqtVersion: string;
   py7zrVersion: string;
-
-  public get versionDir(): string {
-    // Weird naming scheme exception for qt 5.9
-    const version = this.version == "5.9.0" ? "5.9" : this.version;
-    return nativePath(`${this.dir}/${version}`);
-  }
 
   constructor() {
     const host = core.getInput("host");
@@ -152,7 +151,11 @@ class Inputs {
       this.installDeps = installDeps == "true";
     }
 
-    this.cached = core.getInput("cached") == "true";
+    this.cache = core.getInput("cache") == "true";
+
+    this.cacheKeyPrefix = core.getInput("cache-key-prefix");
+
+    this.manuallyCached = core.getInput("manually-cached") == "true";
 
     this.toolsOnly = core.getInput("tools-only") == "true";
 
@@ -161,6 +164,46 @@ class Inputs {
     this.aqtVersion = core.getInput("aqtversion");
 
     this.py7zrVersion = core.getInput("py7zrversion");
+  }
+
+  public get versionDir(): string {
+    // Weird naming scheme exception for qt 5.9
+    const version = this.version == "5.9.0" ? "5.9" : this.version;
+    return nativePath(`${this.dir}/${version}`);
+  }
+
+  public get cacheKey(): string {
+    let cacheKey = this.cacheKeyPrefix;
+    for (const keyStringArray of [
+      [
+        this.host,
+        os.release(),
+        this.target,
+        this.arch,
+        this.version,
+        this.dir,
+        this.py7zrVersion,
+        this.aqtVersion,
+      ],
+      this.modules,
+      this.archives,
+      this.extra,
+      this.tools,
+    ]) {
+      for (const keyString of keyStringArray) {
+        if (keyString) {
+          cacheKey += `-${keyString}`;
+        }
+      }
+    }
+    // cache keys cannot contain commas
+    cacheKey = cacheKey.replace(/,/g, "-");
+    // cache keys cannot be larger than 512 characters
+    if (cacheKey.length > 512) {
+      const hashedCacheKey = crypto.createHash("sha256").update(cacheKey).digest("hex");
+      cacheKey = `${this.cacheKeyPrefix}-${hashedCacheKey}`;
+    }
+    return cacheKey;
   }
 }
 
@@ -210,7 +253,24 @@ async function run() {
       }
     }
 
-    if (!inputs.cached) {
+    // restore automatic cache
+    let cacheHitKey: string | undefined;
+    if (inputs.cache) {
+      if (inputs.manuallyCached) {
+        core.warning("Automatic cache disabled because manual cache is enabled");
+      } else {
+        cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
+        if (cacheHitKey) {
+          core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+        } else {
+          core.info("Automatic cache miss, will cache this run");
+        }
+      }
+    }
+
+    // install qt and tools if not cached
+    const hasCache = inputs.manuallyCached || (inputs.cache && cacheHitKey);
+    if (!hasCache) {
       // 7-zip is required, and not included on macOS
       if (process.platform == "darwin") {
         await exec("brew install p7zip");
@@ -262,8 +322,17 @@ async function run() {
       }
     }
 
-    // set environment variables
+    // save automatic cache
+    if (!hasCache && inputs.cache) {
+      if (inputs.manuallyCached) {
+        core.warning("Automatic cache disabled because manual cache is enabled");
+      } else {
+        const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
+        core.info(`Automatic cache saved with id ${cacheId}`);
+      }
+    }
 
+    // set environment variables
     const qtPath = nativePath(glob.sync(inputs.versionDir + "/**/*")[0]);
     if (inputs.setEnv) {
       if (inputs.tools) {

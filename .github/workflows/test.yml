@@ -1,6 +1,6 @@
 name: CI
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   test:
@@ -19,6 +19,9 @@ jobs:
           - "5.9.0"
           - "5.15.1"
           - "6.2.0"
+        cache:
+          - cached
+          - uncached
 
         # Ubuntu 18 is not a supported target for Qt 6: https://www.qt.io/blog/qt6-development-hosts-and-targets
         exclude:
@@ -43,6 +46,7 @@ jobs:
           modules: qtwebengine
           version: ${{ matrix.version }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
+          cache: ${{ matrix.cache == 'cached' }}
 
       - name: Install Qt6 with options
         if: startsWith(matrix.version, '6.2')
@@ -52,6 +56,7 @@ jobs:
           modules: qtwebengine qtpositioning qtwebchannel
           version: ${{ matrix.version }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
+          cache: ${{ matrix.cache == 'cached' }}
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')

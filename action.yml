@@ -24,7 +24,13 @@ inputs:
     description: Additional Qt modules to install
   archives:
     description: Specify which Qt archive to install
-  cached:
+  cache:
+    description: Whether or not to cache Qt automatically
+    default: false
+  cache-key-prefix:
+    description: Cache key prefix for automatic cache
+    default: install-qt-action
+  manually-cached:
     description: Whether or not to actually download Qt
     default: false
   setup-python:
