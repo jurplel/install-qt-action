@@ -8,8 +8,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-18.04, windows-2019, macos-10.15]
-        version: ["5.9.0", "5.15.1", "6.2.0"]
+        os:
+          - ubuntu-20.04
+          - ubuntu-18.04
+          - windows-2022
+          - windows-2019
+          - macos-11
+          - macos-10.15
+        version:
+          - "5.9.0"
+          - "5.15.1"
+          - "6.2.0"
 
         # Ubuntu 18 is not a supported target for Qt 6: https://www.qt.io/blog/qt6-development-hosts-and-targets
         exclude:
@@ -50,7 +59,7 @@ jobs:
           QT_VERSION: ${{ matrix.version }}
         run: |
           cd tests/TestWithModules
-          call "%programfiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          for /f "delims=" %%d in ( 'vswhere.exe -latest -property installationPath' ) do @( call "%%d\VC\Auxiliary\Build\vcvars64.bat" )
           IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR%\lib\cmake ) ELSE ( dir %Qt6_DIR%\lib\cmake )
           qmake
         shell: cmd
