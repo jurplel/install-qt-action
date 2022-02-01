@@ -9,7 +9,22 @@ import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
 
 const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
+
 const compareVersions = (v1: string, op: CompareOperator, v2: string) => compare(v1, v2, op);
+
+const setOrAppendEnvVar = (name: string, value: string) => {
+  const oldValue = process.env[name];
+  let newValue = value;
+  if (oldValue) {
+    newValue = `${oldValue}:${newValue}`;
+  }
+  core.exportVariable(name, newValue);
+};
+
+const execPython = async (command: string, args: string[]) => {
+  const python = process.platform == "win32" ? "python" : "python3";
+  await exec(`${python} -m ${command} ${args.join(" ")}`);
+};
 
 async function run() {
   try {
@@ -64,15 +79,13 @@ async function run() {
         await exec("brew install p7zip");
       }
 
-      // accomodate for differences in python 3 executable name
-      let pythonName = "python3";
-      if (process.platform == "win32") {
-        pythonName = "python";
-      }
+      await execPython("pip install", [
+        "setuptools",
+        "wheel",
+        `"py7zr${core.getInput("py7zrversion")}"`,
+        `"aqtinstall${core.getInput("aqtversion")}"`,
+      ]);
 
-      await exec(`${pythonName} -m pip install setuptools wheel`);
-      await exec(`${pythonName} -m pip install "py7zr${core.getInput("py7zrversion")}"`);
-      await exec(`${pythonName} -m pip install "aqtinstall${core.getInput("aqtversion")}"`);
       let host = core.getInput("host");
       const target = core.getInput("target");
       let arch = core.getInput("arch");
@@ -147,14 +160,14 @@ async function run() {
 
       // run aqtinstall with args, and install tools if requested
       if (core.getInput("tools-only") != "true") {
-        await exec(`${pythonName} -m aqt install-qt`, args);
+        await execPython("aqt install-qt", args);
       }
       if (tools) {
         for (const currentTool of tools.split(" ")) {
           // the tools inputs have the tool name and tool variant delimited by a comma
           // aqt needs a space instead
           const tool = currentTool.replace(",", " ");
-          await exec(`${pythonName} -m aqt install-tool ${host} ${target} ${tool}`, extraArgs);
+          await execPython("aqt install-tool", [host, target, tool, ...extraArgs]);
         }
       }
     }
@@ -173,24 +186,10 @@ async function run() {
         core.exportVariable("IQTA_TOOLS", nativePath(dir + "/Tools"));
       }
       if (process.platform == "linux") {
-        if (process.env.LD_LIBRARY_PATH) {
-          core.exportVariable(
-            "LD_LIBRARY_PATH",
-            nativePath(process.env.LD_LIBRARY_PATH + ":" + qtPath + "/lib")
-          );
-        } else {
-          core.exportVariable("LD_LIBRARY_PATH", nativePath(qtPath + "/lib"));
-        }
+        setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(qtPath + "/lib"));
       }
       if (process.platform != "win32") {
-        if (process.env.PKG_CONFIG_PATH) {
-          core.exportVariable(
-            "PKG_CONFIG_PATH",
-            nativePath(process.env.PKG_CONFIG_PATH + ":" + qtPath + "/lib/pkgconfig")
-          );
-        } else {
-          core.exportVariable("PKG_CONFIG_PATH", nativePath(qtPath + "/lib/pkgconfig"));
-        }
+        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(qtPath + "/lib/pkgconfig"));
       }
       // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
       if (compareVersions(version, "<", "6.0.0")) {
