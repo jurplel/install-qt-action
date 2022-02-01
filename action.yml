@@ -47,5 +47,5 @@ inputs:
   extra:
     description: "Any extra arguments to append to the back"
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'lib/main.js'
