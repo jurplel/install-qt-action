@@ -1,18 +1,21 @@
+import * as path from "path";
 import * as process from "process";
-import * as glob from "glob";
-import * as compareVersions from "compare-versions";
+
 import * as core from "@actions/core";
-import * as exec from "@actions/exec";
-import * as setupPython from "setup-python/lib/find-python";
-import path from "path";
+import { exec } from "@actions/exec";
+import { findPythonVersion as setupPython } from /* @actions/ */ "setup-python/lib/find-python";
+
+import * as glob from "glob";
+import { compare, CompareOperator } from "compare-versions";
 
 const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
+const compareVersions = (v1: string, op: CompareOperator, v2: string) => compare(v1, v2, op);
 
 async function run() {
   try {
     if (core.getInput("setup-python") == "true") {
-      // Use setup-python to ensure that python >=3.6 is installed
-      const installed = await setupPython.findPythonVersion(">=3.6", "x64");
+      // Use @actions/setup-python to ensure that python >=3.6 is installed
+      const installed = await setupPython(">=3.6", "x64");
       core.info(`Successfully setup ${installed.impl} (${installed.version})`);
     }
 
@@ -47,18 +50,18 @@ async function run() {
       const updateCommand = "apt-get update";
       const installCommand = `apt-get install ${dependencies} -y`;
       if (core.getInput("install-deps") == "true") {
-        await exec.exec("sudo " + updateCommand);
-        await exec.exec("sudo " + installCommand);
+        await exec("sudo " + updateCommand);
+        await exec("sudo " + installCommand);
       } else if (core.getInput("install-deps") == "nosudo") {
-        await exec.exec(updateCommand);
-        await exec.exec(installCommand);
+        await exec(updateCommand);
+        await exec(installCommand);
       }
     }
 
     if (core.getInput("cached") != "true") {
       // 7-zip is required, and not included on macOS
       if (process.platform == "darwin") {
-        await exec.exec("brew install p7zip");
+        await exec("brew install p7zip");
       }
 
       //accomodate for differences in python 3 executable name
@@ -67,11 +70,9 @@ async function run() {
         pythonName = "python";
       }
 
-      await exec.exec(pythonName + " -m pip install setuptools wheel");
-      await exec.exec(pythonName + ' -m pip install "py7zr' + core.getInput("py7zrversion") + '"');
-      await exec.exec(
-        pythonName + ' -m pip install "aqtinstall' + core.getInput("aqtversion") + '"'
-      );
+      await exec(pythonName + " -m pip install setuptools wheel");
+      await exec(pythonName + ' -m pip install "py7zr' + core.getInput("py7zrversion") + '"');
+      await exec(pythonName + ' -m pip install "aqtinstall' + core.getInput("aqtversion") + '"');
       let host = core.getInput("host");
       const target = core.getInput("target");
       let arch = core.getInput("arch");
@@ -100,17 +101,13 @@ async function run() {
       //set arch automatically if omitted
       if (!arch) {
         if (host == "windows") {
-          if (compareVersions.compare(version, "5.15.0", ">=")) {
-            // if version is greater than or equal to 5.15.0
+          if (compareVersions(version, ">=", "5.15.0")) {
             arch = "win64_msvc2019_64";
-          } else if (compareVersions.compare(version, "5.6.0", "<")) {
-            // if version earlier than 5.6
+          } else if (compareVersions(version, "<", "5.6.0")) {
             arch = "win64_msvc2013_64";
-          } else if (compareVersions.compare(version, "5.9.0", "<")) {
-            // if version is earlier than 5.9
+          } else if (compareVersions(version, "<", "5.9.0")) {
             arch = "win64_msvc2015_64";
           } else {
-            // otherwise
             arch = "win64_msvc2017_64";
           }
         } else if (host == "android") {
@@ -150,14 +147,14 @@ async function run() {
 
       //run aqtinstall with args, and install tools if requested
       if (core.getInput("tools-only") != "true") {
-        await exec.exec(`${pythonName} -m aqt install-qt`, args);
+        await exec(`${pythonName} -m aqt install-qt`, args);
       }
       if (tools) {
         for (const element of tools.split(" ")) {
           const elements = element.split(",");
           const toolName = elements[0];
           const variantName = elements.length > 1 ? elements[elements.length - 1] : "";
-          await exec.exec(
+          await exec(
             `${pythonName} -m aqt install-tool ${host} ${target} ${toolName} ${variantName}`,
             extraArgs
           );
@@ -199,7 +196,7 @@ async function run() {
         }
       }
       // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
-      if (compareVersions.compare(version, "6.0.0", "<")) {
+      if (compareVersions(version, "<", "6.0.0")) {
         core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
         core.exportVariable("Qt5_DIR", qtPath);
       } else {
