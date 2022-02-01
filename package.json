@@ -6,7 +6,9 @@
   "main": "lib/main.js",
   "scripts": {
     "postinstall": "npm install --prefix node_modules/setup-python && node -e \"require('fs').rmSync('node_modules/setup-python/lib', { recursive: true, force: true })\" && npm run build --prefix node_modules/setup-python -- --declaration --declarationMap",
-    "build": "tsc"
+    "build": "tsc",
+    "check": "prettier --check .",
+    "lint": "prettier --write ."
   },
   "repository": {
     "type": "git",
@@ -25,6 +27,7 @@
     "@types/glob": "^7.2.0",
     "@types/node": "^12.12.31",
     "@types/semver": "^7.1.0",
+    "prettier": "2.5.1",
     "typescript": "^3.8.3"
   }
 }

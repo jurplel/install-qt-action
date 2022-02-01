@@ -1,4 +1,4 @@
-name: Test Installing Qt
+name: CI
 
 on: [push, pull_request]
 
@@ -8,12 +8,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-18.04, windows-2019, macos-10.15]
-        version: ['5.9.0', '5.15.1', '6.2.0']
+        version: ["5.9.0", "5.15.1", "6.2.0"]
 
         # Ubuntu 18 is not a supported target for Qt 6: https://www.qt.io/blog/qt6-development-hosts-and-targets
         exclude:
           - os: ubuntu-18.04
-            version: '6.2.0'
+            version: "6.2.0"
     steps:
       - uses: actions/checkout@v3
 
@@ -30,18 +30,18 @@ jobs:
         if: startsWith(matrix.version, '5')
         uses: ./
         with:
-          modules: 'qtwebengine'
+          modules: qtwebengine
           version: ${{ matrix.version }}
-          tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
+          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
 
       - name: Install Qt6 with options
         if: startsWith(matrix.version, '6.2')
         uses: ./
         with:
           # In Qt 6.2.0, qtwebengine requires qtpositioning and qtwebchannel
-          modules: 'qtwebengine qtpositioning qtwebchannel'
+          modules: qtwebengine qtpositioning qtwebchannel
           version: ${{ matrix.version }}
-          tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
+          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')
@@ -67,4 +67,3 @@ jobs:
           fi
           qmake
         shell: bash
-
