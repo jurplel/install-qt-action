@@ -24,15 +24,34 @@ async function run() {
     // Qt installer assumes basic requirements that are not installed by
     // default on Ubuntu.
     if (process.platform == "linux") {
-      let cmd0 = "apt-get update";
-      let cmd1 =
-        "apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev libxcb-util1 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-xinerama0 libxcb1 -y";
+      const dependencies = [
+        "build-essential",
+        "libgl1-mesa-dev",
+        "libpulse-dev",
+        "libxcb-glx0",
+        "libxcb-icccm4",
+        "libxcb-image0",
+        "libxcb-keysyms1",
+        "libxcb-randr0",
+        "libxcb-render-util0",
+        "libxcb-render0",
+        "libxcb-shape0",
+        "libxcb-shm0",
+        "libxcb-sync1",
+        "libxcb-util1",
+        "libxcb-xfixes0",
+        "libxcb-xinerama0",
+        "libxcb1",
+        "libxkbcommon-x11-0",
+      ].join(" ");
+      const updateCommand = "apt-get update";
+      const installCommand = `apt-get install ${dependencies} -y`;
       if (core.getInput("install-deps") == "true") {
-        await exec.exec("sudo " + cmd0);
-        await exec.exec("sudo " + cmd1);
+        await exec.exec("sudo " + updateCommand);
+        await exec.exec("sudo " + installCommand);
       } else if (core.getInput("install-deps") == "nosudo") {
-        await exec.exec(cmd0);
-        await exec.exec(cmd1);
+        await exec.exec(updateCommand);
+        await exec.exec(installCommand);
       }
     }
 
