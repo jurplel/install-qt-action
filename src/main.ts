@@ -216,6 +216,7 @@ async function run() {
         await exec("brew install p7zip");
       }
 
+      // install aqtinstall
       await execPython("pip install", [
         "setuptools",
         "wheel",
@@ -223,39 +224,41 @@ async function run() {
         `"aqtinstall${inputs.aqtVersion}"`,
       ]);
 
-      // set args
-      let args = [inputs.host, inputs.target, inputs.version];
-
-      if (inputs.arch) {
-        args.push(inputs.arch);
-      }
-
-      if (inputs.modules.length) {
-        args.push("-m");
-        for (const currentModule of inputs.modules) {
-          args.push(currentModule);
-        }
-      }
-
-      if (inputs.archives.length) {
-        args.push("--archives");
-        for (const currentArchive of inputs.archives) {
-          args.push(currentArchive);
-        }
-      }
-
-      const extraArgs = ["-O", inputs.dir];
-
-      extraArgs.push(...inputs.extra);
-
-      args = args.concat(extraArgs);
-
-      // run aqtinstall with args, and install tools if requested
+      // install qt
       if (!inputs.toolsOnly) {
-        await execPython("aqt install-qt", args);
+        const qtArgs = [inputs.host, inputs.target, inputs.version];
+
+        if (inputs.arch) {
+          qtArgs.push(inputs.arch);
+        }
+
+        qtArgs.push("--outputdir", inputs.dir);
+
+        if (inputs.modules.length) {
+          qtArgs.push("--modules");
+          for (const module of inputs.modules) {
+            qtArgs.push(module);
+          }
+        }
+
+        if (inputs.archives.length) {
+          qtArgs.push("--archives");
+          for (const archive of inputs.archives) {
+            qtArgs.push(archive);
+          }
+        }
+
+        qtArgs.push(...inputs.extra);
+
+        await execPython("aqt install-qt", qtArgs);
       }
+
+      // install tools
       for (const tool of inputs.tools) {
-        await execPython("aqt install-tool", [inputs.host, inputs.target, tool, ...extraArgs]);
+        const toolArgs = [inputs.host, inputs.target, tool];
+        toolArgs.push("--outputdir", inputs.dir);
+        toolArgs.push(...inputs.extra);
+        await execPython("aqt install-tool", toolArgs);
       }
     }
 
