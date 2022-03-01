@@ -13,9 +13,11 @@ import { compare, CompareOperator } from "compare-versions";
 
 const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
 
-const compareVersions = (v1: string, op: CompareOperator, v2: string) => compare(v1, v2, op);
+const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
+  return compare(v1, v2, op);
+};
 
-const setOrAppendEnvVar = (name: string, value: string) => {
+const setOrAppendEnvVar = (name: string, value: string): void => {
   const oldValue = process.env[name];
   let newValue = value;
   if (oldValue) {
@@ -24,36 +26,36 @@ const setOrAppendEnvVar = (name: string, value: string) => {
   core.exportVariable(name, newValue);
 };
 
-const execPython = async (command: string, args: string[]) => {
-  const python = process.platform == "win32" ? "python" : "python3";
-  await exec(`${python} -m ${command} ${args.join(" ")}`);
+const execPython = async (command: string, args: readonly string[]): Promise<number> => {
+  const python = process.platform === "win32" ? "python" : "python3";
+  return exec(`${python} -m ${command} ${args.join(" ")}`);
 };
 
 class Inputs {
-  host: "windows" | "mac" | "linux";
-  target: "desktop" | "android" | "ios";
-  version: string;
-  arch: string;
-  dir: string;
-  modules: string[];
-  archives: string[];
-  tools: string[];
-  extra: string[];
+  readonly host: "windows" | "mac" | "linux";
+  readonly target: "desktop" | "android" | "ios";
+  readonly version: string;
+  readonly arch: string;
+  readonly dir: string;
+  readonly modules: string[];
+  readonly archives: string[];
+  readonly tools: string[];
+  readonly extra: string[];
 
-  setupPython: boolean;
-  installDeps: boolean | "nosudo";
-  cache: boolean;
-  cacheKeyPrefix: string;
-  manuallyCached: boolean;
-  toolsOnly: boolean;
-  setEnv: boolean;
+  readonly setupPython: boolean;
+  readonly installDeps: boolean | "nosudo";
+  readonly cache: boolean;
+  readonly cacheKeyPrefix: string;
+  readonly manuallyCached: boolean;
+  readonly toolsOnly: boolean;
+  readonly setEnv: boolean;
 
-  aqtVersion: string;
-  py7zrVersion: string;
+  readonly aqtVersion: string;
+  readonly py7zrVersion: string;
 
   constructor() {
     const host = core.getInput("host");
-    // set host automatically if omitted
+    // Set host automatically if omitted
     if (!host) {
       switch (process.platform) {
         case "win32": {
@@ -70,8 +72,8 @@ class Inputs {
         }
       }
     } else {
-      // make sure host is one of the allowed values
-      if (host == "windows" || host == "mac" || host == "linux") {
+      // Make sure host is one of the allowed values
+      if (host === "windows" || host === "mac" || host === "linux") {
         this.host = host;
       } else {
         throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux"`);
@@ -79,8 +81,8 @@ class Inputs {
     }
 
     const target = core.getInput("target");
-    // make sure target is one of the allowed values
-    if (target == "desktop" || target == "android" || target == "ios") {
+    // Make sure target is one of the allowed values
+    if (target === "desktop" || target === "android" || target === "ios") {
       this.target = target;
     } else {
       throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
@@ -89,9 +91,9 @@ class Inputs {
     this.version = core.getInput("version");
 
     this.arch = core.getInput("arch");
-    // set arch automatically if omitted
+    // Set arch automatically if omitted
     if (!this.arch) {
-      if (this.host == "windows") {
+      if (this.host === "windows") {
         if (compareVersions(this.version, ">=", "5.15.0")) {
           this.arch = "win64_msvc2019_64";
         } else if (compareVersions(this.version, "<", "5.6.0")) {
@@ -101,12 +103,15 @@ class Inputs {
         } else {
           this.arch = "win64_msvc2017_64";
         }
-      } else if (this.target == "android") {
+      } else if (this.target === "android") {
         this.arch = "android_armv7";
       }
     }
 
     const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
+    if (!dir) {
+      throw TypeError(`"dir" input may not be empty`);
+    }
     this.dir = `${dir}/Qt`;
 
     const modules = core.getInput("modules");
@@ -127,8 +132,8 @@ class Inputs {
     if (tools) {
       this.tools = [];
       for (const tool of tools.split(" ")) {
-        // the tools inputs have the tool name and tool variant delimited by a comma
-        // aqt needs a space instead
+        // The tools inputs have the tool name, variant, and arch delimited by a comma
+        // aqt expects spaces instead
         this.tools.push(tool.replace(/,/g, " "));
       }
     } else {
@@ -142,24 +147,24 @@ class Inputs {
       this.extra = [];
     }
 
-    this.setupPython = core.getInput("setup-python") == "true";
+    this.setupPython = Inputs.getBoolInput("setup-python");
 
-    const installDeps = core.getInput("install-deps");
-    if (installDeps == "nosudo") {
+    const installDeps = core.getInput("install-deps").toLowerCase();
+    if (installDeps === "nosudo") {
       this.installDeps = "nosudo";
     } else {
-      this.installDeps = installDeps == "true";
+      this.installDeps = installDeps === "true";
     }
 
-    this.cache = core.getInput("cache") == "true";
+    this.cache = Inputs.getBoolInput("cache");
 
     this.cacheKeyPrefix = core.getInput("cache-key-prefix");
 
-    this.manuallyCached = core.getInput("manually-cached") == "true";
+    this.manuallyCached = Inputs.getBoolInput("manually-cached");
 
-    this.toolsOnly = core.getInput("tools-only") == "true";
+    this.toolsOnly = Inputs.getBoolInput("tools-only");
 
-    this.setEnv = core.getInput("set-env") == "true";
+    this.setEnv = Inputs.getBoolInput("set-env");
 
     this.aqtVersion = core.getInput("aqtversion");
 
@@ -168,7 +173,7 @@ class Inputs {
 
   public get versionDir(): string {
     // Weird naming scheme exception for qt 5.9
-    const version = this.version == "5.9.0" ? "5.9" : this.version;
+    const version = this.version === "5.9.0" ? "5.9" : this.version;
     return nativePath(`${this.dir}/${version}`);
   }
 
@@ -196,30 +201,35 @@ class Inputs {
         }
       }
     }
-    // cache keys cannot contain commas
+    // Cache keys cannot contain commas
     cacheKey = cacheKey.replace(/,/g, "-");
-    // cache keys cannot be larger than 512 characters
-    if (cacheKey.length > 512) {
+    // Cache keys cannot be larger than 512 characters
+    const maxKeyLength = 512;
+    if (cacheKey.length > maxKeyLength) {
       const hashedCacheKey = crypto.createHash("sha256").update(cacheKey).digest("hex");
       cacheKey = `${this.cacheKeyPrefix}-${hashedCacheKey}`;
     }
     return cacheKey;
   }
+
+  private static getBoolInput(name: string): boolean {
+    return core.getInput(name).toLowerCase() === "true";
+  }
 }
 
-async function run() {
+const run = async (): Promise<void> => {
   try {
     const inputs = new Inputs();
 
+    // Use @actions/setup-python to ensure that python >=3.6 is installed
     if (inputs.setupPython) {
-      // Use @actions/setup-python to ensure that python >=3.6 is installed
       const installed = await setupPython(">=3.6", "x64");
-      core.info(`Successfully setup ${installed.impl} (${installed.version})`);
+      core.info(`Successfully setup ${installed.impl} ${installed.version}`);
     }
 
     // Qt installer assumes basic requirements that are not installed by
     // default on Ubuntu.
-    if (process.platform == "linux") {
+    if (process.platform === "linux") {
       if (inputs.installDeps) {
         const dependencies = [
           "build-essential",
@@ -243,7 +253,7 @@ async function run() {
         ].join(" ");
         const updateCommand = "apt-get update";
         const installCommand = `apt-get install ${dependencies} -y`;
-        if (inputs.installDeps == "nosudo") {
+        if (inputs.installDeps === "nosudo") {
           await exec(updateCommand);
           await exec(installCommand);
         } else {
@@ -253,30 +263,31 @@ async function run() {
       }
     }
 
-    // restore automatic cache
-    let cacheHitKey: string | undefined;
+    // Restore internal cache
+    let internalCacheHit = false;
     if (inputs.cache) {
       if (inputs.manuallyCached) {
         core.warning("Automatic cache disabled because manual cache is enabled");
       } else {
-        cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
+        const cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
         if (cacheHitKey) {
           core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+          internalCacheHit = true;
         } else {
           core.info("Automatic cache miss, will cache this run");
         }
       }
     }
 
-    // install qt and tools if not cached
-    const hasCache = inputs.manuallyCached || (inputs.cache && cacheHitKey);
+    // Install Qt and tools if not cached
+    const hasCache = inputs.manuallyCached || internalCacheHit;
     if (!hasCache) {
       // 7-zip is required, and not included on macOS
-      if (process.platform == "darwin") {
+      if (process.platform === "darwin") {
         await exec("brew install p7zip");
       }
 
-      // install aqtinstall
+      // Install aqtinstall
       await execPython("pip install", [
         "setuptools",
         "wheel",
@@ -284,7 +295,7 @@ async function run() {
         `"aqtinstall${inputs.aqtVersion}"`,
       ]);
 
-      // install qt
+      // Install Qt
       if (!inputs.toolsOnly) {
         const qtArgs = [inputs.host, inputs.target, inputs.version];
 
@@ -313,7 +324,7 @@ async function run() {
         await execPython("aqt install-qt", qtArgs);
       }
 
-      // install tools
+      // Install tools
       for (const tool of inputs.tools) {
         const toolArgs = [inputs.host, inputs.target, tool];
         toolArgs.push("--outputdir", inputs.dir);
@@ -322,7 +333,7 @@ async function run() {
       }
     }
 
-    // save automatic cache
+    // Save automatic cache
     if (!hasCache && inputs.cache) {
       if (inputs.manuallyCached) {
         core.warning("Automatic cache disabled because manual cache is enabled");
@@ -332,17 +343,17 @@ async function run() {
       }
     }
 
-    // set environment variables
-    const qtPath = nativePath(glob.sync(inputs.versionDir + "/**/*")[0]);
+    // Set environment variables
+    const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
     if (inputs.setEnv) {
-      if (inputs.tools) {
-        core.exportVariable("IQTA_TOOLS", nativePath(inputs.dir + "/Tools"));
+      if (inputs.tools.length) {
+        core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
       }
-      if (process.platform == "linux") {
-        setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(qtPath + "/lib"));
+      if (process.platform === "linux") {
+        setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
       }
-      if (process.platform != "win32") {
-        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(qtPath + "/lib/pkgconfig"));
+      if (process.platform !== "win32") {
+        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
       }
       // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
       if (compareVersions(inputs.version, "<", "6.0.0")) {
@@ -351,17 +362,18 @@ async function run() {
       } else {
         core.exportVariable("Qt6_DIR", qtPath);
       }
-      core.exportVariable("QT_PLUGIN_PATH", nativePath(qtPath + "/plugins"));
-      core.exportVariable("QML2_IMPORT_PATH", nativePath(qtPath + "/qml"));
-      core.addPath(nativePath(qtPath + "/bin"));
+      core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
+      core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
+      core.addPath(nativePath(`${qtPath}/bin`));
     }
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error);
     } else {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       core.setFailed(`unknown error: ${error}`);
     }
   }
-}
+};
 
-run();
+void run();

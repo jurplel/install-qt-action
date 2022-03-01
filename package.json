@@ -7,8 +7,8 @@
   "scripts": {
     "postinstall": "npm install --prefix node_modules/setup-python && node -e \"require('fs').rmSync('node_modules/setup-python/lib', { recursive: true, force: true })\" && npm run build --prefix node_modules/setup-python -- --declaration --declarationMap",
     "build": "tsc",
-    "check": "prettier --check .",
-    "lint": "prettier --write ."
+    "lint": "eslint src/main.ts",
+    "fix": "eslint src/main.ts --fix"
   },
   "repository": {
     "type": "git",
@@ -28,7 +28,12 @@
     "@types/glob": "^7.2.0",
     "@types/node": "^12.12.31",
     "@types/semver": "^7.1.0",
+    "@typescript-eslint/eslint-plugin": "^5.13.0",
+    "@typescript-eslint/parser": "^5.13.0",
+    "eslint": "^8.10.0",
+    "eslint-config-prettier": "^8.4.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "prettier": "2.5.1",
-    "typescript": "^3.8.3"
+    "typescript": "^3.9.10"
   }
 }
