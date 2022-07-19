@@ -5,7 +5,7 @@ Installing Qt on Github Actions workflows manually is the worst.
 You know what's easier than dealing with that? Just using this:
 ```yml
     - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+      uses: jurplel/install-qt-action@v3
 ```
 
 All done.
@@ -90,7 +90,24 @@ Example values: `qtbase`, `qtsvg`, `qtdeclarative`, `qtgamepad`, `qtgraphicaleff
 
 Default: none
 
-### `cached`
+### `cache`
+
+Whether to cache Qt automatically. If it is set to `true`, then Qt won't be downloaded if a cached version is available, but the environment variables will always be set, and essential build tools will always be installed.
+
+Has no effect if `manually-cached` is used.
+
+Default: `false`
+
+### `cache-key-prefix`
+
+Prefix to be used for the cache key of the automatic cache.
+
+Default: `install-qt-action`
+
+### `manually-cached`
+
+Not recommended, use `cache` instead if possible. Provided for compatibility with jurplel/install-qt-action@v2 `cached` option and for when changes are made to Qt outside of this action.
+
 If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
 
 It can be used with [actions/cache@v1](https://github.com/actions/cache/tree/releases/v1), for example:
@@ -104,9 +121,9 @@ It can be used with [actions/cache@v1](https://github.com/actions/cache/tree/rel
     key: ${{ runner.os }}-QtCache
 
 - name: Install Qt
-  uses: jurplel/install-qt-action@v2
+  uses: jurplel/install-qt-action@v3
   with:
-    cached: ${{ steps.cache-qt.outputs.cache-hit }}
+    manually-cached: ${{ steps.cache-qt.outputs.cache-hit }}
 ```
 
 Default: `false`
@@ -159,7 +176,7 @@ Example value: `--external 7z`
 
 ```yml
     - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+      uses: jurplel/install-qt-action@v3
       with:
         version: '5.15.2'
         host: 'windows'
@@ -168,7 +185,10 @@ Example value: `--external 7z`
         dir: '${{ github.workspace }}/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
-        cached: 'false'
+        archives: 'qtbase qtsvg'
+        cache: 'false'
+        cache-key-prefix: 'install-qt-action'
+        manually-cached: 'false'
         setup-python: 'true'
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'false'
@@ -186,4 +206,4 @@ Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer
 
 This action is distributed under the [MIT license](LICENSE).
 
-By using this action, you agree to the terms of Qt's licensing. See [Qt licensing](https://www.qt.io/licensing/) and [Licenses used by Qt](https://doc.qt.io/qt-5/licenses-used-in-qt.html). 
+By using this action, you agree to the terms of Qt's licensing. See [Qt licensing](https://www.qt.io/licensing/) and [Licenses used by Qt](https://doc.qt.io/qt-5/licenses-used-in-qt.html).

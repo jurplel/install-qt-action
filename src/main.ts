@@ -1,182 +1,379 @@
+import * as crypto from "crypto";
+import * as os from "os";
+import * as path from "path";
 import * as process from "process";
+
+import * as cache from "@actions/cache";
+import * as core from "@actions/core";
+import { exec } from "@actions/exec";
+import { findPythonVersion as setupPython } from /* @actions/ */ "setup-python/lib/find-python";
+
 import * as glob from "glob";
-import * as compareVersions from "compare-versions";
-import * as core from '@actions/core';
-import * as exec from '@actions/exec';
-import * as setupPython from 'setup-python/lib/find-python'
-import path from 'path';
+import { compare, CompareOperator } from "compare-versions";
 
 const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
 
-async function run() {
-    try {
-      if (core.getInput("setup-python") == "true") {
-        // Use setup-python to ensure that python >=3.6 is installed
-        const installed = await setupPython.findPythonVersion('>=3.6', 'x64')
-        core.info(`Successfully setup ${installed.impl} (${installed.version})`)
-      }
+const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
+  return compare(v1, v2, op);
+};
 
-      const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
-      let version = core.getInput("version");
-      const tools = core.getInput("tools");
-      const setEnv = core.getInput("set-env");
+const setOrAppendEnvVar = (name: string, value: string): void => {
+  const oldValue = process.env[name];
+  let newValue = value;
+  if (oldValue) {
+    newValue = `${oldValue}:${newValue}`;
+  }
+  core.exportVariable(name, newValue);
+};
 
-      // Qt installer assumes basic requirements that are not installed by
-      // default on Ubuntu.
-      if (process.platform == "linux") {
-        let cmd0 = "apt-get update"
-        let cmd1 = "apt-get install build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev libxcb-util1 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-xinerama0 libxcb1 -y"
-        if (core.getInput("install-deps") == "true") {
-            await exec.exec("sudo " + cmd0)
-            await exec.exec("sudo " + cmd1)
-        } else if (core.getInput("install-deps") == "nosudo") {
-            await exec.exec(cmd0)
-            await exec.exec(cmd1)
+const execPython = async (command: string, args: readonly string[]): Promise<number> => {
+  const python = process.platform === "win32" ? "python" : "python3";
+  return exec(`${python} -m ${command} ${args.join(" ")}`);
+};
+
+class Inputs {
+  readonly host: "windows" | "mac" | "linux";
+  readonly target: "desktop" | "android" | "ios";
+  readonly version: string;
+  readonly arch: string;
+  readonly dir: string;
+  readonly modules: string[];
+  readonly archives: string[];
+  readonly tools: string[];
+  readonly extra: string[];
+
+  readonly setupPython: boolean;
+  readonly installDeps: boolean | "nosudo";
+  readonly cache: boolean;
+  readonly cacheKeyPrefix: string;
+  readonly manuallyCached: boolean;
+  readonly toolsOnly: boolean;
+  readonly setEnv: boolean;
+
+  readonly aqtVersion: string;
+  readonly py7zrVersion: string;
+
+  constructor() {
+    const host = core.getInput("host");
+    // Set host automatically if omitted
+    if (!host) {
+      switch (process.platform) {
+        case "win32": {
+          this.host = "windows";
+          break;
+        }
+        case "darwin": {
+          this.host = "mac";
+          break;
+        }
+        default: {
+          this.host = "linux";
+          break;
         }
       }
-
-      if (core.getInput("cached") != "true") {
-        // 7-zip is required, and not included on macOS
-        if (process.platform == "darwin") {
-          await exec.exec("brew install p7zip")
-        }
-
-        //accomodate for differences in python 3 executable name
-        let pythonName = "python3";
-        if (process.platform == "win32") {
-          pythonName = "python";
-        }
-
-        await exec.exec(pythonName + " -m pip install setuptools wheel");
-        await exec.exec(pythonName + " -m pip install \"py7zr" + core.getInput("py7zrversion") + "\"");
-        await exec.exec(pythonName + " -m pip install \"aqtinstall" + core.getInput("aqtversion") + "\"");
-        let host = core.getInput("host");
-        const target = core.getInput("target");
-        let arch = core.getInput("arch");
-        const extra = core.getInput("extra");
-        const modules = core.getInput("modules");
-        const archives = core.getInput("archives");
-
-        //set host automatically if omitted
-        if (!host) {
-          switch(process.platform) {
-            case "win32": {
-                host = "windows";
-                break;
-            }
-            case "darwin": {
-                host = "mac";
-                break;
-            }
-            default: {
-                host = "linux";
-                break;
-            }
-          }
-        }
-
-        //set arch automatically if omitted
-        if (!arch) {
-          if (host == "windows") {
-            if (compareVersions.compare(version, '5.15.0', '>=')) { // if version is greater than or equal to 5.15.0
-              arch = "win64_msvc2019_64";
-            } else if (compareVersions.compare(version, '5.6.0', '<')) { // if version earlier than 5.6
-              arch = "win64_msvc2013_64";
-            } else if (compareVersions.compare(version, '5.9.0', '<')) { // if version is earlier than 5.9
-              arch = "win64_msvc2015_64";
-            } else { // otherwise
-              arch = "win64_msvc2017_64";
-            }
-          } else if (host == "android") {
-            arch = "android_armv7";
-          }
-        }
-
-        //set args
-        let args = [`${host}`, `${target}`, `${version}`];
-        if (arch && ((host == "windows" || target == "android") || arch == "wasm_32")) {
-          args.push(`${arch}`);
-        }
-
-        if (modules) {
-          args.push("-m");
-          modules.split(" ").forEach(function(currentModule) {
-            args.push(currentModule);
-          });
-        }
-
-        if (archives) {
-          args.push("--archives");
-          archives.split(" ").forEach(function(currentArchive) {
-            args.push(currentArchive);
-          });
-        }
-
-        let extraArgs = ["-O", `${dir}`]
-
-        if (extra) {
-          extra.split(" ").forEach(function(string) {
-            extraArgs.push(string);
-          });
-        }
-
-        args = args.concat(extraArgs);
-
-        //run aqtinstall with args, and install tools if requested
-        if (core.getInput("tools-only") != "true") {
-          await exec.exec(`${pythonName} -m aqt install-qt`, args);
-        }
-        if (tools) {
-          tools.split(" ").forEach(async element => {
-            const elements = element.split(",");
-            const toolName = elements[0];
-            const variantName = elements.length > 1 ? elements[elements.length - 1] : "";
-            await exec.exec(`${pythonName} -m aqt install-tool ${host} ${target} ${toolName} ${variantName}`, extraArgs);
-          });
-        }
+    } else {
+      // Make sure host is one of the allowed values
+      if (host === "windows" || host === "mac" || host === "linux") {
+        this.host = host;
+      } else {
+        throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux"`);
       }
-
-      //set environment variables
-
-      // Weird naming scheme exception for qt 5.9
-      if (version == '5.9.0') {
-        version = '5.9'
-      }
-      
-      let qtPath = dir + "/" + version;
-      qtPath = nativePath(glob.sync(qtPath + '/**/*')[0]);
-      if (setEnv == "true") {
-        if (tools) {
-            core.exportVariable('IQTA_TOOLS', nativePath(dir + "/Tools"));
-        }
-        if (process.platform == "linux") {
-            if (process.env.LD_LIBRARY_PATH) {
-                core.exportVariable('LD_LIBRARY_PATH', nativePath(process.env.LD_LIBRARY_PATH + ":" + qtPath + "/lib"));
-            } else {
-                core.exportVariable('LD_LIBRARY_PATH', nativePath(qtPath + "/lib"));
-            }
-        }
-        if (process.platform != "win32") {
-          if (process.env.PKG_CONFIG_PATH) {
-              core.exportVariable('PKG_CONFIG_PATH', nativePath(process.env.PKG_CONFIG_PATH + ":" + qtPath + "/lib/pkgconfig"));
-          } else {
-              core.exportVariable('PKG_CONFIG_PATH', nativePath(qtPath + "/lib/pkgconfig"));
-          }
-      }
-        // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
-        if (compareVersions.compare(version, '6.0.0', '<')) {
-          core.exportVariable('Qt5_Dir', qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-          core.exportVariable('Qt5_DIR', qtPath);
-        } else {
-          core.exportVariable('Qt6_DIR', qtPath);
-        }
-        core.exportVariable('QT_PLUGIN_PATH', nativePath(qtPath + '/plugins'));
-        core.exportVariable('QML2_IMPORT_PATH', nativePath(qtPath + '/qml'));
-        core.addPath(nativePath(qtPath + "/bin"));
-      }
-    } catch (error) {
-      core.setFailed(error.message);
     }
+
+    const target = core.getInput("target");
+    // Make sure target is one of the allowed values
+    if (target === "desktop" || target === "android" || target === "ios") {
+      this.target = target;
+    } else {
+      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
+    }
+
+    this.version = core.getInput("version");
+
+    this.arch = core.getInput("arch");
+    // Set arch automatically if omitted
+    if (!this.arch) {
+      if (this.host === "windows") {
+        if (compareVersions(this.version, ">=", "5.15.0")) {
+          this.arch = "win64_msvc2019_64";
+        } else if (compareVersions(this.version, "<", "5.6.0")) {
+          this.arch = "win64_msvc2013_64";
+        } else if (compareVersions(this.version, "<", "5.9.0")) {
+          this.arch = "win64_msvc2015_64";
+        } else {
+          this.arch = "win64_msvc2017_64";
+        }
+      } else if (this.target === "android") {
+        this.arch = "android_armv7";
+      }
+    }
+
+    const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
+    if (!dir) {
+      throw TypeError(`"dir" input may not be empty`);
+    }
+    this.dir = `${dir}/Qt`;
+
+    const modules = core.getInput("modules");
+    if (modules) {
+      this.modules = modules.split(" ");
+    } else {
+      this.modules = [];
+    }
+
+    const archives = core.getInput("archives");
+    if (archives) {
+      this.archives = archives.split(" ");
+    } else {
+      this.archives = [];
+    }
+
+    const tools = core.getInput("tools");
+    if (tools) {
+      this.tools = [];
+      for (const tool of tools.split(" ")) {
+        // The tools inputs have the tool name, variant, and arch delimited by a comma
+        // aqt expects spaces instead
+        this.tools.push(tool.replace(/,/g, " "));
+      }
+    } else {
+      this.tools = [];
+    }
+
+    const extra = core.getInput("extra");
+    if (extra) {
+      this.extra = extra.split(" ");
+    } else {
+      this.extra = [];
+    }
+
+    this.setupPython = Inputs.getBoolInput("setup-python");
+
+    const installDeps = core.getInput("install-deps").toLowerCase();
+    if (installDeps === "nosudo") {
+      this.installDeps = "nosudo";
+    } else {
+      this.installDeps = installDeps === "true";
+    }
+
+    this.cache = Inputs.getBoolInput("cache");
+
+    this.cacheKeyPrefix = core.getInput("cache-key-prefix");
+
+    this.manuallyCached = Inputs.getBoolInput("manually-cached");
+
+    this.toolsOnly = Inputs.getBoolInput("tools-only");
+
+    this.setEnv = Inputs.getBoolInput("set-env");
+
+    this.aqtVersion = core.getInput("aqtversion");
+
+    this.py7zrVersion = core.getInput("py7zrversion");
+  }
+
+  public get versionDir(): string {
+    // Weird naming scheme exception for qt 5.9
+    const version = this.version === "5.9.0" ? "5.9" : this.version;
+    return nativePath(`${this.dir}/${version}`);
+  }
+
+  public get cacheKey(): string {
+    let cacheKey = this.cacheKeyPrefix;
+    for (const keyStringArray of [
+      [
+        this.host,
+        os.release(),
+        this.target,
+        this.arch,
+        this.version,
+        this.dir,
+        this.py7zrVersion,
+        this.aqtVersion,
+      ],
+      this.modules,
+      this.archives,
+      this.extra,
+      this.tools,
+    ]) {
+      for (const keyString of keyStringArray) {
+        if (keyString) {
+          cacheKey += `-${keyString}`;
+        }
+      }
+    }
+    // Cache keys cannot contain commas
+    cacheKey = cacheKey.replace(/,/g, "-");
+    // Cache keys cannot be larger than 512 characters
+    const maxKeyLength = 512;
+    if (cacheKey.length > maxKeyLength) {
+      const hashedCacheKey = crypto.createHash("sha256").update(cacheKey).digest("hex");
+      cacheKey = `${this.cacheKeyPrefix}-${hashedCacheKey}`;
+    }
+    return cacheKey;
+  }
+
+  private static getBoolInput(name: string): boolean {
+    return core.getInput(name).toLowerCase() === "true";
+  }
 }
 
-run();
+const run = async (): Promise<void> => {
+  try {
+    const inputs = new Inputs();
+
+    // Use @actions/setup-python to ensure that python >=3.6 is installed
+    if (inputs.setupPython) {
+      const installed = await setupPython(">=3.6", "x64");
+      core.info(`Successfully setup ${installed.impl} ${installed.version}`);
+    }
+
+    // Qt installer assumes basic requirements that are not installed by
+    // default on Ubuntu.
+    if (process.platform === "linux") {
+      if (inputs.installDeps) {
+        const dependencies = [
+          "build-essential",
+          "libgl1-mesa-dev",
+          "libpulse-dev",
+          "libxcb-glx0",
+          "libxcb-icccm4",
+          "libxcb-image0",
+          "libxcb-keysyms1",
+          "libxcb-randr0",
+          "libxcb-render-util0",
+          "libxcb-render0",
+          "libxcb-shape0",
+          "libxcb-shm0",
+          "libxcb-sync1",
+          "libxcb-util1",
+          "libxcb-xfixes0",
+          "libxcb-xinerama0",
+          "libxcb1",
+          "libxkbcommon-x11-0",
+        ].join(" ");
+        const updateCommand = "apt-get update";
+        const installCommand = `apt-get install ${dependencies} -y`;
+        if (inputs.installDeps === "nosudo") {
+          await exec(updateCommand);
+          await exec(installCommand);
+        } else {
+          await exec(`sudo ${updateCommand}`);
+          await exec(`sudo ${installCommand}`);
+        }
+      }
+    }
+
+    // Restore internal cache
+    let internalCacheHit = false;
+    if (inputs.cache) {
+      if (inputs.manuallyCached) {
+        core.warning("Automatic cache disabled because manual cache is enabled");
+      } else {
+        const cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
+        if (cacheHitKey) {
+          core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+          internalCacheHit = true;
+        } else {
+          core.info("Automatic cache miss, will cache this run");
+        }
+      }
+    }
+
+    // Install Qt and tools if not cached
+    const hasCache = inputs.manuallyCached || internalCacheHit;
+    if (!hasCache) {
+      // 7-zip is required, and not included on macOS
+      if (process.platform === "darwin") {
+        await exec("brew install p7zip");
+      }
+
+      // Install aqtinstall
+      await execPython("pip install", [
+        "setuptools",
+        "wheel",
+        `"py7zr${inputs.py7zrVersion}"`,
+        `"aqtinstall${inputs.aqtVersion}"`,
+      ]);
+
+      // Install Qt
+      if (!inputs.toolsOnly) {
+        const qtArgs = [inputs.host, inputs.target, inputs.version];
+
+        if (inputs.arch) {
+          qtArgs.push(inputs.arch);
+        }
+
+        qtArgs.push("--outputdir", inputs.dir);
+
+        if (inputs.modules.length) {
+          qtArgs.push("--modules");
+          for (const module of inputs.modules) {
+            qtArgs.push(module);
+          }
+        }
+
+        if (inputs.archives.length) {
+          qtArgs.push("--archives");
+          for (const archive of inputs.archives) {
+            qtArgs.push(archive);
+          }
+        }
+
+        qtArgs.push(...inputs.extra);
+
+        await execPython("aqt install-qt", qtArgs);
+      }
+
+      // Install tools
+      for (const tool of inputs.tools) {
+        const toolArgs = [inputs.host, inputs.target, tool];
+        toolArgs.push("--outputdir", inputs.dir);
+        toolArgs.push(...inputs.extra);
+        await execPython("aqt install-tool", toolArgs);
+      }
+    }
+
+    // Save automatic cache
+    if (!hasCache && inputs.cache) {
+      if (inputs.manuallyCached) {
+        core.warning("Automatic cache disabled because manual cache is enabled");
+      } else {
+        const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
+        core.info(`Automatic cache saved with id ${cacheId}`);
+      }
+    }
+
+    // Set environment variables
+    const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
+    if (inputs.setEnv) {
+      if (inputs.tools.length) {
+        core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
+      }
+      if (process.platform === "linux") {
+        setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
+      }
+      if (process.platform !== "win32") {
+        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
+      }
+      // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+      if (compareVersions(inputs.version, "<", "6.0.0")) {
+        core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
+        core.exportVariable("Qt5_DIR", qtPath);
+      } else {
+        core.exportVariable("Qt6_DIR", qtPath);
+      }
+      core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
+      core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
+      core.addPath(nativePath(`${qtPath}/bin`));
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      core.setFailed(error);
+    } else {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      core.setFailed(`unknown error: ${error}`);
+    }
+  }
+};
+
+void run();

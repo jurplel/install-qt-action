@@ -1,51 +1,61 @@
-name: 'Install Qt'
-description: 'Install Qt on your Github Actions workflows with just one simple action'
-author: 'jurplel'
+name: Install Qt
+description: Install Qt on your Github Actions workflows with just one simple action
+author: jurplel
 branding:
-  icon: 'package'
-  color: 'green'
+  icon: package
+  color: green
 inputs:
   dir:
-    description: 'Directory to install Qt'
+    description: Directory to install Qt
   version:
-    description: 'Version of Qt to install'
-    default: '5.15.2'
+    description: Version of Qt to install
+    default: "5.15.2"
   host:
-    description: 'Host platform'
+    description: Host platform
   target:
-    description: 'Target platform for build'
-    default: 'desktop'
+    description: Target platform for build
+    default: desktop
   arch:
-    description: 'Architecture for Windows/Android'
+    description: Architecture for Windows/Android
   install-deps:
-    description: 'Whether or not to install Qt dependencies on Linux'
-    default: 'true'
+    description: Whether or not to install Qt dependencies on Linux
+    default: true
   modules:
-    description: 'Additional Qt modules to install'
+    description: Additional Qt modules to install
   archives:
-    description: 'Specify which Qt archive to install'
-  cached:
-    description: "Whether or not to actually download Qt"
-    default: 'false'
+    description: Specify which Qt archive to install
+  cache:
+    description: Whether or not to cache Qt automatically
+    default: false
+  cache-key-prefix:
+    description: Cache key prefix for automatic cache
+    default: install-qt-action
+  manually-cached:
+    description: Whether or not to actually download Qt
+    default: false
   setup-python:
-    description: "Whether or not to automatically run setup-python to find a valid python version."
-    default: 'true'
+    description: Whether or not to automatically run setup-python to find a valid python version.
+    default: true
   tools:
-    description: "Qt tools to download--specify comma-separated argument lists which are themselves separated by spaces: <tool_name>,<tool_version>,<tool_arch>"
+    description: >
+      Qt tools to download
+      --
+      specify comma-separated argument lists which are themselves separated by spaces:
+      <tool_name>,<tool_version>,<tool_arch>
   set-env:
-    default: 'true'
-    description: "Whether or not to set environment variables after running aqtinstall"
+    default: true
+    description: Whether or not to set environment variables after running aqtinstall
   tools-only:
-    description: "Whether or not to actually install Qt or just the tools from the tools argument"
-    default: 'false'
+    description: Whether or not to actually install Qt or just the tools from the tools argument
+    default: false
   aqtversion:
-    description: "Version of aqtinstall to use in case of issues"
-    default: '==2.0.0'
+    description: Version of aqtinstall to use in case of issues
+    default: ==2.0.0
   py7zrversion:
-    description: "Version of py7zr to use in case of issues"
-    default: '==0.16.1'
+    description: Version of py7zr to use in case of issues
+    default: ==0.16.1
   extra:
-    description: "Any extra arguments to append to the back"
+    description: Any extra arguments to append to the back
 runs:
-  using: 'node12'
-  main: 'lib/main.js'
+  using: node16
+  main: lib/main.js
