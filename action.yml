@@ -33,7 +33,7 @@ inputs:
   setup-python:
     description: Whether or not to automatically run setup-python to find a valid python version.
     default: true
-    tools:
+  tools:
     description: >
       Qt tools to download
       --
