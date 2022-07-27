@@ -44,7 +44,6 @@ class Inputs {
   readonly installDeps: boolean | "nosudo";
   readonly cache: boolean;
   readonly cacheKeyPrefix: string;
-  readonly manuallyCached: boolean;
   readonly toolsOnly: boolean;
   readonly setEnv: boolean;
 
@@ -156,8 +155,6 @@ class Inputs {
 
     this.cacheKeyPrefix = core.getInput("cache-key-prefix");
 
-    this.manuallyCached = Inputs.getBoolInput("manually-cached");
-
     this.toolsOnly = Inputs.getBoolInput("tools-only");
 
     this.setEnv = Inputs.getBoolInput("set-env");
@@ -256,22 +253,17 @@ const run = async (): Promise<void> => {
     // Restore internal cache
     let internalCacheHit = false;
     if (inputs.cache) {
-      if (inputs.manuallyCached) {
-        core.warning("Automatic cache disabled because manual cache is enabled");
+      const cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
+      if (cacheHitKey) {
+        core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+        internalCacheHit = true;
       } else {
-        const cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
-        if (cacheHitKey) {
-          core.info(`Automatic cache hit with key "${cacheHitKey}"`);
-          internalCacheHit = true;
-        } else {
-          core.info("Automatic cache miss, will cache this run");
-        }
+        core.info("Automatic cache miss, will cache this run");
       }
     }
 
     // Install Qt and tools if not cached
-    const hasCache = inputs.manuallyCached || internalCacheHit;
-    if (!hasCache) {
+    if (!internalCacheHit) {
       // 7-zip is required, and not included on macOS
       if (process.platform === "darwin") {
         await exec("brew install p7zip");
@@ -325,12 +317,8 @@ const run = async (): Promise<void> => {
 
     // Save automatic cache
     if (!hasCache && inputs.cache) {
-      if (inputs.manuallyCached) {
-        core.warning("Automatic cache disabled because manual cache is enabled");
-      } else {
-        const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
-        core.info(`Automatic cache saved with id ${cacheId}`);
-      }
+      const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
+      core.info(`Automatic cache saved with id ${cacheId}`);
     }
 
     // Set environment variables
