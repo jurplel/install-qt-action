@@ -13,7 +13,7 @@ jobs:
           node-version: 16
           cache: npm
 
-      - run: npm ci
+      - run: npm ci || npm install
         shell: bash
 
       - run: npm run lint
