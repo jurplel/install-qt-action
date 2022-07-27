@@ -6,7 +6,6 @@ import * as process from "process";
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 import { exec } from "@actions/exec";
-import { findPythonVersion as setupPython } from /* @actions/ */ "setup-python/lib/find-python";
 
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
@@ -42,7 +41,6 @@ class Inputs {
   readonly tools: string[];
   readonly extra: string[];
 
-  readonly setupPython: boolean;
   readonly installDeps: boolean | "nosudo";
   readonly cache: boolean;
   readonly cacheKeyPrefix: string;
@@ -147,8 +145,6 @@ class Inputs {
       this.extra = [];
     }
 
-    this.setupPython = Inputs.getBoolInput("setup-python");
-
     const installDeps = core.getInput("install-deps").toLowerCase();
     if (installDeps === "nosudo") {
       this.installDeps = "nosudo";
@@ -220,12 +216,6 @@ class Inputs {
 const run = async (): Promise<void> => {
   try {
     const inputs = new Inputs();
-
-    // Use @actions/setup-python to ensure that python >=3.6 is installed
-    if (inputs.setupPython) {
-      const installed = await setupPython(">=3.6", "x64");
-      core.info(`Successfully setup ${installed.impl} ${installed.version}`);
-    }
 
     // Qt installer assumes basic requirements that are not installed by
     // default on Ubuntu.
