@@ -316,7 +316,7 @@ const run = async (): Promise<void> => {
     }
 
     // Save automatic cache
-    if (!hasCache && inputs.cache) {
+    if (!internalCacheHit && inputs.cache) {
       const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
       core.info(`Automatic cache saved with id ${cacheId}`);
     }
