@@ -163,7 +163,6 @@ class Inputs {
         }
         this.cache = Inputs.getBoolInput("cache");
         this.cacheKeyPrefix = core.getInput("cache-key-prefix");
-        this.manuallyCached = Inputs.getBoolInput("manually-cached");
         this.toolsOnly = Inputs.getBoolInput("tools-only");
         this.setEnv = Inputs.getBoolInput("set-env");
         this.aqtVersion = core.getInput("aqtversion");
@@ -254,23 +253,17 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
         // Restore internal cache
         let internalCacheHit = false;
         if (inputs.cache) {
-            if (inputs.manuallyCached) {
-                core.warning("Automatic cache disabled because manual cache is enabled");
+            const cacheHitKey = yield cache.restoreCache([inputs.dir], inputs.cacheKey);
+            if (cacheHitKey) {
+                core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+                internalCacheHit = true;
             }
             else {
-                const cacheHitKey = yield cache.restoreCache([inputs.dir], inputs.cacheKey);
-                if (cacheHitKey) {
-                    core.info(`Automatic cache hit with key "${cacheHitKey}"`);
-                    internalCacheHit = true;
-                }
-                else {
-                    core.info("Automatic cache miss, will cache this run");
-                }
+                core.info("Automatic cache miss, will cache this run");
             }
         }
         // Install Qt and tools if not cached
-        const hasCache = inputs.manuallyCached || internalCacheHit;
-        if (!hasCache) {
+        if (!internalCacheHit) {
             // 7-zip is required, and not included on macOS
             if (process.platform === "darwin") {
                 yield (0, exec_1.exec)("brew install p7zip");
@@ -313,14 +306,9 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             }
         }
         // Save automatic cache
-        if (!hasCache && inputs.cache) {
-            if (inputs.manuallyCached) {
-                core.warning("Automatic cache disabled because manual cache is enabled");
-            }
-            else {
-                const cacheId = yield cache.saveCache([inputs.dir], inputs.cacheKey);
-                core.info(`Automatic cache saved with id ${cacheId}`);
-            }
+        if (!internalCacheHit && inputs.cache) {
+            const cacheId = yield cache.saveCache([inputs.dir], inputs.cacheKey);
+            core.info(`Automatic cache saved with id ${cacheId}`);
         }
         // Set environment variables
         const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
