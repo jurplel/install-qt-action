@@ -5,8 +5,9 @@
   "description": "Install qt action for github actions",
   "main": "lib/main.js",
   "scripts": {
-    "build-setup-python": "npm install --prefix node_modules/setup-python && npm run build --prefix node_modules/setup-python",
-    "build": "tsc"
+    "build": "tsc -p action/",
+    "lint": "eslint action/src/main.ts",
+    "fix": "eslint action/src/main.ts --fix"
   },
   "repository": {
     "type": "git",
@@ -15,15 +16,22 @@
   "author": "jurplel",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.2.6",
-    "@actions/exec": "^1.0.0",
+    "@actions/cache": "^3.0.0",
+    "@actions/core": "^1.7.0",
+    "@actions/exec": "^1.1.0",
     "compare-versions": "^3.6.0",
-    "glob": "^7.0.0",
-    "setup-python": "github:actions/setup-python#v2"
+    "glob": "^7.0.0"
   },
   "devDependencies": {
+    "@types/glob": "^7.2.0",
     "@types/node": "^12.12.31",
     "@types/semver": "^7.1.0",
-    "typescript": "^3.8.3"
+    "@typescript-eslint/eslint-plugin": "^5.13.0",
+    "@typescript-eslint/parser": "^5.13.0",
+    "eslint": "^8.10.0",
+    "eslint-config-prettier": "^8.4.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "prettier": "2.5.1",
+    "typescript": "^4.2.3"
   }
 }
