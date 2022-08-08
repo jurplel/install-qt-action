@@ -12,6 +12,7 @@ jobs:
         with:
           node-version: 16
           cache: npm
+          cache-dependency-path: action/
 
       - run: |
           cd action
@@ -54,6 +55,7 @@ jobs:
         with:
           node-version: 16
           cache: npm
+          cache-dependency-path: action/
 
       - run: |
           cd action
