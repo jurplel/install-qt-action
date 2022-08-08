@@ -63,7 +63,7 @@ runs:
       python-version: '3.6.x - 3.11.x'
 
   - name: Setup and run aqtinstall
-    uses: jurplel/install-qt-action/action@v3
+    uses: jurplel/install-qt-action@v3/action
     with:
       dir: ${{ inputs.dir }}
       version: ${{ inputs.version }}
