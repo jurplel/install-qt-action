@@ -44,12 +44,7 @@ This is the target architecture that your program will be built for. This is onl
 
 **Possible values:**
 
-Windows: `win64_msvc2019_64`, `win64_msvc2017_64`, `win64_msvc2015_64`, `win32_msvc2015`, `win64_mingw81`, and more (see below)
-
-Android: `android_x86`, `android_armv7`
-
-You can find a full list of architectures by installing `aqtinstall` locally and running a command like the following:
-`aqt list-qt windows desktop --arch 5.15.2`
+You can find a full list of architectures easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
 **Default values:**
 
@@ -120,6 +115,8 @@ For example, this value will install the most recent versions of QtIFW and QtCre
 ```
     tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
 ```
+
+You can find a full list of tools easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
 ### `set-env`
 Set this to false if you want to avoid setting environment variables for whatever reason.
