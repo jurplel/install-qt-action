@@ -316,23 +316,25 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             if (inputs.tools.length) {
                 core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
             }
-            if (process.platform === "linux") {
-                setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
+            if (!inputs.toolsOnly) {
+                if (process.platform === "linux") {
+                    setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
+                }
+                if (process.platform !== "win32") {
+                    setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
+                }
+                // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+                if (compareVersions(inputs.version, "<", "6.0.0")) {
+                    core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
+                    core.exportVariable("Qt5_DIR", qtPath);
+                }
+                else {
+                    core.exportVariable("Qt6_DIR", qtPath);
+                }
+                core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
+                core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
+                core.addPath(nativePath(`${qtPath}/bin`));
             }
-            if (process.platform !== "win32") {
-                setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
-            }
-            // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
-            if (compareVersions(inputs.version, "<", "6.0.0")) {
-                core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-                core.exportVariable("Qt5_DIR", qtPath);
-            }
-            else {
-                core.exportVariable("Qt6_DIR", qtPath);
-            }
-            core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
-            core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
-            core.addPath(nativePath(`${qtPath}/bin`));
         }
     }
     catch (error) {
