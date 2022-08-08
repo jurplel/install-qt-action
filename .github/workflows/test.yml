@@ -13,10 +13,14 @@ jobs:
           node-version: 16
           cache: npm
 
-      - run: npm ci || npm install
+      - run: |
+          cd action
+          npm ci || npm install
         shell: bash
 
-      - run: npm run lint
+      - run: |
+          cd action
+          npm run lint
 
   test:
     runs-on: ${{ matrix.os }}
@@ -51,10 +55,14 @@ jobs:
           node-version: 16
           cache: npm
 
-      - run: npm ci || npm install
+      - run: |
+          cd action
+          npm ci || npm install
         shell: bash
 
-      - run: npm run build
+      - run: |
+          cd action
+          npm run build
 
       - name: Install Qt5 with options
         if: startsWith(matrix.version, '5')

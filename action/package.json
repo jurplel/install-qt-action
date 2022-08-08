@@ -5,9 +5,9 @@
   "description": "Install qt action for github actions",
   "main": "lib/main.js",
   "scripts": {
-    "build": "tsc -p action/",
-    "lint": "eslint action/src/main.ts",
-    "fix": "eslint action/src/main.ts --fix"
+    "build": "tsc -p ./",
+    "lint": "eslint src/main.ts",
+    "fix": "eslint src/main.ts --fix"
   },
   "repository": {
     "type": "git",
