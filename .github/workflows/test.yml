@@ -64,6 +64,7 @@ jobs:
           version: ${{ matrix.version }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}
+          setup-python: false
 
       - name: Install Qt6 with options
         if: startsWith(matrix.version, '6.2')
