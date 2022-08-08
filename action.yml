@@ -56,12 +56,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-  - uses: actions/setup-python@v4
-    if: ${{ inputs.setup-python }} == true
+  - name: Setup Python 
+    if: ${{ inputs.setup-python  == 'true' }}
+    uses: actions/setup-python@v4
     with:
       python-version: '3.6.x - 3.11.x'
 
-  - uses: ./action
+  - name: Setup and run aqtinstall
+    uses: ./action
     with:
       dir: ${{ inputs.dir }}
       version: ${{ inputs.version }}
