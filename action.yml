@@ -57,6 +57,7 @@ runs:
   using: "composite"
   steps:
   - uses: actions/setup-python@v4
+    if: ${{ inputs.setup-python }} == true
     with:
       python-version: '3.6.x - 3.11.x'
 
