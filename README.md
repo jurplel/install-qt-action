@@ -15,7 +15,7 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-You can also pass in partial version numbers, for example `6.2` to install the latest version of `6.2.x`.
+You can also pass in SimpleSpec version numbers, for example `6.2.*`.
 
 Default: `5.15.2` (Last Qt 5 LTS)
 
