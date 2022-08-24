@@ -102,7 +102,7 @@ class Inputs {
         }
       } else if (this.target === "android") {
         if (compareVersions(this.version, ">=", "5.14.0")) {
-          this.arch = "android"
+          this.arch = "android";
         } else {
           this.arch = "android_armv7";
         }
