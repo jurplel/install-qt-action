@@ -113,7 +113,8 @@ class Inputs {
                 }
             }
             else if (this.target === "android") {
-                if (compareVersions(this.version, ">=", "5.14.0")) {
+                if (compareVersions(this.version, ">=", "5.14.0") &&
+                    compareVersions(this.version, "<", "6.0.0")) {
                     this.arch = "android";
                 }
                 else {
