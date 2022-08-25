@@ -101,8 +101,9 @@ class Inputs {
           this.arch = "win64_msvc2017_64";
         }
       } else if (this.target === "android") {
-        if (compareVersions(this.version, ">=", "5.14.0")) {
+        if (compareVersions(this.version, ">=", "5.14.0") && compareVersions(this.version, "<", "6.0.0")) {
           this.arch = "android";
+        }
         } else {
           this.arch = "android_armv7";
         }
