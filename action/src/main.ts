@@ -243,7 +243,8 @@ const run = async (): Promise<void> => {
           "libxcb-xfixes0",
           "libxcb-xinerama0",
           "libxcb1",
-          "libxkbcommon-x11-0",
+          "libxkbcommon-dev",
+          "libxcb-xkb-dev",
         ].join(" ");
         const updateCommand = "apt-get update";
         const installCommand = `apt-get install ${dependencies} -y`;
