@@ -39,7 +39,7 @@ jobs:
         version:
           - "5.9.0"
           - "5.15.2"
-          - "6"
+          - "6.2.0"
         cache:
           - cached
           - uncached
