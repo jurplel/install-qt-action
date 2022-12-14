@@ -94,7 +94,18 @@ class Inputs {
         else {
             throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
         }
-        this.version = core.getInput("version");
+        // An attempt to sanitize non-straightforward version number input
+        let version = core.getInput("version");
+        const dots = version.match(/\./g).length;
+        const desiredDotCount = 2;
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        if (dots < desiredDotCount && version.slice(-1) !== "*") {
+            version = version.concat(".*");
+        }
+        else if (dots > desiredDotCount) {
+            throw TypeError(`version: "${version}$ is a malformed semantic version: must be formatted like "6.2.0" or "6.*"`);
+        }
+        this.version = version;
         this.arch = core.getInput("arch");
         // Set arch automatically if omitted
         if (!this.arch) {
@@ -113,7 +124,13 @@ class Inputs {
                 }
             }
             else if (this.target === "android") {
-                this.arch = "android_armv7";
+                if (compareVersions(this.version, ">=", "5.14.0") &&
+                    compareVersions(this.version, "<", "6.0.0")) {
+                    this.arch = "android";
+                }
+                else {
+                    this.arch = "android_armv7";
+                }
             }
         }
         const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
@@ -163,7 +180,6 @@ class Inputs {
         }
         this.cache = Inputs.getBoolInput("cache");
         this.cacheKeyPrefix = core.getInput("cache-key-prefix");
-        this.manuallyCached = Inputs.getBoolInput("manually-cached");
         this.toolsOnly = Inputs.getBoolInput("tools-only");
         this.setEnv = Inputs.getBoolInput("set-env");
         this.aqtVersion = core.getInput("aqtversion");
@@ -237,7 +253,8 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     "libxcb-xfixes0",
                     "libxcb-xinerama0",
                     "libxcb1",
-                    "libxkbcommon-x11-0",
+                    "libxkbcommon-dev",
+                    "libxcb-xkb-dev",
                 ].join(" ");
                 const updateCommand = "apt-get update";
                 const installCommand = `apt-get install ${dependencies} -y`;
@@ -254,23 +271,17 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
         // Restore internal cache
         let internalCacheHit = false;
         if (inputs.cache) {
-            if (inputs.manuallyCached) {
-                core.warning("Automatic cache disabled because manual cache is enabled");
+            const cacheHitKey = yield cache.restoreCache([inputs.dir], inputs.cacheKey);
+            if (cacheHitKey) {
+                core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+                internalCacheHit = true;
             }
             else {
-                const cacheHitKey = yield cache.restoreCache([inputs.dir], inputs.cacheKey);
-                if (cacheHitKey) {
-                    core.info(`Automatic cache hit with key "${cacheHitKey}"`);
-                    internalCacheHit = true;
-                }
-                else {
-                    core.info("Automatic cache miss, will cache this run");
-                }
+                core.info("Automatic cache miss, will cache this run");
             }
         }
         // Install Qt and tools if not cached
-        const hasCache = inputs.manuallyCached || internalCacheHit;
-        if (!hasCache) {
+        if (!internalCacheHit) {
             // 7-zip is required, and not included on macOS
             if (process.platform === "darwin") {
                 yield (0, exec_1.exec)("brew install p7zip");
@@ -313,14 +324,9 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             }
         }
         // Save automatic cache
-        if (!hasCache && inputs.cache) {
-            if (inputs.manuallyCached) {
-                core.warning("Automatic cache disabled because manual cache is enabled");
-            }
-            else {
-                const cacheId = yield cache.saveCache([inputs.dir], inputs.cacheKey);
-                core.info(`Automatic cache saved with id ${cacheId}`);
-            }
+        if (!internalCacheHit && inputs.cache) {
+            const cacheId = yield cache.saveCache([inputs.dir], inputs.cacheKey);
+            core.info(`Automatic cache saved with id ${cacheId}`);
         }
         // Set environment variables
         const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
@@ -328,23 +334,25 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             if (inputs.tools.length) {
                 core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
             }
-            if (process.platform === "linux") {
-                setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
+            if (!inputs.toolsOnly) {
+                if (process.platform === "linux") {
+                    setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
+                }
+                if (process.platform !== "win32") {
+                    setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
+                }
+                // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+                if (compareVersions(inputs.version, "<", "6.0.0")) {
+                    core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
+                    core.exportVariable("Qt5_DIR", qtPath);
+                }
+                else {
+                    core.exportVariable("Qt6_DIR", qtPath);
+                }
+                core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
+                core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
+                core.addPath(nativePath(`${qtPath}/bin`));
             }
-            if (process.platform !== "win32") {
-                setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
-            }
-            // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
-            if (compareVersions(inputs.version, "<", "6.0.0")) {
-                core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-                core.exportVariable("Qt5_DIR", qtPath);
-            }
-            else {
-                core.exportVariable("Qt6_DIR", qtPath);
-            }
-            core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
-            core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
-            core.addPath(nativePath(`${qtPath}/bin`));
         }
     }
     catch (error) {

@@ -87,7 +87,7 @@ class Inputs {
 
     // An attempt to sanitize non-straightforward version number input
     let version = core.getInput("version");
-    const dots = version.match(/\./g).length;
+    const dots = version.match(/\./g)!.length;
     const desiredDotCount = 2;
     // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     if (dots < desiredDotCount && version.slice(-1) !== "*") {
