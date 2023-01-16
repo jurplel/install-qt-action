@@ -36,10 +36,13 @@ jobs:
           - windows-2019
           - macos-11
           - macos-12
-        version:
-          - "5.9.0"
-          - "5.15.2"
-          - "6.2.0"
+        qt:
+          - version: "5.9.0"
+            requested: "5.9.0"
+          - version: "5.15.2"
+            requested: "5.15"
+          - version: "6.3.2"  # Qt 6.3 is not an LTS version, so '6.3.*' always resolves to '6.3.2'
+            requested: "6.3.*"
         cache:
           - cached
           - uncached
@@ -47,7 +50,7 @@ jobs:
         # Ubuntu 18 is not a supported target for Qt 6: https://www.qt.io/blog/qt6-development-hosts-and-targets
         exclude:
           - os: ubuntu-18.04
-            version: "6.2.0"
+            qt: {version: "6.3.2", requested: "6.3.*"}
     steps:
       - uses: actions/checkout@v3
 
@@ -67,28 +70,28 @@ jobs:
           npm run build
 
       - name: Install Qt5 with options
-        if: startsWith(matrix.version, '5')
+        if: startsWith(matrix.qt.version, '5')
         uses: ./
         with:
           modules: qtwebengine
-          version: ${{ matrix.version }}
+          version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Install Qt6 with options
-        if: startsWith(matrix.version, '6.2')
+        if: startsWith(matrix.qt.version, '6.3')
         uses: ./
         with:
           # In Qt 6.2.0, qtwebengine requires qtpositioning and qtwebchannel
           modules: qtwebengine qtpositioning qtwebchannel
-          version: ${{ matrix.version }}
+          version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Configure test project on windows
         if: startsWith(matrix.os, 'windows')
         env:
-          QT_VERSION: ${{ matrix.version }}
+          QT_VERSION: ${{ matrix.qt.version }}
         run: |
           cd tests/TestWithModules
           for /f "delims=" %%d in ( 'vswhere.exe -latest -property installationPath' ) do @( call "%%d\VC\Auxiliary\Build\vcvars64.bat" )
@@ -99,7 +102,7 @@ jobs:
       - name: Configure test project on unix
         if: (!startsWith(matrix.os, 'windows'))
         env:
-          QT_VERSION: ${{ matrix.version }}
+          QT_VERSION: ${{ matrix.qt.version }}
         run: |
           cd tests/TestWithModules
           if [[ $QT_VERSION == 6* ]]; then
