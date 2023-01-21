@@ -79,10 +79,10 @@ jobs:
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Install Qt6 with options
-        if: startsWith(matrix.qt.version, '6.3')
+        if: startsWith(matrix.qt.version, '6')
         uses: ./
         with:
-          # In Qt 6.2.0, qtwebengine requires qtpositioning and qtwebchannel
+          # In Qt 6.2.0+, qtwebengine requires qtpositioning and qtwebchannel
           modules: qtwebengine qtpositioning qtwebchannel
           version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
