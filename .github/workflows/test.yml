@@ -31,7 +31,6 @@ jobs:
         os:
           - ubuntu-22.04
           - ubuntu-20.04
-          - ubuntu-18.04
           - windows-2022
           - windows-2019
           - macos-11
@@ -49,10 +48,6 @@ jobs:
           - cached
           - uncached
 
-        # Ubuntu 18 is not a supported target for Qt 6: https://www.qt.io/blog/qt6-development-hosts-and-targets
-        exclude:
-          - os: ubuntu-18.04
-            qt: {version: "6.3.2", requested: "6.3.*"}
     steps:
       - uses: actions/checkout@v3
 
@@ -136,5 +131,4 @@ jobs:
   
           # Check if QtCreator is installed: QtCreator includes the CLI program 'qbs' on all 3 platforms
           ls "${QTCREATOR_BIN_PATH}"
-          [[ -f "${QTCREATOR_BIN_PATH}qbs" ]] && echo "qbs is installed"
-          "${QTCREATOR_BIN_PATH}qbs" --version || echo "qbs installed but fails to run"
+          "${QTCREATOR_BIN_PATH}qbs" --version
