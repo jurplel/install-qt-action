@@ -30,6 +30,30 @@ const execPython = async (command: string, args: readonly string[]): Promise<num
   return exec(`${python} -m ${command} ${args.join(" ")}`);
 };
 
+const locateQtArchDir = (installDir: string): string => {
+  // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
+  // This makes a list of all the viable arch directories that contain a qmake file.
+  const qtArchDirs = glob
+    .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
+    .map((s) => s.replace(/\/bin\/qmake[^/]*$/, ""));
+
+  // For Qt6 mobile and wasm installations, a standard desktop Qt installation
+  // must exist alongside the requested architecture.
+  // In these cases, we must select the first item that ends with 'android*', 'ios', or 'wasm*'.
+  const requiresParallelDesktop = qtArchDirs.filter((p) =>
+    p.match(/6\.\d+\.\d+\/(android[^/]*|ios|wasm[^/]*)$/)
+  );
+  if (requiresParallelDesktop.length) {
+    // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
+    return requiresParallelDesktop[0];
+  } else if (!qtArchDirs.length) {
+    throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
+  } else {
+    // NOTE: if multiple Qt installations exist, this may not select the desired directory
+    return qtArchDirs[0];
+  }
+};
+
 class Inputs {
   readonly host: "windows" | "mac" | "linux";
   readonly target: "desktop" | "android" | "ios";
@@ -170,12 +194,6 @@ class Inputs {
     this.aqtVersion = core.getInput("aqtversion");
 
     this.py7zrVersion = core.getInput("py7zrversion");
-  }
-
-  public get versionDir(): string {
-    // Weird naming scheme exception for qt 5.9
-    const version = this.version === "5.9.0" ? "5.9" : this.version;
-    return nativePath(`${this.dir}/${version}`);
   }
 
   public get cacheKey(): string {
@@ -331,12 +349,12 @@ const run = async (): Promise<void> => {
     }
 
     // Set environment variables
-    const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
     if (inputs.setEnv) {
       if (inputs.tools.length) {
         core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
       }
       if (!inputs.toolsOnly) {
+        const qtPath = nativePath(locateQtArchDir(inputs.dir));
         if (process.platform === "linux") {
           setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
         }
