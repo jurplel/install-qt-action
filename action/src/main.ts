@@ -30,6 +30,30 @@ const execPython = async (command: string, args: readonly string[]): Promise<num
   return exec(`${python} -m ${command} ${args.join(" ")}`);
 };
 
+const locateQtArchDir = (installDir: string): string => {
+  // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
+  // This makes a list of all the viable arch directories that contain a qmake file.
+  const qtArchDirs = glob
+    .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
+    .map((s) => s.replace(/\/bin\/qmake[^/]*$/, ""));
+
+  // For Qt6 mobile and wasm installations, a standard desktop Qt installation
+  // must exist alongside the requested architecture.
+  // In these cases, we must select the first item that ends with 'android*', 'ios', or 'wasm*'.
+  const requiresParallelDesktop = qtArchDirs.filter((p) =>
+    p.match(/6\.\d+\.\d+\/(android[^/]*|ios|wasm[^/]*)$/)
+  );
+  if (requiresParallelDesktop.length) {
+    // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
+    return requiresParallelDesktop[0];
+  } else if (!qtArchDirs.length) {
+    throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
+  } else {
+    // NOTE: if multiple Qt installations exist, this may not select the desired directory
+    return qtArchDirs[0];
+  }
+};
+
 class Inputs {
   readonly host: "windows" | "mac" | "linux";
   readonly target: "desktop" | "android" | "ios";
@@ -85,6 +109,7 @@ class Inputs {
       throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
     }
 
+    // An attempt to sanitize non-straightforward version number input
     this.version = core.getInput("version");
 
     this.arch = core.getInput("arch");
@@ -171,12 +196,6 @@ class Inputs {
     this.py7zrVersion = core.getInput("py7zrversion");
   }
 
-  public get versionDir(): string {
-    // Weird naming scheme exception for qt 5.9
-    const version = this.version === "5.9.0" ? "5.9" : this.version;
-    return nativePath(`${this.dir}/${version}`);
-  }
-
   public get cacheKey(): string {
     let cacheKey = this.cacheKeyPrefix;
     for (const keyStringArray of [
@@ -243,7 +262,8 @@ const run = async (): Promise<void> => {
           "libxcb-xfixes0",
           "libxcb-xinerama0",
           "libxcb1",
-          "libxkbcommon-x11-0",
+          "libxkbcommon-dev",
+          "libxcb-xkb-dev",
         ].join(" ");
         const updateCommand = "apt-get update";
         const installCommand = `apt-get install ${dependencies} -y`;
@@ -329,12 +349,12 @@ const run = async (): Promise<void> => {
     }
 
     // Set environment variables
-    const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
     if (inputs.setEnv) {
       if (inputs.tools.length) {
         core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
       }
       if (!inputs.toolsOnly) {
+        const qtPath = nativePath(locateQtArchDir(inputs.dir));
         if (process.platform === "linux") {
           setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
         }

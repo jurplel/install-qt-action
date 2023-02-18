@@ -94,7 +94,18 @@ class Inputs {
         else {
             throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
         }
-        this.version = core.getInput("version");
+        // An attempt to sanitize non-straightforward version number input
+        let version = core.getInput("version");
+        const dots = version.match(/\./g).length;
+        const desiredDotCount = 2;
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        if (dots < desiredDotCount && version.slice(-1) !== "*") {
+            version = version.concat(".*");
+        }
+        else if (dots > desiredDotCount) {
+            throw TypeError(`version: "${version}$ is a malformed semantic version: must be formatted like "6.2.0" or "6.*"`);
+        }
+        this.version = version;
         this.arch = core.getInput("arch");
         // Set arch automatically if omitted
         if (!this.arch) {
@@ -242,7 +253,8 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     "libxcb-xfixes0",
                     "libxcb-xinerama0",
                     "libxcb1",
-                    "libxkbcommon-x11-0",
+                    "libxkbcommon-dev",
+                    "libxcb-xkb-dev",
                 ].join(" ");
                 const updateCommand = "apt-get update";
                 const installCommand = `apt-get install ${dependencies} -y`;
