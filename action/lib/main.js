@@ -57,6 +57,28 @@ const execPython = (command, args) => __awaiter(void 0, void 0, void 0, function
     const python = process.platform === "win32" ? "python" : "python3";
     return (0, exec_1.exec)(`${python} -m ${command} ${args.join(" ")}`);
 });
+const locateQtArchDir = (installDir) => {
+    // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
+    // This makes a list of all the viable arch directories that contain a qmake file.
+    const qtArchDirs = glob
+        .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
+        .map((s) => s.replace(/\/bin\/qmake[^/]*$/, ""));
+    // For Qt6 mobile and wasm installations, a standard desktop Qt installation
+    // must exist alongside the requested architecture.
+    // In these cases, we must select the first item that ends with 'android*', 'ios', or 'wasm*'.
+    const requiresParallelDesktop = qtArchDirs.filter((p) => p.match(/6\.\d+\.\d+\/(android[^/]*|ios|wasm[^/]*)$/));
+    if (requiresParallelDesktop.length) {
+        // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
+        return requiresParallelDesktop[0];
+    }
+    else if (!qtArchDirs.length) {
+        throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
+    }
+    else {
+        // NOTE: if multiple Qt installations exist, this may not select the desired directory
+        return qtArchDirs[0];
+    }
+};
 class Inputs {
     constructor() {
         const host = core.getInput("host");
@@ -95,17 +117,7 @@ class Inputs {
             throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
         }
         // An attempt to sanitize non-straightforward version number input
-        let version = core.getInput("version");
-        const dots = version.match(/\./g).length;
-        const desiredDotCount = 2;
-        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-        if (dots < desiredDotCount && version.slice(-1) !== "*") {
-            version = version.concat(".*");
-        }
-        else if (dots > desiredDotCount) {
-            throw TypeError(`version: "${version}$ is a malformed semantic version: must be formatted like "6.2.0" or "6.*"`);
-        }
-        this.version = version;
+        this.version = core.getInput("version");
         this.arch = core.getInput("arch");
         // Set arch automatically if omitted
         if (!this.arch) {
@@ -184,11 +196,6 @@ class Inputs {
         this.setEnv = Inputs.getBoolInput("set-env");
         this.aqtVersion = core.getInput("aqtversion");
         this.py7zrVersion = core.getInput("py7zrversion");
-    }
-    get versionDir() {
-        // Weird naming scheme exception for qt 5.9
-        const version = this.version === "5.9.0" ? "5.9" : this.version;
-        return nativePath(`${this.dir}/${version}`);
     }
     get cacheKey() {
         let cacheKey = this.cacheKeyPrefix;
@@ -329,12 +336,12 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             core.info(`Automatic cache saved with id ${cacheId}`);
         }
         // Set environment variables
-        const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
         if (inputs.setEnv) {
             if (inputs.tools.length) {
                 core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
             }
             if (!inputs.toolsOnly) {
+                const qtPath = nativePath(locateQtArchDir(inputs.dir));
                 if (process.platform === "linux") {
                     setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
                 }
