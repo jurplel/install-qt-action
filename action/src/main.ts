@@ -143,38 +143,17 @@ class Inputs {
     }
     this.dir = `${dir}/Qt`;
 
-    const modules = core.getInput("modules");
-    if (modules) {
-      this.modules = modules.split(" ");
-    } else {
-      this.modules = [];
-    }
+    this.modules = Inputs.getStringArrayInput("modules");
 
-    const archives = core.getInput("archives");
-    if (archives) {
-      this.archives = archives.split(" ");
-    } else {
-      this.archives = [];
-    }
+    this.archives = Inputs.getStringArrayInput("archives");
 
-    const tools = core.getInput("tools");
-    if (tools) {
-      this.tools = [];
-      for (const tool of tools.split(" ")) {
-        // The tools inputs have the tool name, variant, and arch delimited by a comma
-        // aqt expects spaces instead
-        this.tools.push(tool.replace(/,/g, " "));
-      }
-    } else {
-      this.tools = [];
-    }
+    this.tools = Inputs.getStringArrayInput("tools").map(
+      // The tools inputs have the tool name, variant, and arch delimited by a comma
+      // aqt expects spaces instead
+      (tool: string): string => tool.replace(/,/g, " ")
+    );
 
-    const extra = core.getInput("extra");
-    if (extra) {
-      this.extra = extra.split(" ");
-    } else {
-      this.extra = [];
-    }
+    this.extra = Inputs.getStringArrayInput("extra");
 
     const installDeps = core.getInput("install-deps").toLowerCase();
     if (installDeps === "nosudo") {
@@ -233,6 +212,10 @@ class Inputs {
 
   private static getBoolInput(name: string): boolean {
     return core.getInput(name).toLowerCase() === "true";
+  }
+  private static getStringArrayInput(name: string): string[] {
+    const content = core.getInput(name);
+    return content ? content.split(" ") : [];
   }
 }
 
