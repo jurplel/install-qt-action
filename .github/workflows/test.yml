@@ -35,6 +35,8 @@ jobs:
           - windows-2019
           - macos-11
           - macos-12
+        aqtversion:
+          - null  # use whatever the default is
         qt:
           - version: "5.9.0"
             requested: "5.9.0"
@@ -51,6 +53,14 @@ jobs:
         cache:
           - cached
           - uncached
+        include:
+          - os: ubuntu-22.04
+            aqtversion: "==3.1.*"
+            qt:
+              version: "5.15.2"
+              requested: "5.15"
+              modules: qtwebengine
+
 
     steps:
       - uses: actions/checkout@v3
@@ -70,9 +80,20 @@ jobs:
           cd action
           npm run build
 
-      - name: Install Qt with options
+      - name: Install Qt with options and default aqtversion
+        if: ${{ !matrix.aqtversion && matrix.qt.version }}
         uses: ./
         with:
+          modules: ${{ matrix.qt.modules }}
+          version: ${{ matrix.qt.requested }}
+          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
+          cache: ${{ matrix.cache == 'cached' }}
+
+      - name: Install Qt with options and specified aqtversion
+        if: ${{ matrix.aqtversion && matrix.qt.version }}
+        uses: ./
+        with:
+          aqtversion: ${{ matrix.aqtversion }}
           modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
