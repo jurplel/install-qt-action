@@ -123,9 +123,17 @@ Set this to false if you want to avoid setting environment variables for whateve
 
 Default: `true`
 
+### `no-qt-binaries`
+
+Set this to true if you want to skip installing Qt. 
+This option is useful if you want to install tools, source, documentation, or examples.
+
+Default: `false`
+
 ### `tools-only`
 
-Set this to true if you only want to install tools, and not Qt.
+This is a synonym for `no-qt-binaries`. It only exists to preserve backwards compatibility.
+If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip installation of Qt.
 
 Default: `false`
 

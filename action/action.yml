@@ -39,8 +39,11 @@ inputs:
   set-env:
     default: true
     description: Whether or not to set environment variables after running aqtinstall
+  no-qt-binaries:
+    description: Turns off installation of Qt. Useful for installing tools, source, documentation, or examples.
+    default: false
   tools-only:
-    description: Whether or not to actually install Qt or just the tools from the tools argument
+    description: Synonym for `no-qt-binaries`, used for backwards compatibility.
     default: false
   aqtversion:
     description: Version of aqtinstall to use in case of issues

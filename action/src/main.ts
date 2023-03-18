@@ -68,7 +68,7 @@ class Inputs {
   readonly installDeps: boolean | "nosudo";
   readonly cache: boolean;
   readonly cacheKeyPrefix: string;
-  readonly toolsOnly: boolean;
+  readonly isInstallQtBinaries: boolean;
   readonly setEnv: boolean;
 
   readonly aqtVersion: string;
@@ -166,7 +166,8 @@ class Inputs {
 
     this.cacheKeyPrefix = core.getInput("cache-key-prefix");
 
-    this.toolsOnly = Inputs.getBoolInput("tools-only");
+    this.isInstallQtBinaries =
+      !Inputs.getBoolInput("tools-only") && !Inputs.getBoolInput("no-qt-binaries");
 
     this.setEnv = Inputs.getBoolInput("set-env");
 
@@ -286,7 +287,7 @@ const run = async (): Promise<void> => {
       await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
 
       // Install Qt
-      if (!inputs.toolsOnly) {
+      if (inputs.isInstallQtBinaries) {
         const qtArgs = [inputs.host, inputs.target, inputs.version];
 
         if (inputs.arch) {
@@ -334,7 +335,7 @@ const run = async (): Promise<void> => {
       if (inputs.tools.length) {
         core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
       }
-      if (!inputs.toolsOnly) {
+      if (inputs.isInstallQtBinaries) {
         const qtPath = nativePath(locateQtArchDir(inputs.dir));
         if (process.platform === "linux") {
           setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
