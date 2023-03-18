@@ -30,6 +30,10 @@ const execPython = async (command: string, args: readonly string[]): Promise<num
   return exec(`${python} -m ${command} ${args.join(" ")}`);
 };
 
+const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
+  return listArgs.length ? [flag, ...listArgs] : [];
+};
+
 const locateQtArchDir = (installDir: string): string => {
   // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
   // This makes a list of all the viable arch directories that contain a qmake file.
@@ -288,29 +292,16 @@ const run = async (): Promise<void> => {
 
       // Install Qt
       if (inputs.isInstallQtBinaries) {
-        const qtArgs = [inputs.host, inputs.target, inputs.version];
-
-        if (inputs.arch) {
-          qtArgs.push(inputs.arch);
-        }
-
-        qtArgs.push("--outputdir", inputs.dir);
-
-        if (inputs.modules.length) {
-          qtArgs.push("--modules");
-          for (const module of inputs.modules) {
-            qtArgs.push(module);
-          }
-        }
-
-        if (inputs.archives.length) {
-          qtArgs.push("--archives");
-          for (const archive of inputs.archives) {
-            qtArgs.push(archive);
-          }
-        }
-
-        qtArgs.push(...inputs.extra);
+        const qtArgs = [
+          inputs.host,
+          inputs.target,
+          inputs.version,
+          ...(inputs.arch ? [inputs.arch] : []),
+          ...["--outputdir", inputs.dir],
+          ...flaggedList("--modules", inputs.modules),
+          ...flaggedList("--archives", inputs.archives),
+          ...inputs.extra,
+        ];
 
         await execPython("aqt install-qt", qtArgs);
       }
