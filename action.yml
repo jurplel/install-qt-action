@@ -42,8 +42,11 @@ inputs:
   set-env:
     default: true
     description: Whether or not to set environment variables after running aqtinstall
+  no-qt-binaries:
+    description: Turns off installation of Qt. Useful for installing tools, source, documentation, or examples.
+    default: false
   tools-only:
-    description: Whether or not to actually install Qt or just the tools from the tools argument
+    description: Synonym for `no-qt-binaries`, used for backwards compatibility.
     default: false
   aqtversion:
     description: Version of aqtinstall to use in case of issues
@@ -53,6 +56,25 @@ inputs:
     default: ==0.19.*
   extra:
     description: Any extra arguments to append to the back
+  source:
+    default: false
+    description: Whether or not to install Qt source code.
+  src-archives:
+    description: Space-separated list of .7z source archives to install. Used to reduce download/image sizes.
+  documentation:
+    default: false
+    description: Whether or not to install Qt documentation.
+  doc-archives:
+    description: Space-separated list of .7z docs archives to install. Used to reduce download/image sizes.
+  doc-modules:
+    description: Space-separated list of additional documentation modules to install.
+  examples:
+    default: false
+    description: Whether or not to install Qt example code.
+  example-archives:
+    description: Space-separated list of .7z example archives to install. Used to reduce download/image sizes.
+  example-modules:
+    description: Space-separated list of additional example modules to install.
 runs:
   using: "composite"
   steps:
@@ -77,7 +99,16 @@ runs:
       cache-key-prefix: ${{ inputs.cache-key-prefix }}
       tools: ${{ inputs.tools }}
       set-env: ${{ inputs.set-env }}
+      no-qt-binaries: ${{ inputs.no-qt-binaries }}
       tools-only: ${{ inputs.tools-only }}
       aqtversion: ${{ inputs.aqtversion }}
       py7zrversion: ${{ inputs.py7zrversion }}
+      source: ${{ inputs.source }}
+      src-archives: ${{ inputs.src-archives }}
+      documentation: ${{ inputs.documentation }}
+      doc-archives: ${{ inputs.doc-archives }}
+      doc-modules: ${{ inputs.doc-modules }}
+      examples: ${{ inputs.examples }}
+      example-archives: ${{ inputs.example-archives }}
+      example-modules: ${{ inputs.example-modules }}
       extra: ${{ inputs.extra }}

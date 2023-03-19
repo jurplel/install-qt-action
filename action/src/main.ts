@@ -69,6 +69,17 @@ class Inputs {
   readonly tools: string[];
   readonly extra: string[];
 
+  readonly src: boolean;
+  readonly srcArchives: string[];
+
+  readonly doc: boolean;
+  readonly docArchives: string[];
+  readonly docModules: string[];
+
+  readonly example: boolean;
+  readonly exampleArchives: string[];
+  readonly exampleModules: string[];
+
   readonly installDeps: boolean | "nosudo";
   readonly cache: boolean;
   readonly cacheKeyPrefix: string;
@@ -178,6 +189,17 @@ class Inputs {
     this.aqtVersion = core.getInput("aqtversion");
 
     this.py7zrVersion = core.getInput("py7zrversion");
+
+    this.src = Inputs.getBoolInput("source");
+    this.srcArchives = Inputs.getStringArrayInput("src-archives");
+
+    this.doc = Inputs.getBoolInput("documentation");
+    this.docModules = Inputs.getStringArrayInput("doc-modules");
+    this.docArchives = Inputs.getStringArrayInput("doc-archives");
+
+    this.example = Inputs.getBoolInput("examples");
+    this.exampleModules = Inputs.getStringArrayInput("example-modules");
+    this.exampleArchives = Inputs.getStringArrayInput("example-archives");
   }
 
   public get cacheKey(): string {
@@ -197,6 +219,14 @@ class Inputs {
       this.archives,
       this.extra,
       this.tools,
+      this.src ? "src" : "",
+      this.srcArchives,
+      this.doc ? "doc" : "",
+      this.docArchives,
+      this.docModules,
+      this.example ? "example" : "",
+      this.exampleArchives,
+      this.exampleModules,
     ]) {
       for (const keyString of keyStringArray) {
         if (keyString) {
@@ -304,6 +334,34 @@ const run = async (): Promise<void> => {
         ];
 
         await execPython("aqt install-qt", qtArgs);
+      }
+
+      const installSrcDocExamples = async (
+        flavor: "src" | "doc" | "example",
+        archives: readonly string[],
+        modules: readonly string[]
+      ): Promise<void> => {
+        const qtArgs = [
+          inputs.host,
+          // Aqtinstall < 2.0.4 requires `inputs.target` here, but that's deprecated
+          inputs.version,
+          ...["--outputdir", inputs.dir],
+          ...flaggedList("--archives", archives),
+          ...flaggedList("--modules", modules),
+          ...inputs.extra,
+        ];
+        await execPython(`aqt install-${flavor}`, qtArgs);
+      };
+
+      // Install source, docs, & examples
+      if (inputs.src) {
+        await installSrcDocExamples("src", inputs.srcArchives, []);
+      }
+      if (inputs.doc) {
+        await installSrcDocExamples("doc", inputs.docArchives, inputs.docModules);
+      }
+      if (inputs.example) {
+        await installSrcDocExamples("example", inputs.exampleArchives, inputs.exampleModules);
       }
 
       // Install tools

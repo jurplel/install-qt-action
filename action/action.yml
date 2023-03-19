@@ -53,6 +53,25 @@ inputs:
     default: ==0.19.*
   extra:
     description: Any extra arguments to append to the back
+  source:
+    default: false
+    description: Whether or not to install Qt source code.
+  src-archives:
+    description: Space-separated list of .7z source archives to install. Used to reduce download/image sizes.
+  documentation:
+    default: false
+    description: Whether or not to install Qt documentation.
+  doc-archives:
+    description: Space-separated list of .7z docs archives to install. Used to reduce download/image sizes.
+  doc-modules:
+    description: Space-separated list of additional documentation modules to install.
+  examples:
+    default: false
+    description: Whether or not to install Qt example code.
+  example-archives:
+    description: Space-separated list of .7z example archives to install. Used to reduce download/image sizes.
+  example-modules:
+    description: Space-separated list of additional example modules to install.
 runs:
   using: node16
   main: lib/main.js
