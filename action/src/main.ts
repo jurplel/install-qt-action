@@ -25,11 +25,10 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
   core.exportVariable(name, newValue);
 };
 
-const toolsPaths = (installDir: string): string =>
-  ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"]
-    .flatMap((p: string): string[] => glob.sync(`${installDir}/${p}`))
-    .map(nativePath)
-    .join(":");
+const toolsPaths = (installDir: string): string[] =>
+  ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p: string): string[] =>
+    glob.sync(`${installDir}/${p}`)
+  );
 
 const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
@@ -411,7 +410,7 @@ const run = async (): Promise<void> => {
     if (inputs.setEnv) {
       if (inputs.tools.length) {
         core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
-        setOrAppendEnvVar("PATH", toolsPaths(inputs.dir));
+        toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
       }
       if (inputs.isInstallQtBinaries) {
         const qtPath = nativePath(locateQtArchDir(inputs.dir));
