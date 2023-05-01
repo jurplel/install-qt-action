@@ -293,13 +293,10 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             if (process.platform === "darwin") {
                 yield (0, exec_1.exec)("brew install p7zip");
             }
-            // Install aqtinstall
-            yield execPython("pip install", [
-                "setuptools",
-                "wheel",
-                `"py7zr${inputs.py7zrVersion}"`,
-                `"aqtinstall${inputs.aqtVersion}"`,
-            ]);
+            // Install dependencies via pip
+            yield execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
+            // Install aqtinstall separately: allows aqtinstall to override py7zr if required
+            yield execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
             // Install Qt
             if (!inputs.toolsOnly) {
                 const qtArgs = [inputs.host, inputs.target, inputs.version];
