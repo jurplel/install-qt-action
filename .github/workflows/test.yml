@@ -35,18 +35,32 @@ jobs:
           - windows-2019
           - macos-11
           - macos-12
+        aqtversion:
+          - null  # use whatever the default is
         qt:
           - version: "5.9.0"
             requested: "5.9.0"
+            modules: qtwebengine
           - version: "5.15.2"
             requested: "5.15"
+            modules: qtwebengine
           - version: "6.3.2"  # Qt 6.3 is not an LTS version, so '6.3.*' always resolves to '6.3.2'
             requested: "6.3.*"
+            # In Qt 6.2.0+, qtwebengine requires qtpositioning and qtwebchannel
+            modules: qtwebengine qtpositioning qtwebchannel
           - version: null   # Tools-only build
             requested: null
         cache:
           - cached
           - uncached
+        include:
+          - os: ubuntu-22.04
+            aqtversion: "==3.1.*"
+            qt:
+              version: "5.15.2"
+              requested: "5.15"
+              modules: qtwebengine
+
 
     steps:
       - uses: actions/checkout@v3
@@ -66,21 +80,21 @@ jobs:
           cd action
           npm run build
 
-      - name: Install Qt5 with options
-        if: ${{ matrix.qt.version && startsWith(matrix.qt.version, '5') }}
+      - name: Install Qt with options and default aqtversion
+        if: ${{ !matrix.aqtversion && matrix.qt.version }}
         uses: ./
         with:
-          modules: qtwebengine
+          modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}
 
-      - name: Install Qt6 with options
-        if: ${{ matrix.qt.version && startsWith(matrix.qt.version, '6') }}
+      - name: Install Qt with options and specified aqtversion
+        if: ${{ matrix.aqtversion && matrix.qt.version }}
         uses: ./
         with:
-          # In Qt 6.2.0+, qtwebengine requires qtpositioning and qtwebchannel
-          modules: qtwebengine qtpositioning qtwebchannel
+          aqtversion: ${{ matrix.aqtversion }}
+          modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}

@@ -296,13 +296,11 @@ const run = async (): Promise<void> => {
         await exec("brew install p7zip");
       }
 
-      // Install aqtinstall
-      await execPython("pip install", [
-        "setuptools",
-        "wheel",
-        `"py7zr${inputs.py7zrVersion}"`,
-        `"aqtinstall${inputs.aqtVersion}"`,
-      ]);
+      // Install dependencies via pip
+      await execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
+
+      // Install aqtinstall separately: allows aqtinstall to override py7zr if required
+      await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
 
       // Install Qt
       if (!inputs.toolsOnly) {
