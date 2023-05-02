@@ -108,6 +108,7 @@ jobs:
           for /f "delims=" %%d in ( 'vswhere.exe -latest -property installationPath' ) do @( call "%%d\VC\Auxiliary\Build\vcvars64.bat" )
           IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR% ) ELSE ( dir %QT_ROOT_DIR%\lib\cmake )
           qmake
+          cmake -S . -B ./build
         shell: cmd
 
       - name: Configure test project on unix
@@ -122,6 +123,7 @@ jobs:
             ls "${Qt5_DIR}"
           fi
           qmake
+          cmake -S . -B ./build
         shell: bash
 
       - name: Install tools with options
