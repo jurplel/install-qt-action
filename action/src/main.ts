@@ -247,6 +247,7 @@ const run = async (): Promise<void> => {
         const dependencies = [
           "build-essential",
           "libgl1-mesa-dev",
+          "libgstreamer-gl1.0-0",
           "libpulse-dev",
           "libxcb-glx0",
           "libxcb-icccm4",
