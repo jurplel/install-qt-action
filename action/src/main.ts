@@ -130,7 +130,16 @@ class Inputs {
     this.arch = core.getInput("arch");
     // Set arch automatically if omitted
     if (!this.arch) {
-      if (this.host === "windows") {
+      if (this.target === "android") {
+        if (
+          compareVersions(this.version, ">=", "5.14.0") &&
+          compareVersions(this.version, "<", "6.0.0")
+        ) {
+          this.arch = "android";
+        } else {
+          this.arch = "android_armv7";
+        }
+      } else if (this.host === "windows") {
         if (compareVersions(this.version, ">=", "5.15.0")) {
           this.arch = "win64_msvc2019_64";
         } else if (compareVersions(this.version, "<", "5.6.0")) {
@@ -139,15 +148,6 @@ class Inputs {
           this.arch = "win64_msvc2015_64";
         } else {
           this.arch = "win64_msvc2017_64";
-        }
-      } else if (this.target === "android") {
-        if (
-          compareVersions(this.version, ">=", "5.14.0") &&
-          compareVersions(this.version, "<", "6.0.0")
-        ) {
-          this.arch = "android";
-        } else {
-          this.arch = "android_armv7";
         }
       }
     }
