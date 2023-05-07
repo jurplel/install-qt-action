@@ -10,6 +10,12 @@ You know what's easier than dealing with that? Just using this:
 
 All done.
 
+## Upgrade Guides
+Each new major version of this project includes changes that can break workflows written to use an older version of
+this project. These changes are summarized here, to help you upgrade your existing workflows.
+
+[Upgrading `install-qt-action`](README_upgrade_guide.md)
+
 ## Options
 
 ### `version`
