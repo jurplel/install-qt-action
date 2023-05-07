@@ -1,0 +1,82 @@
+name: CI-android
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-22.04
+          - windows-2022
+          - macos-12
+        qt:
+          - version: "5.15.2"
+            ndk-version: r21e
+            modules:
+            example-archives: qtbase qtsensors
+            example-modules:
+          - version: "6.3.2"
+            ndk-version: r21e
+            modules: qtsensors
+            example-archives: qtbase
+            example-modules:  qtsensors
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: npm
+          cache-dependency-path: action/
+
+      - run: |
+          cd action
+          npm ci || npm install
+        shell: bash
+
+      - run: |
+          cd action
+          npm run build
+
+      - name: Install Qt
+        uses: ./
+        with:
+          target: android
+          modules: ${{ matrix.qt.modules }}
+          version: ${{ matrix.qt.version }}
+          examples: true
+          example-archives: ${{ matrix.qt.example-archives }}
+          example-modules:  ${{ matrix.qt.example-modules }}
+
+      - name: Install Android NDK
+        shell: bash
+        # Links to NDK are at https://github.com/android/ndk/wiki/Unsupported-Downloads
+        run: |
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
+            export TARGET_ARCH="linux"
+          elif [[ "${RUNNER_OS}" == "Windows" ]]; then
+            export TARGET_ARCH="windows"
+          else
+            export TARGET_ARCH="darwin"
+          fi
+          export NDK_VER_NUM=$(echo ${{ matrix.qt.ndk-version }} | sed -e 's/r(\d+).*/$1/g')
+          # If it's less than 23, append -x86_64
+          if (( "${NDK_VER_NUM}" < 23 )); then
+            export TARGET_ARCH="${TARGET_ARCH}-x86_64"
+          fi;
+          curl -O "https://dl.google.com/android/repository/android-ndk-${{ matrix.qt.ndk-version }}-${TARGET_ARCH}.zip"
+          unzip "android-ndk-${{ matrix.qt.ndk-version }}-${TARGET_ARCH}.zip"
+
+      - name: Build test project
+        env:
+          QT_VERSION: ${{ matrix.qt.version }}
+        run: |
+          export ANDROID_NDK_ROOT=$(pwd)/android-ndk-${{ matrix.qt.ndk-version }}
+          cd ../Qt/Examples/Qt-${{ matrix.qt.version }}/sensors/accelbubble
+          qmake || qmake.bat
+          make
+        shell: bash
