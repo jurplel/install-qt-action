@@ -261,6 +261,10 @@ Example value: `--external 7z`
 ## More info
 For more in-depth and certifiably up-to-date documentation, check the documentation for aqtinstall [here](https://aqtinstall.readthedocs.io/en/latest/getting_started.html).
 
+Any tools you installed with the `tools` key will be added to the beginning of your `PATH` environment variable.
+Specifically, any `bin` directories within the tool's directory will be added.
+On MacOS, if the tool is an app bundle, then the `.app/Contents/MacOS` folder will also be added to your `PATH`.
+
 The Qt bin directory is appended to your `path` environment variable.
 `Qt5_DIR` is also set appropriately for CMake if you are using Qt 5.
 In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` are set accordingly. `IQTA_TOOLS` is set to the "Tools" directory if tools are installed as well.
