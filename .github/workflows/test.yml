@@ -106,7 +106,7 @@ jobs:
         run: |
           cd tests/TestWithModules
           for /f "delims=" %%d in ( 'vswhere.exe -latest -property installationPath' ) do @( call "%%d\VC\Auxiliary\Build\vcvars64.bat" )
-          IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR%\lib\cmake ) ELSE ( dir %Qt6_DIR%\lib\cmake )
+          IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR% ) ELSE ( dir %QT_ROOT_DIR%\lib\cmake )
           qmake
         shell: cmd
 
@@ -117,9 +117,9 @@ jobs:
         run: |
           cd tests/TestWithModules
           if [[ $QT_VERSION == 6* ]]; then
-            ls "$Qt6_DIR/lib/cmake"
+            ls "${QT_ROOT_DIR}/lib/cmake"
           else
-            ls "$Qt5_DIR/lib/cmake"
+            ls "${Qt5_DIR}"
           fi
           qmake
         shell: bash
