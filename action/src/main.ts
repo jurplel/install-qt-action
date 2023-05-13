@@ -30,6 +30,10 @@ const execPython = async (command: string, args: readonly string[]): Promise<num
   return exec(`${python} -m ${command} ${args.join(" ")}`);
 };
 
+const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
+  return listArgs.length ? [flag, ...listArgs] : [];
+};
+
 const locateQtArchDir = (installDir: string): string => {
   // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
   // This makes a list of all the viable arch directories that contain a qmake file.
@@ -65,10 +69,21 @@ class Inputs {
   readonly tools: string[];
   readonly extra: string[];
 
+  readonly src: boolean;
+  readonly srcArchives: string[];
+
+  readonly doc: boolean;
+  readonly docArchives: string[];
+  readonly docModules: string[];
+
+  readonly example: boolean;
+  readonly exampleArchives: string[];
+  readonly exampleModules: string[];
+
   readonly installDeps: boolean | "nosudo";
   readonly cache: boolean;
   readonly cacheKeyPrefix: string;
-  readonly toolsOnly: boolean;
+  readonly isInstallQtBinaries: boolean;
   readonly setEnv: boolean;
 
   readonly aqtVersion: string;
@@ -143,38 +158,17 @@ class Inputs {
     }
     this.dir = `${dir}/Qt`;
 
-    const modules = core.getInput("modules");
-    if (modules) {
-      this.modules = modules.split(" ");
-    } else {
-      this.modules = [];
-    }
+    this.modules = Inputs.getStringArrayInput("modules");
 
-    const archives = core.getInput("archives");
-    if (archives) {
-      this.archives = archives.split(" ");
-    } else {
-      this.archives = [];
-    }
+    this.archives = Inputs.getStringArrayInput("archives");
 
-    const tools = core.getInput("tools");
-    if (tools) {
-      this.tools = [];
-      for (const tool of tools.split(" ")) {
-        // The tools inputs have the tool name, variant, and arch delimited by a comma
-        // aqt expects spaces instead
-        this.tools.push(tool.replace(/,/g, " "));
-      }
-    } else {
-      this.tools = [];
-    }
+    this.tools = Inputs.getStringArrayInput("tools").map(
+      // The tools inputs have the tool name, variant, and arch delimited by a comma
+      // aqt expects spaces instead
+      (tool: string): string => tool.replace(/,/g, " ")
+    );
 
-    const extra = core.getInput("extra");
-    if (extra) {
-      this.extra = extra.split(" ");
-    } else {
-      this.extra = [];
-    }
+    this.extra = Inputs.getStringArrayInput("extra");
 
     const installDeps = core.getInput("install-deps").toLowerCase();
     if (installDeps === "nosudo") {
@@ -187,13 +181,25 @@ class Inputs {
 
     this.cacheKeyPrefix = core.getInput("cache-key-prefix");
 
-    this.toolsOnly = Inputs.getBoolInput("tools-only");
+    this.isInstallQtBinaries =
+      !Inputs.getBoolInput("tools-only") && !Inputs.getBoolInput("no-qt-binaries");
 
     this.setEnv = Inputs.getBoolInput("set-env");
 
     this.aqtVersion = core.getInput("aqtversion");
 
     this.py7zrVersion = core.getInput("py7zrversion");
+
+    this.src = Inputs.getBoolInput("source");
+    this.srcArchives = Inputs.getStringArrayInput("src-archives");
+
+    this.doc = Inputs.getBoolInput("documentation");
+    this.docModules = Inputs.getStringArrayInput("doc-modules");
+    this.docArchives = Inputs.getStringArrayInput("doc-archives");
+
+    this.example = Inputs.getBoolInput("examples");
+    this.exampleModules = Inputs.getStringArrayInput("example-modules");
+    this.exampleArchives = Inputs.getStringArrayInput("example-archives");
   }
 
   public get cacheKey(): string {
@@ -213,6 +219,14 @@ class Inputs {
       this.archives,
       this.extra,
       this.tools,
+      this.src ? "src" : "",
+      this.srcArchives,
+      this.doc ? "doc" : "",
+      this.docArchives,
+      this.docModules,
+      this.example ? "example" : "",
+      this.exampleArchives,
+      this.exampleModules,
     ]) {
       for (const keyString of keyStringArray) {
         if (keyString) {
@@ -233,6 +247,10 @@ class Inputs {
 
   private static getBoolInput(name: string): boolean {
     return core.getInput(name).toLowerCase() === "true";
+  }
+  private static getStringArrayInput(name: string): string[] {
+    const content = core.getInput(name);
+    return content ? content.split(" ") : [];
   }
 }
 
@@ -305,32 +323,47 @@ const run = async (): Promise<void> => {
       await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
 
       // Install Qt
-      if (!inputs.toolsOnly) {
-        const qtArgs = [inputs.host, inputs.target, inputs.version];
-
-        if (inputs.arch) {
-          qtArgs.push(inputs.arch);
-        }
-
-        qtArgs.push("--outputdir", inputs.dir);
-
-        if (inputs.modules.length) {
-          qtArgs.push("--modules");
-          for (const module of inputs.modules) {
-            qtArgs.push(module);
-          }
-        }
-
-        if (inputs.archives.length) {
-          qtArgs.push("--archives");
-          for (const archive of inputs.archives) {
-            qtArgs.push(archive);
-          }
-        }
-
-        qtArgs.push(...inputs.extra);
+      if (inputs.isInstallQtBinaries) {
+        const qtArgs = [
+          inputs.host,
+          inputs.target,
+          inputs.version,
+          ...(inputs.arch ? [inputs.arch] : []),
+          ...["--outputdir", inputs.dir],
+          ...flaggedList("--modules", inputs.modules),
+          ...flaggedList("--archives", inputs.archives),
+          ...inputs.extra,
+        ];
 
         await execPython("aqt install-qt", qtArgs);
+      }
+
+      const installSrcDocExamples = async (
+        flavor: "src" | "doc" | "example",
+        archives: readonly string[],
+        modules: readonly string[]
+      ): Promise<void> => {
+        const qtArgs = [
+          inputs.host,
+          // Aqtinstall < 2.0.4 requires `inputs.target` here, but that's deprecated
+          inputs.version,
+          ...["--outputdir", inputs.dir],
+          ...flaggedList("--archives", archives),
+          ...flaggedList("--modules", modules),
+          ...inputs.extra,
+        ];
+        await execPython(`aqt install-${flavor}`, qtArgs);
+      };
+
+      // Install source, docs, & examples
+      if (inputs.src) {
+        await installSrcDocExamples("src", inputs.srcArchives, []);
+      }
+      if (inputs.doc) {
+        await installSrcDocExamples("doc", inputs.docArchives, inputs.docModules);
+      }
+      if (inputs.example) {
+        await installSrcDocExamples("example", inputs.exampleArchives, inputs.exampleModules);
       }
 
       // Install tools
@@ -353,7 +386,7 @@ const run = async (): Promise<void> => {
       if (inputs.tools.length) {
         core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
       }
-      if (!inputs.toolsOnly) {
+      if (inputs.isInstallQtBinaries) {
         const qtPath = nativePath(locateQtArchDir(inputs.dir));
         if (process.platform === "linux") {
           setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
