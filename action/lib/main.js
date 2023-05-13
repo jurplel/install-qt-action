@@ -261,6 +261,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     "libxcb-xinerama0",
                     "libxcb1",
                     "libxkbcommon-dev",
+                    "libxkbcommon-x11-0",
                     "libxcb-xkb-dev",
                 ].join(" ");
                 const updateCommand = "apt-get update";
