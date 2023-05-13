@@ -118,14 +118,95 @@ For example, this value will install the most recent versions of QtIFW and QtCre
 
 You can find a full list of tools easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
+### `source`
+
+Set this to `true` to install Qt source code. Incompatible with `aqtinstall < 2.0.4`.
+
+Default: `false`
+
+### `src-archives`
+
+String with whitespace delimited list of source archives to install, with each entry separated by a space.
+Has no effect unless `source` is set to `true`.
+Useful to limit download size.
+
+See the `--archives` flag for [aqt install-src](https://aqtinstall.readthedocs.io/en/latest/cli.html#install-src-command) for more details.
+Use [aqt list-src](https://aqtinstall.readthedocs.io/en/latest/cli.html#list-src-command) to see available options.
+
+Default: none
+
+### `documentation`
+
+Set this to `true` to install Qt documentation files. Incompatible with `aqtinstall < 2.0.4`.
+
+Default: `false`
+
+### `doc-archives`
+
+String with whitespace delimited list of documentation archives to install, with each entry separated by a space.
+Has no effect unless `documentation` is set to `true`.
+Useful to limit download size.
+
+See the `--archives` flag for [aqt install-doc](https://aqtinstall.readthedocs.io/en/latest/cli.html#install-doc-command) for more details.
+Use [aqt list-doc](https://aqtinstall.readthedocs.io/en/latest/cli.html#list-doc-command) to see available options.
+
+Default: none
+
+### `doc-modules`
+
+String with whitespace delimited list of documentation modules to install, with each entry separated by a space.
+Has no effect unless `documentation` is set to `true`.
+Each module contains extra documentation not included with the base installation.
+
+See the `--modules` flag for [aqt install-doc](https://aqtinstall.readthedocs.io/en/latest/cli.html#install-doc-command) for more details.
+Use [aqt list-doc](https://aqtinstall.readthedocs.io/en/latest/cli.html#list-doc-command) to see available options.
+
+Default: none
+
+### `examples`
+
+Set this to `true` to install Qt example code. Incompatible with `aqtinstall < 2.0.4`.
+
+Default: `false`
+
+### `example-archives`
+
+String with whitespace delimited list of example archives to install, with each entry separated by a space.
+Has no effect unless `examples` is set to `true`.
+Useful to limit download size.
+
+See the `--archives` flag for [aqt install-example](https://aqtinstall.readthedocs.io/en/latest/cli.html#install-example-command) for more details.
+Use [aqt list-example](https://aqtinstall.readthedocs.io/en/latest/cli.html#list-example-command) to see available options.
+
+Default: none
+
+### `example-modules`
+
+String with whitespace delimited list of example modules to install, with each entry separated by a space.
+Has no effect unless `examples` is set to `true`.
+Each module contains extra examples not included with the base installation.
+
+See the `--modules` flag for [aqt install-example](https://aqtinstall.readthedocs.io/en/latest/cli.html#install-example-command) for more details.
+Use [aqt list-example](https://aqtinstall.readthedocs.io/en/latest/cli.html#list-example-command) to see available options.
+
+Default: none
+
 ### `set-env`
 Set this to false if you want to avoid setting environment variables for whatever reason.
 
 Default: `true`
 
+### `no-qt-binaries`
+
+Set this to true if you want to skip installing Qt. 
+This option is useful if you want to install tools, source, documentation, or examples.
+
+Default: `false`
+
 ### `tools-only`
 
-Set this to true if you only want to install tools, and not Qt.
+This is a synonym for `no-qt-binaries`. It only exists to preserve backwards compatibility.
+If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip installation of Qt.
 
 Default: `false`
 
