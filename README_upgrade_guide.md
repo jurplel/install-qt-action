@@ -1,6 +1,14 @@
 # Upgrading `install-qt-action`
 
 ## Unreleased
+* Updated `aqtinstall` to version 3.1.* by default.
+* Use the `--autodesktop` flag to automatically install the desktop version of Qt, parallel to any WASM or mobile
+  versions of Qt 6.2 and above.
+  * If your action installed Qt 6.2+ for Android or WASM using `install-qt-action@v3`, then your action would have
+    needed to install the desktop version of Qt alongside the WASM/mobile version of Qt, otherwise it would not have
+    worked properly. As long as you are using `aqtinstall v3` or higher, the new version of `install-qt-action` will do
+    that automatically, so you can remove the second step where you add the parallel desktop version of Qt.
+    If you don't, your workflow will install desktop Qt twice.
 * Added the `QT_ROOT_DIR` environment variable that points to the root of the Qt installation.
   This variable points to the same directory as the old `Qt5_DIR` and `Qt6_DIR` variables.
 * Changed `Qt5_DIR` environment variable, so that it points to `${QT_ROOT_DIR}/lib/cmake`, as required by CMake.
