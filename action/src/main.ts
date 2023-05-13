@@ -281,6 +281,7 @@ const run = async (): Promise<void> => {
         const dependencies = [
           "build-essential",
           "libgl1-mesa-dev",
+          "libgstreamer-gl1.0-0",
           "libpulse-dev",
           "libxcb-glx0",
           "libxcb-icccm4",
@@ -413,13 +414,11 @@ const run = async (): Promise<void> => {
         if (process.platform !== "win32") {
           setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
         }
-        // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+        // If less than qt6, set Qt5_DIR variable
         if (compareVersions(inputs.version, "<", "6.0.0")) {
-          core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-          core.exportVariable("Qt5_DIR", qtPath);
-        } else {
-          core.exportVariable("Qt6_DIR", qtPath);
+          core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
         }
+        core.exportVariable("QT_ROOT_DIR", qtPath);
         core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
         core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
         core.addPath(nativePath(`${qtPath}/bin`));
