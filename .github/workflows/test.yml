@@ -51,6 +51,7 @@ jobs:
             # In Qt 6.2.0+, qtwebengine requires qtpositioning and qtwebchannel
             modules: qtwebengine qtpositioning qtwebchannel
           - tools-only-build: true
+            add-tools-to-path: true
         cache:
           - cached
           - uncached
@@ -81,6 +82,10 @@ jobs:
               version: "5.15.2"
               requested: "5.15"
               modules: qtwebengine
+          - os: ubuntu-22.04
+            qt:
+              tools-only-build: true
+              add-tools-to-path: false
 
 
     steps:
@@ -189,10 +194,11 @@ jobs:
         with:
           tools-only: true
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
+          add-tools-to-path: ${{ matrix.qt.add-tools-to-path }}
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Test installed tools
-        if: ${{ matrix.qt.tools-only-build }}
+        if: ${{ matrix.qt.tools-only-build && matrix.qt.add-tools-to-path }}
         shell: bash
         run: |
           echo "Path: ${PATH}"
@@ -203,3 +209,19 @@ jobs:
           # Check if QtCreator is installed: QtCreator includes the CLI program 'qbs' on all 3 platforms
           which qbs
           qbs --version
+
+      - name: Test that installed tools are not in the path
+        if: ${{ matrix.qt.tools-only-build && !matrix.qt.add-tools-to-path }}
+        shell: bash
+        run: |
+          echo "Path: ${PATH}"
+          # Check that QtIFW has been installed
+          ls ../Qt/Tools/QtInstallerFramework/*/bin/ | grep archivegen
+          
+          # Check that QtIFW is not in the path
+          ! which archivegen
+          ! archivegen --version
+          
+          # Check that qbs (from QtCreator) is not in the path
+          ! which qbs
+          ! qbs --version

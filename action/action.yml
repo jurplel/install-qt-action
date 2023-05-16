@@ -36,6 +36,9 @@ inputs:
       --
       specify comma-separated argument lists which are themselves separated by spaces:
       <tool_name>,<tool_version>,<tool_arch>
+  add-tools-to-path:
+    default: true
+    description: When true, prepends directories of tools to PATH environment variable.
   set-env:
     default: true
     description: Whether or not to set environment variables after running aqtinstall

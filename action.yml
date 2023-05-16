@@ -39,6 +39,9 @@ inputs:
       --
       specify comma-separated argument lists which are themselves separated by spaces:
       <tool_name>,<tool_version>,<tool_arch>
+  add-tools-to-path:
+    default: true
+    description: When true, prepends directories of tools to PATH environment variable.
   set-env:
     default: true
     description: Whether or not to set environment variables after running aqtinstall
@@ -98,6 +101,7 @@ runs:
       cache: ${{ inputs.cache }}
       cache-key-prefix: ${{ inputs.cache-key-prefix }}
       tools: ${{ inputs.tools }}
+      add-tools-to-path: ${{ inputs.add-tools-to-path }}
       set-env: ${{ inputs.set-env }}
       no-qt-binaries: ${{ inputs.no-qt-binaries }}
       tools-only: ${{ inputs.tools-only }}
