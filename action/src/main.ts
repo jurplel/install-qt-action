@@ -88,6 +88,7 @@ class Inputs {
   readonly modules: string[];
   readonly archives: string[];
   readonly tools: string[];
+  readonly addToolsToPath: boolean;
   readonly extra: string[];
 
   readonly src: boolean;
@@ -188,6 +189,8 @@ class Inputs {
       // aqt expects spaces instead
       (tool: string): string => tool.replace(/,/g, " ")
     );
+
+    this.addToolsToPath = Inputs.getBoolInput("add-tools-to-path");
 
     this.extra = Inputs.getStringArrayInput("extra");
 
@@ -406,11 +409,15 @@ const run = async (): Promise<void> => {
       core.info(`Automatic cache saved with id ${cacheId}`);
     }
 
+    // Add tools to path
+    if (inputs.addToolsToPath && inputs.tools.length) {
+      toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+    }
+
     // Set environment variables
     if (inputs.setEnv) {
       if (inputs.tools.length) {
         core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
-        toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
       }
       if (inputs.isInstallQtBinaries) {
         const qtPath = nativePath(locateQtArchDir(inputs.dir));
