@@ -53,9 +53,49 @@ const setOrAppendEnvVar = (name, value) => {
     }
     core.exportVariable(name, newValue);
 };
-const execPython = (command, args) => __awaiter(void 0, void 0, void 0, function* () {
+const toolsPaths = (installDir) => ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p) => glob.sync(`${installDir}/${p}`));
+const pythonCommand = (command, args) => {
     const python = process.platform === "win32" ? "python" : "python3";
-    return (0, exec_1.exec)(`${python} -m ${command} ${args.join(" ")}`);
+    return `${python} -m ${command} ${args.join(" ")}`;
+};
+const execPython = (command, args) => __awaiter(void 0, void 0, void 0, function* () {
+    return (0, exec_1.exec)(pythonCommand(command, args));
+});
+const getPythonOutput = (command, args) => __awaiter(void 0, void 0, void 0, function* () {
+    // Aqtinstall prints to both stderr and stdout, depending on the command.
+    // This function assumes we don't care which is which, and we want to see it all.
+    const out = yield (0, exec_1.getExecOutput)(pythonCommand(command, args));
+    return out.stdout + out.stderr;
+});
+const flaggedList = (flag, listArgs) => {
+    return listArgs.length ? [flag, ...listArgs] : [];
+};
+const locateQtArchDir = (installDir) => {
+    // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
+    // This makes a list of all the viable arch directories that contain a qmake file.
+    const qtArchDirs = glob
+        .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
+        .map((s) => s.replace(/\/bin\/qmake[^/]*$/, ""));
+    // For Qt6 mobile and wasm installations, and Qt6 Windows on ARM installations,
+    // a standard desktop Qt installation must exist alongside the requested architecture.
+    // In these cases, we must select the first item that ends with 'android*', 'ios', 'wasm*' or 'msvc*_arm64'.
+    const requiresParallelDesktop = qtArchDirs.filter((p) => p.match(/6\.\d+\.\d+\/(android[^/]*|ios|wasm[^/]*|msvc[^/]*_arm64)$/));
+    if (requiresParallelDesktop.length) {
+        // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
+        return requiresParallelDesktop[0];
+    }
+    else if (!qtArchDirs.length) {
+        throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
+    }
+    else {
+        // NOTE: if multiple Qt installations exist, this may not select the desired directory
+        return qtArchDirs[0];
+    }
+};
+const isAutodesktopSupported = () => __awaiter(void 0, void 0, void 0, function* () {
+    const rawOutput = yield getPythonOutput("aqt", ["version"]);
+    const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
+    return match ? compareVersions(match[1], ">=", "3.0.0") : false;
 });
 class Inputs {
     constructor() {
@@ -95,21 +135,20 @@ class Inputs {
             throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
         }
         // An attempt to sanitize non-straightforward version number input
-        let version = core.getInput("version");
-        const dots = version.match(/\./g).length;
-        const desiredDotCount = 2;
-        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-        if (dots < desiredDotCount && version.slice(-1) !== "*") {
-            version = version.concat(".*");
-        }
-        else if (dots > desiredDotCount) {
-            throw TypeError(`version: "${version}$ is a malformed semantic version: must be formatted like "6.2.0" or "6.*"`);
-        }
-        this.version = version;
+        this.version = core.getInput("version");
         this.arch = core.getInput("arch");
         // Set arch automatically if omitted
         if (!this.arch) {
-            if (this.host === "windows") {
+            if (this.target === "android") {
+                if (compareVersions(this.version, ">=", "5.14.0") &&
+                    compareVersions(this.version, "<", "6.0.0")) {
+                    this.arch = "android";
+                }
+                else {
+                    this.arch = "android_armv7";
+                }
+            }
+            else if (this.host === "windows") {
                 if (compareVersions(this.version, ">=", "5.15.0")) {
                     this.arch = "win64_msvc2019_64";
                 }
@@ -123,54 +162,20 @@ class Inputs {
                     this.arch = "win64_msvc2017_64";
                 }
             }
-            else if (this.target === "android") {
-                if (compareVersions(this.version, ">=", "5.14.0") &&
-                    compareVersions(this.version, "<", "6.0.0")) {
-                    this.arch = "android";
-                }
-                else {
-                    this.arch = "android_armv7";
-                }
-            }
         }
         const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
         if (!dir) {
             throw TypeError(`"dir" input may not be empty`);
         }
         this.dir = `${dir}/Qt`;
-        const modules = core.getInput("modules");
-        if (modules) {
-            this.modules = modules.split(" ");
-        }
-        else {
-            this.modules = [];
-        }
-        const archives = core.getInput("archives");
-        if (archives) {
-            this.archives = archives.split(" ");
-        }
-        else {
-            this.archives = [];
-        }
-        const tools = core.getInput("tools");
-        if (tools) {
-            this.tools = [];
-            for (const tool of tools.split(" ")) {
-                // The tools inputs have the tool name, variant, and arch delimited by a comma
-                // aqt expects spaces instead
-                this.tools.push(tool.replace(/,/g, " "));
-            }
-        }
-        else {
-            this.tools = [];
-        }
-        const extra = core.getInput("extra");
-        if (extra) {
-            this.extra = extra.split(" ");
-        }
-        else {
-            this.extra = [];
-        }
+        this.modules = Inputs.getStringArrayInput("modules");
+        this.archives = Inputs.getStringArrayInput("archives");
+        this.tools = Inputs.getStringArrayInput("tools").map(
+        // The tools inputs have the tool name, variant, and arch delimited by a comma
+        // aqt expects spaces instead
+        (tool) => tool.replace(/,/g, " "));
+        this.addToolsToPath = Inputs.getBoolInput("add-tools-to-path");
+        this.extra = Inputs.getStringArrayInput("extra");
         const installDeps = core.getInput("install-deps").toLowerCase();
         if (installDeps === "nosudo") {
             this.installDeps = "nosudo";
@@ -180,15 +185,19 @@ class Inputs {
         }
         this.cache = Inputs.getBoolInput("cache");
         this.cacheKeyPrefix = core.getInput("cache-key-prefix");
-        this.toolsOnly = Inputs.getBoolInput("tools-only");
+        this.isInstallQtBinaries =
+            !Inputs.getBoolInput("tools-only") && !Inputs.getBoolInput("no-qt-binaries");
         this.setEnv = Inputs.getBoolInput("set-env");
         this.aqtVersion = core.getInput("aqtversion");
         this.py7zrVersion = core.getInput("py7zrversion");
-    }
-    get versionDir() {
-        // Weird naming scheme exception for qt 5.9
-        const version = this.version === "5.9.0" ? "5.9" : this.version;
-        return nativePath(`${this.dir}/${version}`);
+        this.src = Inputs.getBoolInput("source");
+        this.srcArchives = Inputs.getStringArrayInput("src-archives");
+        this.doc = Inputs.getBoolInput("documentation");
+        this.docModules = Inputs.getStringArrayInput("doc-modules");
+        this.docArchives = Inputs.getStringArrayInput("doc-archives");
+        this.example = Inputs.getBoolInput("examples");
+        this.exampleModules = Inputs.getStringArrayInput("example-modules");
+        this.exampleArchives = Inputs.getStringArrayInput("example-archives");
     }
     get cacheKey() {
         let cacheKey = this.cacheKeyPrefix;
@@ -207,6 +216,14 @@ class Inputs {
             this.archives,
             this.extra,
             this.tools,
+            this.src ? "src" : "",
+            this.srcArchives,
+            this.doc ? "doc" : "",
+            this.docArchives,
+            this.docModules,
+            this.example ? "example" : "",
+            this.exampleArchives,
+            this.exampleModules,
         ]) {
             for (const keyString of keyStringArray) {
                 if (keyString) {
@@ -227,6 +244,10 @@ class Inputs {
     static getBoolInput(name) {
         return core.getInput(name).toLowerCase() === "true";
     }
+    static getStringArrayInput(name) {
+        const content = core.getInput(name);
+        return content ? content.split(" ") : [];
+    }
 }
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -238,6 +259,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                 const dependencies = [
                     "build-essential",
                     "libgl1-mesa-dev",
+                    "libgstreamer-gl1.0-0",
                     "libpulse-dev",
                     "libxcb-glx0",
                     "libxcb-icccm4",
@@ -254,6 +276,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     "libxcb-xinerama0",
                     "libxcb1",
                     "libxkbcommon-dev",
+                    "libxkbcommon-x11-0",
                     "libxcb-xkb-dev",
                 ].join(" ");
                 const updateCommand = "apt-get update";
@@ -286,34 +309,49 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             if (process.platform === "darwin") {
                 yield (0, exec_1.exec)("brew install p7zip");
             }
-            // Install aqtinstall
-            yield execPython("pip install", [
-                "setuptools",
-                "wheel",
-                `"py7zr${inputs.py7zrVersion}"`,
-                `"aqtinstall${inputs.aqtVersion}"`,
-            ]);
+            // Install dependencies via pip
+            yield execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
+            // Install aqtinstall separately: allows aqtinstall to override py7zr if required
+            yield execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
+            // This flag will install a parallel desktop version of Qt, only where required.
+            // aqtinstall will automatically determine if this is necessary.
+            const autodesktop = (yield isAutodesktopSupported()) ? ["--autodesktop"] : [];
             // Install Qt
-            if (!inputs.toolsOnly) {
-                const qtArgs = [inputs.host, inputs.target, inputs.version];
-                if (inputs.arch) {
-                    qtArgs.push(inputs.arch);
-                }
-                qtArgs.push("--outputdir", inputs.dir);
-                if (inputs.modules.length) {
-                    qtArgs.push("--modules");
-                    for (const module of inputs.modules) {
-                        qtArgs.push(module);
-                    }
-                }
-                if (inputs.archives.length) {
-                    qtArgs.push("--archives");
-                    for (const archive of inputs.archives) {
-                        qtArgs.push(archive);
-                    }
-                }
-                qtArgs.push(...inputs.extra);
+            if (inputs.isInstallQtBinaries) {
+                const qtArgs = [
+                    inputs.host,
+                    inputs.target,
+                    inputs.version,
+                    ...(inputs.arch ? [inputs.arch] : []),
+                    ...autodesktop,
+                    ...["--outputdir", inputs.dir],
+                    ...flaggedList("--modules", inputs.modules),
+                    ...flaggedList("--archives", inputs.archives),
+                    ...inputs.extra,
+                ];
                 yield execPython("aqt install-qt", qtArgs);
+            }
+            const installSrcDocExamples = (flavor, archives, modules) => __awaiter(void 0, void 0, void 0, function* () {
+                const qtArgs = [
+                    inputs.host,
+                    // Aqtinstall < 2.0.4 requires `inputs.target` here, but that's deprecated
+                    inputs.version,
+                    ...["--outputdir", inputs.dir],
+                    ...flaggedList("--archives", archives),
+                    ...flaggedList("--modules", modules),
+                    ...inputs.extra,
+                ];
+                yield execPython(`aqt install-${flavor}`, qtArgs);
+            });
+            // Install source, docs, & examples
+            if (inputs.src) {
+                yield installSrcDocExamples("src", inputs.srcArchives, []);
+            }
+            if (inputs.doc) {
+                yield installSrcDocExamples("doc", inputs.docArchives, inputs.docModules);
+            }
+            if (inputs.example) {
+                yield installSrcDocExamples("example", inputs.exampleArchives, inputs.exampleModules);
             }
             // Install tools
             for (const tool of inputs.tools) {
@@ -328,27 +366,28 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             const cacheId = yield cache.saveCache([inputs.dir], inputs.cacheKey);
             core.info(`Automatic cache saved with id ${cacheId}`);
         }
+        // Add tools to path
+        if (inputs.addToolsToPath && inputs.tools.length) {
+            toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+        }
         // Set environment variables
-        const qtPath = nativePath(glob.sync(`${inputs.versionDir}/**/*`)[0]);
         if (inputs.setEnv) {
             if (inputs.tools.length) {
                 core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
             }
-            if (!inputs.toolsOnly) {
+            if (inputs.isInstallQtBinaries) {
+                const qtPath = nativePath(locateQtArchDir(inputs.dir));
                 if (process.platform === "linux") {
                     setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
                 }
                 if (process.platform !== "win32") {
                     setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
                 }
-                // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+                // If less than qt6, set Qt5_DIR variable
                 if (compareVersions(inputs.version, "<", "6.0.0")) {
-                    core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-                    core.exportVariable("Qt5_DIR", qtPath);
+                    core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
                 }
-                else {
-                    core.exportVariable("Qt6_DIR", qtPath);
-                }
+                core.exportVariable("QT_ROOT_DIR", qtPath);
                 core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
                 core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
                 core.addPath(nativePath(`${qtPath}/bin`));
