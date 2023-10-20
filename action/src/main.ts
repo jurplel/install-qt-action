@@ -44,10 +44,6 @@ const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
   return listArgs.length ? [flag, ...listArgs] : [];
 };
 
-const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
-  return listArgs.length ? [flag, ...listArgs] : [];
-};
-
 const locateQtArchDir = (installDir: string): string => {
   // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
   // This makes a list of all the viable arch directories that contain a qmake file.

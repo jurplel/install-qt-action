@@ -53,9 +53,18 @@ const setOrAppendEnvVar = (name, value) => {
     }
     core.exportVariable(name, newValue);
 };
-const execPython = (command, args) => __awaiter(void 0, void 0, void 0, function* () {
+const pythonCommand = (command, args) => {
     const python = process.platform === "win32" ? "python" : "python3";
-    return (0, exec_1.exec)(`${python} -m ${command} ${args.join(" ")}`);
+    return `${python} -m ${command} ${args.join(" ")}`;
+};
+const execPython = (command, args) => __awaiter(void 0, void 0, void 0, function* () {
+    return (0, exec_1.exec)(pythonCommand(command, args));
+});
+const getPythonOutput = (command, args) => __awaiter(void 0, void 0, void 0, function* () {
+    // Aqtinstall prints to both stderr and stdout, depending on the command.
+    // This function assumes we don't care which is which, and we want to see it all.
+    const out = yield (0, exec_1.getExecOutput)(pythonCommand(command, args));
+    return out.stdout + out.stderr;
 });
 const flaggedList = (flag, listArgs) => {
     return listArgs.length ? [flag, ...listArgs] : [];
@@ -82,6 +91,11 @@ const locateQtArchDir = (installDir) => {
         return qtArchDirs[0];
     }
 };
+const isAutodesktopSupported = () => __awaiter(void 0, void 0, void 0, function* () {
+    const rawOutput = yield getPythonOutput("aqt", ["version"]);
+    const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
+    return match ? compareVersions(match[1], ">=", "3.0.0") : false;
+});
 class Inputs {
     constructor() {
         const host = core.getInput("host");
@@ -124,7 +138,16 @@ class Inputs {
         this.arch = core.getInput("arch");
         // Set arch automatically if omitted
         if (!this.arch) {
-            if (this.host === "windows") {
+            if (this.target === "android") {
+                if (compareVersions(this.version, ">=", "5.14.0") &&
+                    compareVersions(this.version, "<", "6.0.0")) {
+                    this.arch = "android";
+                }
+                else {
+                    this.arch = "android_armv7";
+                }
+            }
+            else if (this.host === "windows") {
                 if (compareVersions(this.version, ">=", "5.15.0")) {
                     this.arch = "win64_msvc2019_64";
                 }
@@ -136,15 +159,6 @@ class Inputs {
                 }
                 else {
                     this.arch = "win64_msvc2017_64";
-                }
-            }
-            else if (this.target === "android") {
-                if (compareVersions(this.version, ">=", "5.14.0") &&
-                    compareVersions(this.version, "<", "6.0.0")) {
-                    this.arch = "android";
-                }
-                else {
-                    this.arch = "android_armv7";
                 }
             }
         }
@@ -297,6 +311,9 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             yield execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
             // Install aqtinstall separately: allows aqtinstall to override py7zr if required
             yield execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
+            // This flag will install a parallel desktop version of Qt, only where required.
+            // aqtinstall will automatically determine if this is necessary.
+            const autodesktop = (yield isAutodesktopSupported()) ? ["--autodesktop"] : [];
             // Install Qt
             if (inputs.isInstallQtBinaries) {
                 const qtArgs = [
@@ -304,6 +321,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     inputs.target,
                     inputs.version,
                     ...(inputs.arch ? [inputs.arch] : []),
+                    ...autodesktop,
                     ...["--outputdir", inputs.dir],
                     ...flaggedList("--modules", inputs.modules),
                     ...flaggedList("--archives", inputs.archives),
@@ -359,14 +377,11 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                 if (process.platform !== "win32") {
                     setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
                 }
-                // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+                // If less than qt6, set Qt5_DIR variable
                 if (compareVersions(inputs.version, "<", "6.0.0")) {
-                    core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-                    core.exportVariable("Qt5_DIR", qtPath);
+                    core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
                 }
-                else {
-                    core.exportVariable("Qt6_DIR", qtPath);
-                }
+                core.exportVariable("QT_ROOT_DIR", qtPath);
                 core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
                 core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
                 core.addPath(nativePath(`${qtPath}/bin`));
