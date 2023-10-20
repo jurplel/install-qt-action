@@ -10,6 +10,12 @@ You know what's easier than dealing with that? Just using this:
 
 All done.
 
+## Upgrade Guides
+Each new major version of this project includes changes that can break workflows written to use an older version of
+this project. These changes are summarized here, to help you upgrade your existing workflows.
+
+[Upgrading `install-qt-action`](README_upgrade_guide.md)
+
 ## Options
 
 ### `version`
@@ -38,7 +44,7 @@ Possible values: `desktop`, `android`, `ios`, or `winrt`
 Default: `desktop`
 
 ### `arch`
-This is the target architecture that your program will be built for. This is only used for Windows and Android.
+This is the target architecture that your program will be built for.
 
 **Linux x86 packages are not supported by this action.** Qt does not offer pre-built Linux x86 packages. Please consider using your distro's repository or building it manually.
 
@@ -61,7 +67,8 @@ Android: `android_armv7`
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.15.2/{arch}/bin`. When possible, access your Qt directory through the `Qt5_DIR` or `Qt6_DIR` environment variable.
+For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.15.2/{arch}/bin`.
+When possible, access your Qt directory through the `QT_ROOT_DIR` environment variable; this will point to `$GITHUB_WORKSPACE/example/Qt/5.15.2/{arch}` in this case.
 
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
@@ -214,12 +221,12 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==2.1.*`
+Default: `==3.1.*`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.19.*`
+Default: `==0.20.*`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
@@ -246,16 +253,20 @@ Example value: `--external 7z`
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'true'
         tools-only: 'false'
-        aqtversion: '==2.1.*'
-        py7zrversion: '==0.19.*'
+        aqtversion: '==3.1.*'
+        py7zrversion: '==0.20.*'
         extra: '--external 7z'
 ```
 
 ## More info
 For more in-depth and certifiably up-to-date documentation, check the documentation for aqtinstall [here](https://aqtinstall.readthedocs.io/en/latest/getting_started.html).
 
-The Qt bin directory is appended to your `path` environment variable. `Qt5_DIR`/`Qt6_DIR` is also set appropriately for cmake.
+The Qt bin directory is appended to your `path` environment variable.
+`Qt5_DIR` is also set appropriately for CMake if you are using Qt 5.
 In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` are set accordingly. `IQTA_TOOLS` is set to the "Tools" directory if tools are installed as well.
+
+Since the Qt bin directory is in your `path`, you will not need to set the `CMAKE_PREFIX_PATH` CMake variable.
+If you wish to do so, you can set it to either `${QT_ROOT_DIR}` or to `${QT_ROOT_DIR}/lib/cmake`.
 
 Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer for making this easy. Please go support [miurahr](https://github.com/miurahr/aqtinstall), he did all of the hard work here ([his liberapay](https://liberapay.com/miurahr)).
 

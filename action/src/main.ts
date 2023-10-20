@@ -5,7 +5,7 @@ import * as process from "process";
 
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
-import { exec } from "@actions/exec";
+import { exec, getExecOutput } from "@actions/exec";
 
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
@@ -25,9 +25,23 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
   core.exportVariable(name, newValue);
 };
 
-const execPython = async (command: string, args: readonly string[]): Promise<number> => {
+const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
-  return exec(`${python} -m ${command} ${args.join(" ")}`);
+  return `${python} -m ${command} ${args.join(" ")}`;
+};
+const execPython = async (command: string, args: readonly string[]): Promise<number> => {
+  return exec(pythonCommand(command, args));
+};
+
+const getPythonOutput = async (command: string, args: readonly string[]): Promise<string> => {
+  // Aqtinstall prints to both stderr and stdout, depending on the command.
+  // This function assumes we don't care which is which, and we want to see it all.
+  const out = await getExecOutput(pythonCommand(command, args));
+  return out.stdout + out.stderr;
+};
+
+const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
+  return listArgs.length ? [flag, ...listArgs] : [];
 };
 
 const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
@@ -56,6 +70,12 @@ const locateQtArchDir = (installDir: string): string => {
     // NOTE: if multiple Qt installations exist, this may not select the desired directory
     return qtArchDirs[0];
   }
+};
+
+const isAutodesktopSupported = async (): Promise<boolean> => {
+  const rawOutput = await getPythonOutput("aqt", ["version"]);
+  const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
+  return match ? compareVersions(match[1], ">=", "3.0.0") : false;
 };
 
 class Inputs {
@@ -130,7 +150,16 @@ class Inputs {
     this.arch = core.getInput("arch");
     // Set arch automatically if omitted
     if (!this.arch) {
-      if (this.host === "windows") {
+      if (this.target === "android") {
+        if (
+          compareVersions(this.version, ">=", "5.14.0") &&
+          compareVersions(this.version, "<", "6.0.0")
+        ) {
+          this.arch = "android";
+        } else {
+          this.arch = "android_armv7";
+        }
+      } else if (this.host === "windows") {
         if (compareVersions(this.version, ">=", "5.15.0")) {
           this.arch = "win64_msvc2019_64";
         } else if (compareVersions(this.version, "<", "5.6.0")) {
@@ -139,15 +168,6 @@ class Inputs {
           this.arch = "win64_msvc2015_64";
         } else {
           this.arch = "win64_msvc2017_64";
-        }
-      } else if (this.target === "android") {
-        if (
-          compareVersions(this.version, ">=", "5.14.0") &&
-          compareVersions(this.version, "<", "6.0.0")
-        ) {
-          this.arch = "android";
-        } else {
-          this.arch = "android_armv7";
         }
       }
     }
@@ -322,6 +342,10 @@ const run = async (): Promise<void> => {
       // Install aqtinstall separately: allows aqtinstall to override py7zr if required
       await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
 
+      // This flag will install a parallel desktop version of Qt, only where required.
+      // aqtinstall will automatically determine if this is necessary.
+      const autodesktop = (await isAutodesktopSupported()) ? ["--autodesktop"] : [];
+
       // Install Qt
       if (inputs.isInstallQtBinaries) {
         const qtArgs = [
@@ -329,6 +353,7 @@ const run = async (): Promise<void> => {
           inputs.target,
           inputs.version,
           ...(inputs.arch ? [inputs.arch] : []),
+          ...autodesktop,
           ...["--outputdir", inputs.dir],
           ...flaggedList("--modules", inputs.modules),
           ...flaggedList("--archives", inputs.archives),
@@ -394,13 +419,11 @@ const run = async (): Promise<void> => {
         if (process.platform !== "win32") {
           setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
         }
-        // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+        // If less than qt6, set Qt5_DIR variable
         if (compareVersions(inputs.version, "<", "6.0.0")) {
-          core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-          core.exportVariable("Qt5_DIR", qtPath);
-        } else {
-          core.exportVariable("Qt6_DIR", qtPath);
+          core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
         }
+        core.exportVariable("QT_ROOT_DIR", qtPath);
         core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
         core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
         core.addPath(nativePath(`${qtPath}/bin`));
