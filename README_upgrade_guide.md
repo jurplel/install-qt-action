@@ -15,6 +15,14 @@
   If your action uses this variable for any other purpose, you should update it to use `QT_ROOT_DIR` instead.
 * Removed the `Qt5_Dir` and `Qt6_DIR` environment variables, because they are not used by CMake.
   If your action uses these variables, you should update them to use `QT_ROOT_DIR` instead.
+* Any tools you installed with the `tools` key will be added to the beginning of your `PATH` environment variable.
+  Specifically, any `bin` directories within the tool's directory will be added.
+  On MacOS, if the tool is an app bundle, then the `.app/Contents/MacOS` folder will also be added to your `PATH`.
+  * You should take care to investigate the order of the new `PATH` variable to make sure that the tools you are using
+    are not clobbered by tools in some other path. You may need to rearrange the order of your workflow steps, so that
+    any clobbered tools are added to the path later than the ones added by this action.
+  * If the added tool paths are still causing trouble, you can remove them from the `PATH` by setting
+    `add-tools-to-path: false`. 
 
 ## v3
 * Updated `aqtinstall` to version 2.1.* by default.

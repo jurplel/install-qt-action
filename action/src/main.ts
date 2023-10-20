@@ -25,6 +25,11 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
   core.exportVariable(name, newValue);
 };
 
+const toolsPaths = (installDir: string): string[] =>
+  ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p: string): string[] =>
+    glob.sync(`${installDir}/${p}`)
+  );
+
 const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
   return `${python} -m ${command} ${args.join(" ")}`;
@@ -83,6 +88,7 @@ class Inputs {
   readonly modules: string[];
   readonly archives: string[];
   readonly tools: string[];
+  readonly addToolsToPath: boolean;
   readonly extra: string[];
 
   readonly src: boolean;
@@ -183,6 +189,8 @@ class Inputs {
       // aqt expects spaces instead
       (tool: string): string => tool.replace(/,/g, " ")
     );
+
+    this.addToolsToPath = Inputs.getBoolInput("add-tools-to-path");
 
     this.extra = Inputs.getStringArrayInput("extra");
 
@@ -400,6 +408,11 @@ const run = async (): Promise<void> => {
     if (!internalCacheHit && inputs.cache) {
       const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
       core.info(`Automatic cache saved with id ${cacheId}`);
+    }
+
+    // Add tools to path
+    if (inputs.addToolsToPath && inputs.tools.length) {
+      toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
     }
 
     // Set environment variables
