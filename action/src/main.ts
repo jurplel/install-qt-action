@@ -308,9 +308,14 @@ const run = async (): Promise<void> => {
           "libxkbcommon-dev",
           "libxkbcommon-x11-0",
           "libxcb-xkb-dev",
-        ].join(" ");
+        ];
+
+        if (compareVersions(inputs.version, ">=", "6.5.0")) {
+          dependencies.push("libxcb-cursor0");
+        }
+
         const updateCommand = "apt-get update";
-        const installCommand = `apt-get install ${dependencies} -y`;
+        const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
         if (inputs.installDeps === "nosudo") {
           await exec(updateCommand);
           await exec(installCommand);
