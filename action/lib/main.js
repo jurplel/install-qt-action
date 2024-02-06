@@ -53,6 +53,7 @@ const setOrAppendEnvVar = (name, value) => {
     }
     core.exportVariable(name, newValue);
 };
+const toolsPaths = (installDir) => ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p) => glob.sync(`${installDir}/${p}`));
 const pythonCommand = (command, args) => {
     const python = process.platform === "win32" ? "python" : "python3";
     return `${python} -m ${command} ${args.join(" ")}`;
@@ -173,6 +174,7 @@ class Inputs {
         // The tools inputs have the tool name, variant, and arch delimited by a comma
         // aqt expects spaces instead
         (tool) => tool.replace(/,/g, " "));
+        this.addToolsToPath = Inputs.getBoolInput("add-tools-to-path");
         this.extra = Inputs.getStringArrayInput("extra");
         const installDeps = core.getInput("install-deps").toLowerCase();
         if (installDeps === "nosudo") {
@@ -276,9 +278,14 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     "libxkbcommon-dev",
                     "libxkbcommon-x11-0",
                     "libxcb-xkb-dev",
-                ].join(" ");
+                ];
+                // Qt 6.5.0 adds this requirement:
+                // https://code.qt.io/cgit/qt/qtreleasenotes.git/about/qt/6.5.0/release-note.md
+                if (compareVersions(inputs.version, ">=", "6.5.0")) {
+                    dependencies.push("libxcb-cursor0");
+                }
                 const updateCommand = "apt-get update";
-                const installCommand = `apt-get install ${dependencies} -y`;
+                const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
                 if (inputs.installDeps === "nosudo") {
                     yield (0, exec_1.exec)(updateCommand);
                     yield (0, exec_1.exec)(installCommand);
@@ -364,13 +371,21 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             const cacheId = yield cache.saveCache([inputs.dir], inputs.cacheKey);
             core.info(`Automatic cache saved with id ${cacheId}`);
         }
-        // Set environment variables
-        if (inputs.setEnv) {
-            if (inputs.tools.length) {
-                core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
-            }
-            if (inputs.isInstallQtBinaries) {
-                const qtPath = nativePath(locateQtArchDir(inputs.dir));
+        // Add tools to path
+        if (inputs.addToolsToPath && inputs.tools.length) {
+            toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+        }
+        // Set environment variables/outputs for tools
+        if (inputs.tools.length && inputs.setEnv) {
+            core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
+        }
+        // Set environment variables/outputs for binaries
+        if (inputs.isInstallQtBinaries) {
+            const qtPath = nativePath(locateQtArchDir(inputs.dir));
+            // Set outputs
+            core.setOutput("qtPath", qtPath);
+            // Set env variables
+            if (inputs.setEnv) {
                 if (process.platform === "linux") {
                     setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
                 }
