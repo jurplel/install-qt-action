@@ -76,5 +76,5 @@ inputs:
   example-modules:
     description: Space-separated list of additional example modules to install.
 runs:
-  using: node16
+  using: node20
   main: lib/main.js
