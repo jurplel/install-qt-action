@@ -310,6 +310,8 @@ const run = async (): Promise<void> => {
           "libxcb-xkb-dev",
         ];
 
+        // Qt 6.5.0 adds this requirement:
+        // https://code.qt.io/cgit/qt/qtreleasenotes.git/about/qt/6.5.0/release-note.md
         if (compareVersions(inputs.version, ">=", "6.5.0")) {
           dependencies.push("libxcb-cursor0");
         }
