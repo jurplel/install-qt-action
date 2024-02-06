@@ -125,6 +125,22 @@ For example, this value will install the most recent versions of QtIFW and QtCre
 
 You can find a full list of tools easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
+### `add-tools-to-path`
+
+When set to `true`, and the `tools` parameter is non-empty,
+the following paths will be prepended to the `PATH` variable: 
+* `Tools/**/bin`
+* `*.app/Contents/MacOS`
+* `*.app/**/bin`
+
+Most tools end up in the `Tools` folder, and have a `bin` directory containing CLI tools.
+On MacOS, several tools are packaged in `.app` bundles, and CLI tools are spread out among various `bin` folders
+and the `Contents/MacOS` folder.
+
+Distinct from, and not affected by, the `set-env` parameter.
+
+Default: `true`
+
 ### `source`
 
 Set this to `true` to install Qt source code. Incompatible with `aqtinstall < 2.0.4`.
@@ -200,6 +216,7 @@ Default: none
 
 ### `set-env`
 Set this to false if you want to avoid setting environment variables for whatever reason.
+Has no effect on `tools` paths; to modify these you must use `add-tools-to-path`.
 
 Default: `true`
 
@@ -260,6 +277,10 @@ Example value: `--external 7z`
 
 ## More info
 For more in-depth and certifiably up-to-date documentation, check the documentation for aqtinstall [here](https://aqtinstall.readthedocs.io/en/latest/getting_started.html).
+
+Any tools you installed with the `tools` key will be added to the beginning of your `PATH` environment variable.
+Specifically, any `bin` directories within the tool's directory will be added.
+On MacOS, if the tool is an app bundle, then the `.app/Contents/MacOS` folder will also be added to your `PATH`.
 
 The Qt bin directory is appended to your `path` environment variable.
 `Qt5_DIR` is also set appropriately for CMake if you are using Qt 5.

@@ -25,6 +25,11 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
   core.exportVariable(name, newValue);
 };
 
+const toolsPaths = (installDir: string): string[] =>
+  ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p: string): string[] =>
+    glob.sync(`${installDir}/${p}`)
+  );
+
 const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
   return `${python} -m ${command} ${args.join(" ")}`;
@@ -83,6 +88,7 @@ class Inputs {
   readonly modules: string[];
   readonly archives: string[];
   readonly tools: string[];
+  readonly addToolsToPath: boolean;
   readonly extra: string[];
 
   readonly src: boolean;
@@ -183,6 +189,8 @@ class Inputs {
       // aqt expects spaces instead
       (tool: string): string => tool.replace(/,/g, " ")
     );
+
+    this.addToolsToPath = Inputs.getBoolInput("add-tools-to-path");
 
     this.extra = Inputs.getStringArrayInput("extra");
 
@@ -300,9 +308,16 @@ const run = async (): Promise<void> => {
           "libxkbcommon-dev",
           "libxkbcommon-x11-0",
           "libxcb-xkb-dev",
-        ].join(" ");
+        ];
+
+        // Qt 6.5.0 adds this requirement:
+        // https://code.qt.io/cgit/qt/qtreleasenotes.git/about/qt/6.5.0/release-note.md
+        if (compareVersions(inputs.version, ">=", "6.5.0")) {
+          dependencies.push("libxcb-cursor0");
+        }
+
         const updateCommand = "apt-get update";
-        const installCommand = `apt-get install ${dependencies} -y`;
+        const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
         if (inputs.installDeps === "nosudo") {
           await exec(updateCommand);
           await exec(installCommand);
@@ -402,6 +417,11 @@ const run = async (): Promise<void> => {
       core.info(`Automatic cache saved with id ${cacheId}`);
     }
 
+    // Add tools to path
+    if (inputs.addToolsToPath && inputs.tools.length) {
+      toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+    }
+
     // Set environment variables
     if (inputs.setEnv) {
       if (inputs.tools.length) {
@@ -425,6 +445,8 @@ const run = async (): Promise<void> => {
         core.addPath(nativePath(`${qtPath}/bin`));
       }
     }
+    // Expose outputs
+    core.setOutput("qtPath", qtPath);
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error);
