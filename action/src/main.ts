@@ -445,6 +445,8 @@ const run = async (): Promise<void> => {
         core.addPath(nativePath(`${qtPath}/bin`));
       }
     }
+    // Expose outputs
+    core.setOutput("qtPath", qtPath);
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error);
