@@ -422,13 +422,18 @@ const run = async (): Promise<void> => {
       toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
     }
 
-    // Set environment variables
-    if (inputs.setEnv) {
-      if (inputs.tools.length) {
-        core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
-      }
-      if (inputs.isInstallQtBinaries) {
-        const qtPath = nativePath(locateQtArchDir(inputs.dir));
+    // Set environment variables/outputs for tools
+    if (inputs.tools.length && inputs.setEnv) {
+      core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
+    }
+    // Set environment variables/outputs for binaries
+    if (inputs.isInstallQtBinaries) {
+      const qtPath = nativePath(locateQtArchDir(inputs.dir));
+      // Set outputs
+      core.setOutput("qtPath", qtPath);
+
+      // Set env variables
+      if (inputs.setEnv) {
         if (process.platform === "linux") {
           setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
         }
@@ -445,8 +450,6 @@ const run = async (): Promise<void> => {
         core.addPath(nativePath(`${qtPath}/bin`));
       }
     }
-    // Expose outputs
-    core.setOutput("qtPath", qtPath);
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error);
