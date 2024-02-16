@@ -36,6 +36,9 @@ inputs:
       --
       specify comma-separated argument lists which are themselves separated by spaces:
       <tool_name>,<tool_version>,<tool_arch>
+  add-tools-to-path:
+    default: true
+    description: When true, prepends directories of tools to PATH environment variable.
   set-env:
     default: true
     description: Whether or not to set environment variables after running aqtinstall
@@ -47,10 +50,10 @@ inputs:
     default: false
   aqtversion:
     description: Version of aqtinstall to use in case of issues
-    default: ==2.1.*
+    default: ==3.1.*
   py7zrversion:
     description: Version of py7zr to use in case of issues
-    default: ==0.19.*
+    default: ==0.20.*
   extra:
     description: Any extra arguments to append to the back
   source:
@@ -73,5 +76,5 @@ inputs:
   example-modules:
     description: Space-separated list of additional example modules to install.
 runs:
-  using: node16
+  using: node20
   main: lib/main.js

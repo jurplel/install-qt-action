@@ -5,7 +5,7 @@ import * as process from "process";
 
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
-import { exec } from "@actions/exec";
+import { exec, getExecOutput } from "@actions/exec";
 
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
@@ -25,9 +25,28 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
   core.exportVariable(name, newValue);
 };
 
-const execPython = async (command: string, args: readonly string[]): Promise<number> => {
+const toolsPaths = (installDir: string): string[] =>
+  ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p: string): string[] =>
+    glob.sync(`${installDir}/${p}`)
+  );
+
+const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
-  return exec(`${python} -m ${command} ${args.join(" ")}`);
+  return `${python} -m ${command} ${args.join(" ")}`;
+};
+const execPython = async (command: string, args: readonly string[]): Promise<number> => {
+  return exec(pythonCommand(command, args));
+};
+
+const getPythonOutput = async (command: string, args: readonly string[]): Promise<string> => {
+  // Aqtinstall prints to both stderr and stdout, depending on the command.
+  // This function assumes we don't care which is which, and we want to see it all.
+  const out = await getExecOutput(pythonCommand(command, args));
+  return out.stdout + out.stderr;
+};
+
+const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
+  return listArgs.length ? [flag, ...listArgs] : [];
 };
 
 const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
@@ -58,6 +77,12 @@ const locateQtArchDir = (installDir: string): string => {
   }
 };
 
+const isAutodesktopSupported = async (): Promise<boolean> => {
+  const rawOutput = await getPythonOutput("aqt", ["version"]);
+  const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
+  return match ? compareVersions(match[1], ">=", "3.0.0") : false;
+};
+
 class Inputs {
   readonly host: "windows" | "mac" | "linux";
   readonly target: "desktop" | "android" | "ios";
@@ -67,6 +92,7 @@ class Inputs {
   readonly modules: string[];
   readonly archives: string[];
   readonly tools: string[];
+  readonly addToolsToPath: boolean;
   readonly extra: string[];
 
   readonly src: boolean;
@@ -130,7 +156,16 @@ class Inputs {
     this.arch = core.getInput("arch");
     // Set arch automatically if omitted
     if (!this.arch) {
-      if (this.host === "windows") {
+      if (this.target === "android") {
+        if (
+          compareVersions(this.version, ">=", "5.14.0") &&
+          compareVersions(this.version, "<", "6.0.0")
+        ) {
+          this.arch = "android";
+        } else {
+          this.arch = "android_armv7";
+        }
+      } else if (this.host === "windows") {
         if (compareVersions(this.version, ">=", "5.15.0")) {
           this.arch = "win64_msvc2019_64";
         } else if (compareVersions(this.version, "<", "5.6.0")) {
@@ -139,15 +174,6 @@ class Inputs {
           this.arch = "win64_msvc2015_64";
         } else {
           this.arch = "win64_msvc2017_64";
-        }
-      } else if (this.target === "android") {
-        if (
-          compareVersions(this.version, ">=", "5.14.0") &&
-          compareVersions(this.version, "<", "6.0.0")
-        ) {
-          this.arch = "android";
-        } else {
-          this.arch = "android_armv7";
         }
       }
     }
@@ -167,6 +193,8 @@ class Inputs {
       // aqt expects spaces instead
       (tool: string): string => tool.replace(/,/g, " ")
     );
+
+    this.addToolsToPath = Inputs.getBoolInput("add-tools-to-path");
 
     this.extra = Inputs.getStringArrayInput("extra");
 
@@ -284,9 +312,16 @@ const run = async (): Promise<void> => {
           "libxkbcommon-dev",
           "libxkbcommon-x11-0",
           "libxcb-xkb-dev",
-        ].join(" ");
+        ];
+
+        // Qt 6.5.0 adds this requirement:
+        // https://code.qt.io/cgit/qt/qtreleasenotes.git/about/qt/6.5.0/release-note.md
+        if (compareVersions(inputs.version, ">=", "6.5.0")) {
+          dependencies.push("libxcb-cursor0");
+        }
+
         const updateCommand = "apt-get update";
-        const installCommand = `apt-get install ${dependencies} -y`;
+        const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
         if (inputs.installDeps === "nosudo") {
           await exec(updateCommand);
           await exec(installCommand);
@@ -322,6 +357,10 @@ const run = async (): Promise<void> => {
       // Install aqtinstall separately: allows aqtinstall to override py7zr if required
       await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
 
+      // This flag will install a parallel desktop version of Qt, only where required.
+      // aqtinstall will automatically determine if this is necessary.
+      const autodesktop = (await isAutodesktopSupported()) ? ["--autodesktop"] : [];
+
       // Install Qt
       if (inputs.isInstallQtBinaries) {
         const qtArgs = [
@@ -329,6 +368,7 @@ const run = async (): Promise<void> => {
           inputs.target,
           inputs.version,
           ...(inputs.arch ? [inputs.arch] : []),
+          ...autodesktop,
           ...["--outputdir", inputs.dir],
           ...flaggedList("--modules", inputs.modules),
           ...flaggedList("--archives", inputs.archives),
@@ -381,26 +421,34 @@ const run = async (): Promise<void> => {
       core.info(`Automatic cache saved with id ${cacheId}`);
     }
 
-    // Set environment variables
-    if (inputs.setEnv) {
-      if (inputs.tools.length) {
-        core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
-      }
-      if (inputs.isInstallQtBinaries) {
-        const qtPath = nativePath(locateQtArchDir(inputs.dir));
+    // Add tools to path
+    if (inputs.addToolsToPath && inputs.tools.length) {
+      toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+    }
+
+    // Set environment variables/outputs for tools
+    if (inputs.tools.length && inputs.setEnv) {
+      core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
+    }
+    // Set environment variables/outputs for binaries
+    if (inputs.isInstallQtBinaries) {
+      const qtPath = nativePath(locateQtArchDir(inputs.dir));
+      // Set outputs
+      core.setOutput("qtPath", qtPath);
+
+      // Set env variables
+      if (inputs.setEnv) {
         if (process.platform === "linux") {
           setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
         }
         if (process.platform !== "win32") {
           setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
         }
-        // If less than qt6, set qt5_dir variable, otherwise set qt6_dir variable
+        // If less than qt6, set Qt5_DIR variable
         if (compareVersions(inputs.version, "<", "6.0.0")) {
-          core.exportVariable("Qt5_Dir", qtPath); // Incorrect name that was fixed, but kept around so it doesn't break anything
-          core.exportVariable("Qt5_DIR", qtPath);
-        } else {
-          core.exportVariable("Qt6_DIR", qtPath);
+          core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
         }
+        core.exportVariable("QT_ROOT_DIR", qtPath);
         core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
         core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
         core.addPath(nativePath(`${qtPath}/bin`));
