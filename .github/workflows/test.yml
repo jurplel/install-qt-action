@@ -51,6 +51,8 @@ jobs:
             requested: "6.3.*"
             # In Qt 6.2.0+, qtwebengine requires qtpositioning and qtwebchannel
             modules: qtwebengine qtpositioning qtwebchannel
+          - version: "6.7.0"
+            requested: "6.7.0"
           - tools-only-build: true
             add-tools-to-path: true
         cache:
@@ -125,6 +127,18 @@ jobs:
           version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}
+
+      - name: Switch macOS Xcode version with older Qt versions
+        if: ${{ startsWith(matrix.os, 'mac') }}
+        shell: pwsh
+        run: |
+          if ($qtVersion -ge [version]"6.5.3") {
+              # GitHub macOS 13/14 runners use Xcode 15.0.x by default which has a known linker issue causing crashes if the artifact is run on macOS <= 12
+              sudo xcode-select --switch /Applications/Xcode_15.3.app
+          } else {
+              # Keep older Qt versions on Xcode 14 due to concern over QTBUG-117484
+              sudo xcode-select --switch /Applications/Xcode_14.3.1.app
+          }
 
       - name: Configure test project on windows
         if: ${{ matrix.qt.version && startsWith(matrix.os, 'windows') }}
