@@ -53,7 +53,7 @@ jobs:
             modules: qtwebengine qtpositioning qtwebchannel
           - version: "6.7.0"
             requested: "6.7.0"
-            modules: qtwebengine
+            modules: qtwebengine qtpositioning qtwebchannel
           - tools-only-build: true
             add-tools-to-path: true
         cache:
