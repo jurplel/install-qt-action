@@ -51,8 +51,6 @@ jobs:
             requested: "6.3.*"
             # In Qt 6.2.0+, qtwebengine requires qtpositioning and qtwebchannel
             modules: qtwebengine qtpositioning qtwebchannel
-          - version: "6.7.0"
-            requested: "6.7.0"
           - tools-only-build: true
             add-tools-to-path: true
         cache:
