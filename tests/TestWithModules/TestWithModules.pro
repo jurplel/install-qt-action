@@ -4,6 +4,10 @@ QT += webenginewidgets
 CONFIG += c++11 console
 CONFIG -= app_bundle
 
+# Xcode 15 fix
+# https://crystalidea.com/blog/qt-apps-crash-when-using-xcode-15
+LIBS += -Wl,-ld_classic
+
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
