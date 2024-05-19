@@ -281,7 +281,7 @@ class Inputs {
   }
 }
 
-async function run(): Promise<void> {
+const run = async (): Promise<void> => {
   const inputs = new Inputs();
 
   // Qt installer assumes basic requirements that are not installed by
@@ -458,11 +458,16 @@ async function run(): Promise<void> {
   }
 };
 
-run()
-  .catch(err => {
-    core.setFailed(err.message)
-    process.exit(1)
+void run()
+  .catch((err) => {
+    if (err instanceof Error) {
+      core.setFailed(err);
+    } else {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      core.setFailed(`unknown error: ${err}`);
+    }
+    process.exit(1);
   })
   .then(() => {
-    process.exit(0)
+    process.exit(0);
   });
