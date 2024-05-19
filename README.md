@@ -5,7 +5,7 @@ Installing Qt on Github Actions workflows manually is the worst.
 You know what's easier than dealing with that? Just using this:
 ```yml
     - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
 ```
 
 All done.
