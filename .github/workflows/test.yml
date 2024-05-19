@@ -135,9 +135,9 @@ jobs:
         env:
           QT_VERSION: ${{ matrix.qt.version }}
         run: |
-          if ($env:QT_VERSION -ge [version]"6.5.3") {
+          if ([version]$env:QT_VERSION -ge [version]"6.5.3") {
               # GitHub macOS 13/14 runners use Xcode 15.0.x by default which has a known linker issue causing crashes if the artifact is run on macOS <= 12
-              sudo xcode-select --switch /Applications/Xcode_15.3.app
+              sudo xcode-select --switch /Applications/Xcode_15.2.app
           } else {
               # Keep older Qt versions on Xcode 14 due to concern over QTBUG-117484
               sudo xcode-select --switch /Applications/Xcode_14.3.1.app

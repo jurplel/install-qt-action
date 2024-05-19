@@ -57,7 +57,7 @@ module.exports = {
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/no-invalid-this": "error",
     "@typescript-eslint/no-loop-func": "error",
-    "@typescript-eslint/no-magic-numbers": ["error", { ignoreArrayIndexes: true }],
+    "@typescript-eslint/no-magic-numbers": ["error", { ignoreArrayIndexes: true, ignore: [0, 1] }],
     "@typescript-eslint/no-redeclare": "error",
     "@typescript-eslint/no-require-imports": "error",
     "@typescript-eslint/no-restricted-imports": "error",

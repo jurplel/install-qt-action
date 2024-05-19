@@ -51,6 +51,8 @@ inputs:
   tools-only:
     description: Synonym for `no-qt-binaries`, used for backwards compatibility.
     default: false
+  aqtsource:
+    description: Location to source aqtinstall from in case of issues
   aqtversion:
     description: Version of aqtinstall to use in case of issues
     default: ==3.1.*
@@ -105,6 +107,7 @@ runs:
       set-env: ${{ inputs.set-env }}
       no-qt-binaries: ${{ inputs.no-qt-binaries }}
       tools-only: ${{ inputs.tools-only }}
+      aqtsource: ${{ inputs.aqtsource }}
       aqtversion: ${{ inputs.aqtversion }}
       py7zrversion: ${{ inputs.py7zrversion }}
       source: ${{ inputs.source }}
