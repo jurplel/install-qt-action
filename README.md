@@ -234,6 +234,12 @@ If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip inst
 
 Default: `false`
 
+### `aqtsource`
+
+The full specifier for a version of [aqtinstall](https://github.com/miurahr/aqtinstall) as passed to pip. For example: `git+https://github.com/miurahr/aqtinstall.git`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall. Note that when this is used, the value of `aqtversion` is ignored.
+
+By default this is unset and ignored.
+
 ### `aqtversion`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.

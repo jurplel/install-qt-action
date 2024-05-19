@@ -48,6 +48,8 @@ inputs:
   tools-only:
     description: Synonym for `no-qt-binaries`, used for backwards compatibility.
     default: false
+  aqtsource:
+    description: Location to source aqtinstall from in case of issues
   aqtversion:
     description: Version of aqtinstall to use in case of issues
     default: ==3.1.*
@@ -76,5 +78,5 @@ inputs:
   example-modules:
     description: Space-separated list of additional example modules to install.
 runs:
-  using: node16
+  using: node20
   main: lib/main.js
