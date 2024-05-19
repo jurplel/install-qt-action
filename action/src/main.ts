@@ -281,190 +281,188 @@ class Inputs {
   }
 }
 
-const run = async (): Promise<void> => {
-  try {
-    const inputs = new Inputs();
+async function run(): Promise<void> {
+  const inputs = new Inputs();
 
-    // Qt installer assumes basic requirements that are not installed by
-    // default on Ubuntu.
-    if (process.platform === "linux") {
-      if (inputs.installDeps) {
-        const dependencies = [
-          "build-essential",
-          "libgl1-mesa-dev",
-          "libgstreamer-gl1.0-0",
-          "libpulse-dev",
-          "libxcb-glx0",
-          "libxcb-icccm4",
-          "libxcb-image0",
-          "libxcb-keysyms1",
-          "libxcb-randr0",
-          "libxcb-render-util0",
-          "libxcb-render0",
-          "libxcb-shape0",
-          "libxcb-shm0",
-          "libxcb-sync1",
-          "libxcb-util1",
-          "libxcb-xfixes0",
-          "libxcb-xinerama0",
-          "libxcb1",
-          "libxkbcommon-dev",
-          "libxkbcommon-x11-0",
-          "libxcb-xkb-dev",
-        ];
+  // Qt installer assumes basic requirements that are not installed by
+  // default on Ubuntu.
+  if (process.platform === "linux") {
+    if (inputs.installDeps) {
+      const dependencies = [
+        "build-essential",
+        "libgl1-mesa-dev",
+        "libgstreamer-gl1.0-0",
+        "libpulse-dev",
+        "libxcb-glx0",
+        "libxcb-icccm4",
+        "libxcb-image0",
+        "libxcb-keysyms1",
+        "libxcb-randr0",
+        "libxcb-render-util0",
+        "libxcb-render0",
+        "libxcb-shape0",
+        "libxcb-shm0",
+        "libxcb-sync1",
+        "libxcb-util1",
+        "libxcb-xfixes0",
+        "libxcb-xinerama0",
+        "libxcb1",
+        "libxkbcommon-dev",
+        "libxkbcommon-x11-0",
+        "libxcb-xkb-dev",
+      ];
 
-        // Qt 6.5.0 adds this requirement:
-        // https://code.qt.io/cgit/qt/qtreleasenotes.git/about/qt/6.5.0/release-note.md
-        if (compareVersions(inputs.version, ">=", "6.5.0")) {
-          dependencies.push("libxcb-cursor0");
-        }
-
-        const updateCommand = "apt-get update";
-        const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
-        if (inputs.installDeps === "nosudo") {
-          await exec(updateCommand);
-          await exec(installCommand);
-        } else {
-          await exec(`sudo ${updateCommand}`);
-          await exec(`sudo ${installCommand}`);
-        }
+      // Qt 6.5.0 adds this requirement:
+      // https://code.qt.io/cgit/qt/qtreleasenotes.git/about/qt/6.5.0/release-note.md
+      if (compareVersions(inputs.version, ">=", "6.5.0")) {
+        dependencies.push("libxcb-cursor0");
       }
-    }
 
-    // Restore internal cache
-    let internalCacheHit = false;
-    if (inputs.cache) {
-      const cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
-      if (cacheHitKey) {
-        core.info(`Automatic cache hit with key "${cacheHitKey}"`);
-        internalCacheHit = true;
+      const updateCommand = "apt-get update";
+      const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
+      if (inputs.installDeps === "nosudo") {
+        await exec(updateCommand);
+        await exec(installCommand);
       } else {
-        core.info("Automatic cache miss, will cache this run");
+        await exec(`sudo ${updateCommand}`);
+        await exec(`sudo ${installCommand}`);
       }
     }
+  }
 
-    // Install Qt and tools if not cached
-    if (!internalCacheHit) {
-      // 7-zip is required, and not included on macOS
-      if (process.platform === "darwin") {
-        await exec("brew install p7zip");
-      }
-
-      // Install dependencies via pip
-      await execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
-
-      // Install aqtinstall separately: allows aqtinstall to override py7zr if required
-      if (inputs.aqtSource.length > 0) {
-        await execPython("pip install", [`"${inputs.aqtSource}"`]);
-      } else {
-        await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
-      }
-
-      // This flag will install a parallel desktop version of Qt, only where required.
-      // aqtinstall will automatically determine if this is necessary.
-      const autodesktop = (await isAutodesktopSupported()) ? ["--autodesktop"] : [];
-
-      // Install Qt
-      if (inputs.isInstallQtBinaries) {
-        const qtArgs = [
-          inputs.host,
-          inputs.target,
-          inputs.version,
-          ...(inputs.arch ? [inputs.arch] : []),
-          ...autodesktop,
-          ...["--outputdir", inputs.dir],
-          ...flaggedList("--modules", inputs.modules),
-          ...flaggedList("--archives", inputs.archives),
-          ...inputs.extra,
-        ];
-
-        await execPython("aqt install-qt", qtArgs);
-      }
-
-      const installSrcDocExamples = async (
-        flavor: "src" | "doc" | "example",
-        archives: readonly string[],
-        modules: readonly string[]
-      ): Promise<void> => {
-        const qtArgs = [
-          inputs.host,
-          // Aqtinstall < 2.0.4 requires `inputs.target` here, but that's deprecated
-          inputs.version,
-          ...["--outputdir", inputs.dir],
-          ...flaggedList("--archives", archives),
-          ...flaggedList("--modules", modules),
-          ...inputs.extra,
-        ];
-        await execPython(`aqt install-${flavor}`, qtArgs);
-      };
-
-      // Install source, docs, & examples
-      if (inputs.src) {
-        await installSrcDocExamples("src", inputs.srcArchives, []);
-      }
-      if (inputs.doc) {
-        await installSrcDocExamples("doc", inputs.docArchives, inputs.docModules);
-      }
-      if (inputs.example) {
-        await installSrcDocExamples("example", inputs.exampleArchives, inputs.exampleModules);
-      }
-
-      // Install tools
-      for (const tool of inputs.tools) {
-        const toolArgs = [inputs.host, inputs.target, tool];
-        toolArgs.push("--outputdir", inputs.dir);
-        toolArgs.push(...inputs.extra);
-        await execPython("aqt install-tool", toolArgs);
-      }
-    }
-
-    // Save automatic cache
-    if (!internalCacheHit && inputs.cache) {
-      const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
-      core.info(`Automatic cache saved with id ${cacheId}`);
-    }
-
-    // Add tools to path
-    if (inputs.addToolsToPath && inputs.tools.length) {
-      toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
-    }
-
-    // Set environment variables/outputs for tools
-    if (inputs.tools.length && inputs.setEnv) {
-      core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
-    }
-    // Set environment variables/outputs for binaries
-    if (inputs.isInstallQtBinaries) {
-      const qtPath = nativePath(locateQtArchDir(inputs.dir));
-      // Set outputs
-      core.setOutput("qtPath", qtPath);
-
-      // Set env variables
-      if (inputs.setEnv) {
-        if (process.platform === "linux") {
-          setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
-        }
-        if (process.platform !== "win32") {
-          setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
-        }
-        // If less than qt6, set Qt5_DIR variable
-        if (compareVersions(inputs.version, "<", "6.0.0")) {
-          core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
-        }
-        core.exportVariable("QT_ROOT_DIR", qtPath);
-        core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
-        core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
-        core.addPath(nativePath(`${qtPath}/bin`));
-      }
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      core.setFailed(error);
+  // Restore internal cache
+  let internalCacheHit = false;
+  if (inputs.cache) {
+    const cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
+    if (cacheHitKey) {
+      core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+      internalCacheHit = true;
     } else {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      core.setFailed(`unknown error: ${error}`);
+      core.info("Automatic cache miss, will cache this run");
+    }
+  }
+
+  // Install Qt and tools if not cached
+  if (!internalCacheHit) {
+    // 7-zip is required, and not included on macOS
+    if (process.platform === "darwin") {
+      await exec("brew install p7zip");
+    }
+
+    // Install dependencies via pip
+    await execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
+
+    // Install aqtinstall separately: allows aqtinstall to override py7zr if required
+    if (inputs.aqtSource.length > 0) {
+      await execPython("pip install", [`"${inputs.aqtSource}"`]);
+    } else {
+      await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
+    }
+
+    // This flag will install a parallel desktop version of Qt, only where required.
+    // aqtinstall will automatically determine if this is necessary.
+    const autodesktop = (await isAutodesktopSupported()) ? ["--autodesktop"] : [];
+
+    // Install Qt
+    if (inputs.isInstallQtBinaries) {
+      const qtArgs = [
+        inputs.host,
+        inputs.target,
+        inputs.version,
+        ...(inputs.arch ? [inputs.arch] : []),
+        ...autodesktop,
+        ...["--outputdir", inputs.dir],
+        ...flaggedList("--modules", inputs.modules),
+        ...flaggedList("--archives", inputs.archives),
+        ...inputs.extra,
+      ];
+
+      await execPython("aqt install-qt", qtArgs);
+    }
+
+    const installSrcDocExamples = async (
+      flavor: "src" | "doc" | "example",
+      archives: readonly string[],
+      modules: readonly string[]
+    ): Promise<void> => {
+      const qtArgs = [
+        inputs.host,
+        // Aqtinstall < 2.0.4 requires `inputs.target` here, but that's deprecated
+        inputs.version,
+        ...["--outputdir", inputs.dir],
+        ...flaggedList("--archives", archives),
+        ...flaggedList("--modules", modules),
+        ...inputs.extra,
+      ];
+      await execPython(`aqt install-${flavor}`, qtArgs);
+    };
+
+    // Install source, docs, & examples
+    if (inputs.src) {
+      await installSrcDocExamples("src", inputs.srcArchives, []);
+    }
+    if (inputs.doc) {
+      await installSrcDocExamples("doc", inputs.docArchives, inputs.docModules);
+    }
+    if (inputs.example) {
+      await installSrcDocExamples("example", inputs.exampleArchives, inputs.exampleModules);
+    }
+
+    // Install tools
+    for (const tool of inputs.tools) {
+      const toolArgs = [inputs.host, inputs.target, tool];
+      toolArgs.push("--outputdir", inputs.dir);
+      toolArgs.push(...inputs.extra);
+      await execPython("aqt install-tool", toolArgs);
+    }
+  }
+
+  // Save automatic cache
+  if (!internalCacheHit && inputs.cache) {
+    const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
+    core.info(`Automatic cache saved with id ${cacheId}`);
+  }
+
+  // Add tools to path
+  if (inputs.addToolsToPath && inputs.tools.length) {
+    toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+  }
+
+  // Set environment variables/outputs for tools
+  if (inputs.tools.length && inputs.setEnv) {
+    core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
+  }
+  // Set environment variables/outputs for binaries
+  if (inputs.isInstallQtBinaries) {
+    const qtPath = nativePath(locateQtArchDir(inputs.dir));
+    // Set outputs
+    core.setOutput("qtPath", qtPath);
+
+    // Set env variables
+    if (inputs.setEnv) {
+      if (process.platform === "linux") {
+        setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
+      }
+      if (process.platform !== "win32") {
+        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
+      }
+      // If less than qt6, set Qt5_DIR variable
+      if (compareVersions(inputs.version, "<", "6.0.0")) {
+        core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
+      }
+      core.exportVariable("QT_ROOT_DIR", qtPath);
+      core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
+      core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
+      core.addPath(nativePath(`${qtPath}/bin`));
     }
   }
 };
 
-void run();
+run()
+  .catch(err => {
+    core.setFailed(err.message)
+    process.exit(1)
+  })
+  .then(() => {
+    process.exit(0)
+  });
