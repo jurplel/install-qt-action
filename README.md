@@ -260,7 +260,7 @@ Example value: `--external 7z`
 
 ```yml
     - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: '5.15.2'
         host: 'windows'
