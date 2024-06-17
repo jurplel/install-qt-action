@@ -344,11 +344,6 @@ const run = async (): Promise<void> => {
 
   // Install Qt and tools if not cached
   if (!internalCacheHit) {
-    // 7-zip is required, and not included on macOS
-    if (process.platform === "darwin") {
-      await exec("brew install p7zip");
-    }
-
     // Install dependencies via pip
     await execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
 
