@@ -1,4 +1,5 @@
 import * as crypto from "crypto";
+import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as process from "process";
@@ -25,10 +26,32 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
   core.exportVariable(name, newValue);
 };
 
-const toolsPaths = (installDir: string): string[] =>
-  ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p: string): string[] =>
-    glob.sync(`${installDir}/${p}`)
-  );
+const dirExists = (dir: string): boolean => {
+  try {
+    return fs.statSync(dir).isDirectory();
+  } catch (err) {
+    return false;
+  }
+};
+
+// Names of directories for tools (tools_conan & tools_ninja) that include binaries in the
+// base directory instead of a bin directory (ie 'Tools/Conan', not 'Tools/Conan/bin')
+const binlessToolDirectories = ["Conan", "Ninja"];
+
+const toolsPaths = (installDir: string): string[] => {
+  const binlessPaths: string[] = binlessToolDirectories
+    .map((dir) => `${installDir}/Tools/${dir}`)
+    .filter((dir) => dirExists(dir));
+  return [
+    "Tools/**/bin",
+    "*.app/Contents/MacOS",
+    "*.app/**/bin",
+    "Tools/*/*.app/Contents/MacOS",
+    "Tools/*/*.app/**/bin",
+  ]
+    .flatMap((p: string): string[] => glob.sync(`${installDir}/${p}`))
+    .concat(binlessPaths);
+};
 
 const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
