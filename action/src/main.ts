@@ -5,7 +5,7 @@ import * as process from "process";
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 import { exec } from "@actions/exec";
-import { nativePath, compareVersions, setOrAppendEnvVar, dirExists, toolsPaths, pythonCommand, execPython, getPythonOutput, flaggedList, locateQtArchDir, isAutodesktopSupported } from "./helpers";
+import { nativePath, compareVersions, setOrAppendEnvVar, toolsPaths, execPython, flaggedList, locateQtArchDir, isAutodesktopSupported } from "./helpers";
 
 
 
