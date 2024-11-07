@@ -106,6 +106,10 @@ jobs:
           npm ci || npm install
         shell: bash
 
+      - name: Run tests
+        run: npm test
+        shell: bash
+
       - run: |
           cd action
           npm run build
