@@ -33,6 +33,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const crypto = __importStar(require("crypto"));
+const fs = __importStar(require("fs"));
 const os = __importStar(require("os"));
 const path = __importStar(require("path"));
 const process = __importStar(require("process"));
@@ -53,7 +54,31 @@ const setOrAppendEnvVar = (name, value) => {
     }
     core.exportVariable(name, newValue);
 };
-const toolsPaths = (installDir) => ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p) => glob.sync(`${installDir}/${p}`));
+const dirExists = (dir) => {
+    try {
+        return fs.statSync(dir).isDirectory();
+    }
+    catch (err) {
+        return false;
+    }
+};
+// Names of directories for tools (tools_conan & tools_ninja) that include binaries in the
+// base directory instead of a bin directory (ie 'Tools/Conan', not 'Tools/Conan/bin')
+const binlessToolDirectories = ["Conan", "Ninja"];
+const toolsPaths = (installDir) => {
+    const binlessPaths = binlessToolDirectories
+        .map((dir) => `${installDir}/Tools/${dir}`)
+        .filter((dir) => dirExists(dir));
+    return [
+        "Tools/**/bin",
+        "*.app/Contents/MacOS",
+        "*.app/**/bin",
+        "Tools/*/*.app/Contents/MacOS",
+        "Tools/*/*.app/**/bin",
+    ]
+        .flatMap((p) => glob.sync(`${installDir}/${p}`))
+        .concat(binlessPaths);
+};
 const pythonCommand = (command, args) => {
     const python = process.platform === "win32" ? "python" : "python3";
     return `${python} -m ${command} ${args.join(" ")}`;
@@ -149,7 +174,10 @@ class Inputs {
                 }
             }
             else if (this.host === "windows") {
-                if (compareVersions(this.version, ">=", "5.15.0")) {
+                if (compareVersions(this.version, ">=", "6.7.3")) {
+                    this.arch = "win64_msvc2022_64";
+                }
+                else if (compareVersions(this.version, ">=", "5.15.0")) {
                     this.arch = "win64_msvc2019_64";
                 }
                 else if (compareVersions(this.version, "<", "5.6.0")) {
@@ -311,10 +339,6 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     // Install Qt and tools if not cached
     if (!internalCacheHit) {
-        // 7-zip is required, and not included on macOS
-        if (process.platform === "darwin") {
-            yield (0, exec_1.exec)("brew install p7zip");
-        }
         // Install dependencies via pip
         yield execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
         // Install aqtinstall separately: allows aqtinstall to override py7zr if required
