@@ -107,7 +107,9 @@ jobs:
         shell: bash
 
       - name: Run tests
-        run: npm test
+        run: |
+          cd action
+          npm test
         shell: bash
 
       - run: |
