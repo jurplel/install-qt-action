@@ -5,9 +5,14 @@ import * as fs from "fs";
 import * as core from "@actions/core";
 import { exec, getExecOutput } from "@actions/exec";
 
-export const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
+export const nativePath =
+  process.platform === "win32" ? path.win32.normalize : path.normalize;
 
-export const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
+export const compareVersions = (
+  v1: string,
+  op: CompareOperator,
+  v2: string
+): boolean => {
   return compare(v1, v2, op);
 };
 
@@ -47,22 +52,34 @@ export const toolsPaths = (installDir: string): string[] => {
     .concat(binlessPaths);
 };
 
-export const pythonCommand = (command: string, args: readonly string[]): string => {
+export const pythonCommand = (
+  command: string,
+  args: readonly string[]
+): string => {
   const python = process.platform === "win32" ? "python" : "python3";
   return `${python} -m ${command} ${args.join(" ")}`;
 };
-export const execPython = async (command: string, args: readonly string[]): Promise<number> => {
+export const execPython = async (
+  command: string,
+  args: readonly string[]
+): Promise<number> => {
   return exec(pythonCommand(command, args));
 };
 
-export const getPythonOutput = async (command: string, args: readonly string[]): Promise<string> => {
+export const getPythonOutput = async (
+  command: string,
+  args: readonly string[]
+): Promise<string> => {
   // Aqtinstall prints to both stderr and stdout, depending on the command.
   // This function assumes we don't care which is which, and we want to see it all.
   const out = await getExecOutput(pythonCommand(command, args));
   return out.stdout + out.stderr;
 };
 
-export const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
+export const flaggedList = (
+  flag: string,
+  listArgs: readonly string[]
+): string[] => {
   return listArgs.length ? [flag, ...listArgs] : [];
 };
 
@@ -83,7 +100,9 @@ export const locateQtArchDir = (installDir: string): string => {
     // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
     return requiresParallelDesktop[0];
   } else if (!qtArchDirs.length) {
-    throw Error(`Failed to locate a Qt installation directory in ${installDir}`);
+    throw Error(
+      `Failed to locate a Qt installation directory in ${installDir}`
+    );
   } else {
     // NOTE: if multiple Qt installations exist, this may not select the desired directory
     return qtArchDirs[0];

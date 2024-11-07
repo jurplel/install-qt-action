@@ -5,9 +5,16 @@ import * as process from "process";
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 import { exec } from "@actions/exec";
-import { nativePath, compareVersions, setOrAppendEnvVar, toolsPaths, execPython, flaggedList, locateQtArchDir, isAutodesktopSupported } from "./helpers";
-
-
+import {
+  nativePath,
+  compareVersions,
+  setOrAppendEnvVar,
+  toolsPaths,
+  execPython,
+  flaggedList,
+  locateQtArchDir,
+  isAutodesktopSupported,
+} from "./helpers";
 
 class Inputs {
   readonly host: "windows" | "mac" | "linux";
@@ -65,7 +72,9 @@ class Inputs {
       if (host === "windows" || host === "mac" || host === "linux") {
         this.host = host;
       } else {
-        throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux"`);
+        throw TypeError(
+          `host: "${host}" is not one of "windows" | "mac" | "linux"`
+        );
       }
     }
 
@@ -74,7 +83,9 @@ class Inputs {
     if (target === "desktop" || target === "android" || target === "ios") {
       this.target = target;
     } else {
-      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
+      throw TypeError(
+        `target: "${target}" is not one of "desktop" | "android" | "ios"`
+      );
     }
 
     // An attempt to sanitize non-straightforward version number input
@@ -139,7 +150,8 @@ class Inputs {
     this.cacheKeyPrefix = core.getInput("cache-key-prefix");
 
     this.isInstallQtBinaries =
-      !Inputs.getBoolInput("tools-only") && !Inputs.getBoolInput("no-qt-binaries");
+      !Inputs.getBoolInput("tools-only") &&
+      !Inputs.getBoolInput("no-qt-binaries");
 
     this.setEnv = Inputs.getBoolInput("set-env");
 
@@ -198,7 +210,10 @@ class Inputs {
     // Cache keys cannot be larger than 512 characters
     const maxKeyLength = 512;
     if (cacheKey.length > maxKeyLength) {
-      const hashedCacheKey = crypto.createHash("sha256").update(cacheKey).digest("hex");
+      const hashedCacheKey = crypto
+        .createHash("sha256")
+        .update(cacheKey)
+        .digest("hex");
       cacheKey = `${this.cacheKeyPrefix}-${hashedCacheKey}`;
     }
     return cacheKey;
@@ -277,7 +292,11 @@ const run = async (): Promise<void> => {
   // Install Qt and tools if not cached
   if (!internalCacheHit) {
     // Install dependencies via pip
-    await execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
+    await execPython("pip install", [
+      "setuptools",
+      "wheel",
+      `"py7zr${inputs.py7zrVersion}"`,
+    ]);
 
     // Install aqtinstall separately: allows aqtinstall to override py7zr if required
     if (inputs.aqtSource.length > 0) {
@@ -288,7 +307,9 @@ const run = async (): Promise<void> => {
 
     // This flag will install a parallel desktop version of Qt, only where required.
     // aqtinstall will automatically determine if this is necessary.
-    const autodesktop = (await isAutodesktopSupported()) ? ["--autodesktop"] : [];
+    const autodesktop = (await isAutodesktopSupported())
+      ? ["--autodesktop"]
+      : [];
 
     // Install Qt
     if (inputs.isInstallQtBinaries) {
@@ -332,7 +353,11 @@ const run = async (): Promise<void> => {
       await installSrcDocExamples("doc", inputs.docArchives, inputs.docModules);
     }
     if (inputs.example) {
-      await installSrcDocExamples("example", inputs.exampleArchives, inputs.exampleModules);
+      await installSrcDocExamples(
+        "example",
+        inputs.exampleArchives,
+        inputs.exampleModules
+      );
     }
 
     // Install tools
@@ -371,7 +396,10 @@ const run = async (): Promise<void> => {
         setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
       }
       if (process.platform !== "win32") {
-        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
+        setOrAppendEnvVar(
+          "PKG_CONFIG_PATH",
+          nativePath(`${qtPath}/lib/pkgconfig`)
+        );
       }
       // If less than qt6, set Qt5_DIR variable
       if (compareVersions(inputs.version, "<", "6.0.0")) {
