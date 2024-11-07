@@ -1,4 +1,4 @@
-import { locateQtArchDir } from "../src/helpers";
+import { locateQtArchDir, nativePath } from "../src/helpers";
 import * as fs from "fs";
 import * as path from "path";
 import "jest";
@@ -43,8 +43,24 @@ describe("locateQtArchDir integration tests", () => {
       createDummyQMakeFile(fullPath);
     });
 
-    const result = locateQtArchDir(tempDir);
+    const result = nativePath(locateQtArchDir(tempDir));
     expect(result).toBe(path.join(tempDir, "6.4.2/gcc_64"));
+  });
+
+  it("Windows-specific folder", () => {
+    const dirsToCreate = [
+      "6.4.3/msvc2022_64/bin",
+    ];
+
+    dirsToCreate.forEach((dir) => {
+      const fullPath = path.join(tempDir, dir);
+      fs.mkdirSync(fullPath, { recursive: true });
+      // create dummy qmake file
+      createDummyQMakeFile(fullPath);
+    });
+
+    const result = nativePath(locateQtArchDir(tempDir));
+    expect(result).toBe(path.join(tempDir, "6.4.3/msvc2022_64"));
   });
 
   it("should prioritize mobile installation if both mobile and desktop installations are present", () => {
@@ -56,7 +72,7 @@ describe("locateQtArchDir integration tests", () => {
       createDummyQMakeFile(fullPath);
     });
 
-    const result = locateQtArchDir(tempDir);
+    const result = nativePath(locateQtArchDir(tempDir));
     expect(result).toBe(path.join(tempDir, "6.4.2/android_arm64_v8a"));
   });
 
@@ -69,7 +85,7 @@ describe("locateQtArchDir integration tests", () => {
       createDummyQMakeFile(fullPath);
     });
 
-    const result = locateQtArchDir(tempDir);
+    const result = nativePath(locateQtArchDir(tempDir));
     expect(result).toBe(path.join(tempDir, "6.4.2/wasm_32"));
   });
 
@@ -82,12 +98,12 @@ describe("locateQtArchDir integration tests", () => {
       createDummyQMakeFile(fullPath);
     });
 
-    const result = locateQtArchDir(tempDir);
+    const result = nativePath(locateQtArchDir(tempDir));
     expect(result).toBe(path.join(tempDir, "6.4.2/msvc2019_arm64"));
   });
 
   it("should throw an error if no valid Qt installation directories are found", () => {
-    expect(() => locateQtArchDir(tempDir)).toThrow(
+    expect(() => nativePath(locateQtArchDir(tempDir))).toThrow(
       `Failed to locate a Qt installation directory in ${tempDir}`
     );
   });
@@ -105,7 +121,7 @@ describe("locateQtArchDir integration tests", () => {
       createDummyQMakeFile(fullPath);
     });
 
-    const result = locateQtArchDir(tempDir);
+    const result = nativePath(locateQtArchDir(tempDir));
     expect(result).toBe(path.join(tempDir, "6.4.2/android_arm64_v8a"));
   });
 });
