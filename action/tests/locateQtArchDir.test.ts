@@ -6,6 +6,14 @@ import 'jest';
 describe('locateQtArchDir integration tests', () => {
   let tempDir: string;
 
+  const createDummyQMakeFile = (dir: string): void => {
+    if (process.platform === "win32") {
+      fs.writeFileSync(path.join(dir, 'qmake.exe'), '');
+    } else {
+      fs.writeFileSync(path.join(dir, 'qmake'), '');
+    }
+  }
+
   beforeAll(() => {
     tempDir = fs.mkdtempSync(path.join(__dirname, 'tempQtInstall_'));
   });
@@ -25,12 +33,14 @@ describe('locateQtArchDir integration tests', () => {
     const dirsToCreate = [
       '6.4.2/gcc_64/bin',
       '6.4.3/clang_64/bin',
+      '6.4.3/msvc2022_64/bin',
     ];
 
     dirsToCreate.forEach((dir) => {
       const fullPath = path.join(tempDir, dir);
       fs.mkdirSync(fullPath, { recursive: true });
-      fs.writeFileSync(path.join(fullPath, 'qmake'), ''); // create a dummy qmake file
+      // create dummy qmake file
+      createDummyQMakeFile(fullPath);
     });
 
     const result = locateQtArchDir(tempDir);
@@ -46,7 +56,7 @@ describe('locateQtArchDir integration tests', () => {
     dirsToCreate.forEach((dir) => {
       const fullPath = path.join(tempDir, dir);
       fs.mkdirSync(fullPath, { recursive: true });
-      fs.writeFileSync(path.join(fullPath, 'qmake'), '');
+      createDummyQMakeFile(fullPath);
     });
 
     const result = locateQtArchDir(tempDir);
@@ -62,7 +72,7 @@ describe('locateQtArchDir integration tests', () => {
     dirsToCreate.forEach((dir) => {
       const fullPath = path.join(tempDir, dir);
       fs.mkdirSync(fullPath, { recursive: true });
-      fs.writeFileSync(path.join(fullPath, 'qmake'), '');
+      createDummyQMakeFile(fullPath);
     });
 
     const result = locateQtArchDir(tempDir);
@@ -78,7 +88,7 @@ describe('locateQtArchDir integration tests', () => {
     dirsToCreate.forEach((dir) => {
       const fullPath = path.join(tempDir, dir);
       fs.mkdirSync(fullPath, { recursive: true });
-      fs.writeFileSync(path.join(fullPath, 'qmake'), '');
+      createDummyQMakeFile(fullPath);
     });
 
     const result = locateQtArchDir(tempDir);
@@ -101,7 +111,7 @@ describe('locateQtArchDir integration tests', () => {
     dirsToCreate.forEach((dir) => {
       const fullPath = path.join(tempDir, dir);
       fs.mkdirSync(fullPath, { recursive: true });
-      fs.writeFileSync(path.join(fullPath, 'qmake'), '');
+      createDummyQMakeFile(fullPath);
     });
 
     const result = locateQtArchDir(tempDir);
