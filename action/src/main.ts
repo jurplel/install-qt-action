@@ -1,4 +1,5 @@
 import * as crypto from "crypto";
+import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as process from "process";
@@ -25,10 +26,32 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
   core.exportVariable(name, newValue);
 };
 
-const toolsPaths = (installDir: string): string[] =>
-  ["Tools/**/bin", "*.app/Contents/MacOS", "*.app/**/bin"].flatMap((p: string): string[] =>
-    glob.sync(`${installDir}/${p}`)
-  );
+const dirExists = (dir: string): boolean => {
+  try {
+    return fs.statSync(dir).isDirectory();
+  } catch (err) {
+    return false;
+  }
+};
+
+// Names of directories for tools (tools_conan & tools_ninja) that include binaries in the
+// base directory instead of a bin directory (ie 'Tools/Conan', not 'Tools/Conan/bin')
+const binlessToolDirectories = ["Conan", "Ninja"];
+
+const toolsPaths = (installDir: string): string[] => {
+  const binlessPaths: string[] = binlessToolDirectories
+    .map((dir) => `${installDir}/Tools/${dir}`)
+    .filter((dir) => dirExists(dir));
+  return [
+    "Tools/**/bin",
+    "*.app/Contents/MacOS",
+    "*.app/**/bin",
+    "Tools/*/*.app/Contents/MacOS",
+    "Tools/*/*.app/**/bin",
+  ]
+    .flatMap((p: string): string[] => glob.sync(`${installDir}/${p}`))
+    .concat(binlessPaths);
+};
 
 const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
@@ -163,7 +186,9 @@ class Inputs {
           this.arch = "android_armv7";
         }
       } else if (this.host === "windows") {
-        if (compareVersions(this.version, ">=", "5.15.0")) {
+        if (compareVersions(this.version, ">=", "6.7.3")) {
+          this.arch = "win64_msvc2022_64";
+        } else if (compareVersions(this.version, ">=", "5.15.0")) {
           this.arch = "win64_msvc2019_64";
         } else if (compareVersions(this.version, "<", "5.6.0")) {
           this.arch = "win64_msvc2013_64";
@@ -344,11 +369,6 @@ const run = async (): Promise<void> => {
 
   // Install Qt and tools if not cached
   if (!internalCacheHit) {
-    // 7-zip is required, and not included on macOS
-    if (process.platform === "darwin") {
-      await exec("brew install p7zip");
-    }
-
     // Install dependencies via pip
     await execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
 

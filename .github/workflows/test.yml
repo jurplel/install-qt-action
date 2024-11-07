@@ -211,7 +211,7 @@ jobs:
         uses: ./
         with:
           tools-only: true
-          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
+          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator tools_cmake tools_ninja tools_conan
           add-tools-to-path: ${{ matrix.qt.add-tools-to-path }}
           cache: ${{ matrix.cache == 'cached' }}
 
@@ -220,26 +220,45 @@ jobs:
         shell: bash
         run: |
           echo "Path: ${PATH}"
-          # Check if QtIFW is installed
-          which archivegen
-          archivegen --version
-  
-          # Check if QtCreator is installed: QtCreator includes the CLI program 'qbs' on all 3 platforms
-          which qbs
-          qbs --version
+          set -x
+
+          # tools_ifw: use `archivegen` to test that Tools/QtInstallerFramework/4.7/bin is added to path
+          # tools_qtcreator: use `qbs` to test that Tools/QtCreator/bin or "Qt Creator.app/Contents/MacOS/" is added to path
+          # tools_cmake: test that Tools/CMake/bin or Tools/CMake/CMake.app/Contents/bin is added to path
+          # tools_ninja: test that Tools/Ninja is added to path
+          # tools_conan: test that Tools/Conan is added to path
+
+          for tool_name in archivegen qbs cmake ninja conan; do
+            which "${tool_name}"
+            "${tool_name}" --version
+          done
+          
 
       - name: Test that installed tools are not in the path
         if: ${{ matrix.qt.tools-only-build && !matrix.qt.add-tools-to-path }}
         shell: bash
         run: |
           echo "Path: ${PATH}"
+          set -x
+
           # Check that QtIFW has been installed
           ls ../Qt/Tools/QtInstallerFramework/*/bin/ | grep archivegen
-          
-          # Check that QtIFW is not in the path
-          ! which archivegen
-          ! archivegen --version
-          
-          # Check that qbs (from QtCreator) is not in the path
-          ! which qbs
-          ! qbs --version
+          # Check that QtCreator has been installed
+          [[ -e "../Qt/Tools/QtCreator/bin/qbs" || -e "../Qt/Qt Creator.app/Contents/MacOS/qbs" ]]
+          # Check that CMake has been installed
+          [[ -e "../Qt/Tools/CMake/bin/cmake" || -e "../Qt/Tools/CMake/CMake.app/Contents/bin/cmake" ]]
+          # Check that Ninja has been installed
+          [[ -e "../Qt/Tools/Ninja/ninja" ]]
+          # Check that Conan has been installed
+          [[ -e "../Qt/Tools/Conan/conan" ]]
+
+          # tools_ifw: use `archivegen` to test that Tools/QtInstallerFramework/4.7/bin is not added to path
+          # tools_qtcreator: use `qbs` to test that Tools/QtCreator/bin or "Qt Creator.app/Contents/MacOS/" is not added to path
+          # tools_cmake: test that Tools/CMake/bin or Tools/CMake/CMake.app/Contents/bin is not added to path
+          # tools_ninja: test that Tools/Ninja is not added to path
+          # tools_conan: test that Tools/Conan is not added to path
+
+          for tool_name in archivegen qbs cmake ninja conan; do
+            ! which "${tool_name}"
+            ! "${tool_name}" --version
+          done

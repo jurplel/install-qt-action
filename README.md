@@ -60,7 +60,9 @@ Windows w/ Qt >= 5.6 && Qt < 5.9: `win64_msvc2015_64`
 
 Windows w/ Qt >= 5.9 && Qt < 5.15: `win64_msvc2017_64`
 
-Windows w/ Qt >= 5.15: `win64_msvc2019_64`
+Windows w/ Qt >= 5.15 && Qt < 6.8: `win64_msvc2019_64`
+
+Windows w/ Qt >= 6.8: `win64_msvc2022_64`
 
 Android: `android_armv7`
 
@@ -260,7 +262,7 @@ Example value: `--external 7z`
 
 ```yml
     - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: '5.15.2'
         host: 'windows'
