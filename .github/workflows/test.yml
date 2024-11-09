@@ -137,6 +137,14 @@ jobs:
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}
 
+      - name: Test QT_ROOT_DIR
+        if: ${{ matrix.qt.version }}
+        shell: bash
+        run: |
+          set -x
+          # Check that QT_ROOT_DIR contains a qmake of some kind
+          ls "${QT_ROOT_DIR}/bin/" | grep qmake
+
       - name: Switch macOS Xcode version with older Qt versions
         if: ${{ matrix.qt.version && (startsWith(matrix.os, 'macos-13') || startsWith(matrix.os, 'macos-14')) }}
         shell: pwsh
