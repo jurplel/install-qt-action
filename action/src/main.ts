@@ -186,7 +186,7 @@ class Inputs {
           this.arch = "android_armv7";
         }
       } else if (this.host === "windows") {
-        if (compareVersions(this.version, ">=", "6.7.3")) {
+        if (compareVersions(this.version, ">=", "6.8.0")) {
           this.arch = "win64_msvc2022_64";
         } else if (compareVersions(this.version, ">=", "5.15.0")) {
           this.arch = "win64_msvc2019_64";
