@@ -11,7 +11,7 @@ jobs:
         os:
           - ubuntu-22.04
           - windows-2022
-          - macos-12
+          - macos-15
         qt:
           - version: "5.15.2"
             ndk-version: r21e
