@@ -11,8 +11,6 @@ import { exec, getExecOutput } from "@actions/exec";
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
 
-const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
-
 const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
   return compare(v1, v2, op);
 };
@@ -50,7 +48,8 @@ const toolsPaths = (installDir: string): string[] => {
     "Tools/*/*.app/**/bin",
   ]
     .flatMap((p: string): string[] => glob.sync(`${installDir}/${p}`))
-    .concat(binlessPaths);
+    .concat(binlessPaths)
+    .map((p) => path.resolve(p));
 };
 
 const pythonCommand = (command: string, args: readonly string[]): string => {
@@ -77,7 +76,7 @@ const locateQtArchDir = (installDir: string): string => {
   // This makes a list of all the viable arch directories that contain a qmake file.
   const qtArchDirs = glob
     .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
-    .map((s) => path.join(s, "..", ".."));
+    .map((s) => path.resolve(s, "..", ".."));
 
   // For Qt6 mobile and wasm installations, and Qt6 Windows on ARM installations,
   // a standard desktop Qt installation must exist alongside the requested architecture.
@@ -206,7 +205,7 @@ class Inputs {
     if (!dir) {
       throw TypeError(`"dir" input may not be empty`);
     }
-    this.dir = path.join(dir, "Qt");
+    this.dir = path.resolve(dir, "Qt");
 
     this.modules = Inputs.getStringArrayInput("modules");
 
@@ -447,35 +446,35 @@ const run = async (): Promise<void> => {
 
   // Add tools to path
   if (inputs.addToolsToPath && inputs.tools.length) {
-    toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+    toolsPaths(inputs.dir).forEach(core.addPath);
   }
 
   // Set environment variables/outputs for tools
   if (inputs.tools.length && inputs.setEnv) {
-    core.exportVariable("IQTA_TOOLS", nativePath(path.join(inputs.dir, "Tools")));
+    core.exportVariable("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
   }
   // Set environment variables/outputs for binaries
   if (inputs.isInstallQtBinaries) {
-    const qtPath = nativePath(locateQtArchDir(inputs.dir));
+    const qtPath = locateQtArchDir(inputs.dir);
     // Set outputs
     core.setOutput("qtPath", qtPath);
 
     // Set env variables
     if (inputs.setEnv) {
       if (process.platform === "linux") {
-        setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(path.join(qtPath, "lib")));
+        setOrAppendEnvVar("LD_LIBRARY_PATH", path.resolve(qtPath, "lib"));
       }
       if (process.platform !== "win32") {
-        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(path.join(qtPath, "lib", "pkgconfig")));
+        setOrAppendEnvVar("PKG_CONFIG_PATH", path.resolve(qtPath, "lib", "pkgconfig"));
       }
       // If less than qt6, set Qt5_DIR variable
       if (compareVersions(inputs.version, "<", "6.0.0")) {
-        core.exportVariable("Qt5_DIR", nativePath(path.join(qtPath, "lib", "cmake")));
+        core.exportVariable("Qt5_DIR", path.resolve(qtPath, "lib", "cmake"));
       }
       core.exportVariable("QT_ROOT_DIR", qtPath);
-      core.exportVariable("QT_PLUGIN_PATH", nativePath(path.join(qtPath, "plugins")));
-      core.exportVariable("QML2_IMPORT_PATH", nativePath(path.join(qtPath, "qml")));
-      core.addPath(nativePath(path.join(qtPath, "bin")));
+      core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
+      core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
+      core.addPath(path.resolve(qtPath, "bin"));
     }
   }
 };
