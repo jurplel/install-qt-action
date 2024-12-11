@@ -71,7 +71,7 @@ const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
   return listArgs.length ? [flag, ...listArgs] : [];
 };
 
-const locateQtArchDir = (installDir: string): string => {
+const locateQtArchDir = (installDir: string): [string, boolean] => {
   // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
   // This makes a list of all the viable arch directories that contain a qmake file.
   const qtArchDirs = glob
@@ -88,12 +88,12 @@ const locateQtArchDir = (installDir: string): string => {
   });
   if (requiresParallelDesktop.length) {
     // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
-    return requiresParallelDesktop[0];
+    return [requiresParallelDesktop[0], true];
   } else if (!qtArchDirs.length) {
     throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
   } else {
     // NOTE: if multiple Qt installations exist, this may not select the desired directory
-    return qtArchDirs[0];
+    return [qtArchDirs[0], false];
   }
 };
 
@@ -455,7 +455,7 @@ const run = async (): Promise<void> => {
   }
   // Set environment variables/outputs for binaries
   if (inputs.isInstallQtBinaries) {
-    const qtPath = locateQtArchDir(inputs.dir);
+    const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir);
     // Set outputs
     core.setOutput("qtPath", qtPath);
 
@@ -474,6 +474,11 @@ const run = async (): Promise<void> => {
       core.exportVariable("QT_ROOT_DIR", qtPath);
       core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
       core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
+      if (requiresParallelDesktop) {
+        const qmakePath = path.resolve(qtPath, "bin", "qmake");
+        const queryResult = await getExecOutput(`${qmakePath} -query QT_HOST_PREFIX`);
+        core.exportVariable("QT_HOST_PATH", path.normalize(queryResult.stdout.trim()));
+      }
       core.addPath(path.resolve(qtPath, "bin"));
     }
   }
