@@ -84,7 +84,9 @@ const locateQtArchDir = (installDir: string): [string, boolean] => {
   const requiresParallelDesktop = qtArchDirs.filter((archPath) => {
     const archDir = path.basename(archPath);
     const versionDir = path.basename(path.join(archPath, ".."));
-    return versionDir.match(/^6\.\d+\.\d+$/) && archDir.match(/^(android.*|ios|wasm.*|msvc.*_arm64)$/);
+    return (
+      versionDir.match(/^6\.\d+\.\d+$/) && archDir.match(/^(android.*|ios|wasm.*|msvc.*_arm64)$/)
+    );
   });
   if (requiresParallelDesktop.length) {
     // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
