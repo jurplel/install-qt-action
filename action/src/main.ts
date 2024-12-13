@@ -477,10 +477,12 @@ const run = async (): Promise<void> => {
       core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
       core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
       if (requiresParallelDesktop) {
-        const qmakePath = path.resolve(qtPath, "bin", "qmake");
-        const val = await getExecOutput(`${qmakePath} -query QT_HOST_PREFIX`).catch(() => null);
-        if (val?.exitCode === 0) {
-          core.exportVariable("QT_HOST_PATH", path.normalize(val.stdout.trim()));
+        const hostPrefix = await fs.promises
+          .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
+          .then((data) => data.match(/^HostPrefix=(.*)$/m)?.[1].trim() ?? "")
+          .catch(() => "");
+        if (hostPrefix) {
+          core.exportVariable("QT_HOST_PATH", path.resolve(qtPath, "bin", hostPrefix));
         }
       }
       core.addPath(path.resolve(qtPath, "bin"));
