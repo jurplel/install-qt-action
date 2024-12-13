@@ -52,6 +52,22 @@ jobs:
           example-archives: ${{ matrix.qt.example-archives }}
           example-modules:  ${{ matrix.qt.example-modules }}
 
+      - name: Test QT_HOST_PATH
+        if: ${{ startsWith(matrix.qt.version, '6.') }}
+        shell: pwsh
+        run: |
+          $qmakeHostPrefix = [string](Resolve-Path -Path (qmake -query QT_HOST_PREFIX))
+          if ($env:QT_HOST_PATH -ne $qmakeHostPrefix) {
+            throw "QT_HOST_PATH should match qmake's QT_HOST_PREFIX."
+          }
+          if ($env:QT_HOST_PATH -eq $env:QT_ROOT_DIR) {
+            throw "QT_HOST_PATH and QT_ROOT_DIR should be different."
+          }
+          if ((Split-Path -Path $env:QT_HOST_PATH -Parent) -ne (Split-Path -Path $env:QT_ROOT_DIR -Parent)) {
+            throw "QT_HOST_PATH and QT_ROOT_DIR should have the same parent directory."
+          }
+          Write-Host "All tests passed!"
+
       - name: Install Android NDK
         shell: bash
         # Links to NDK are at https://github.com/android/ndk/wiki/Unsupported-Downloads
