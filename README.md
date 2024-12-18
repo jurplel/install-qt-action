@@ -32,14 +32,14 @@ This is the host platform of the Qt version you will be installing. It's unlikel
 
 For example, if you are building on Linux and targeting desktop, you would set host to `linux`. If you are building on Linux and targeting android, you would set host to `linux` also. The host platform is the platform that your application will build on, not its target platform.
 
-Possible values: `windows`, `mac`, or `linux`
+Possible values: `windows`, `mac`, `linux` or `all_os`
 
 Defaults to the current platform it is being run on.
 
 ### `target`
 This is the target platform that you will be building for. You will want to set this if you are building for iOS or Android. Please note that iOS builds are supported only on macOS hosts and Win RT builds are only supported on Windows hosts.
 
-Possible values: `desktop`, `android`, `ios`, or `winrt`
+Possible values: `desktop`, `android`, `ios`, `winrt` or `wasm`
 
 Default: `desktop`
 
@@ -65,6 +65,8 @@ Windows w/ Qt >= 5.15 && Qt < 6.8: `win64_msvc2019_64`
 Windows w/ Qt >= 6.8: `win64_msvc2022_64`
 
 Android: `android_armv7`
+
+WASM: `wasm_singlethread`
 
 ### `dir`
 This is the directory prefix that Qt will be installed to.
@@ -255,8 +257,11 @@ Default: `==0.20.*`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
+It is useful with WASM builds using `--autodesktop` as it allows the automatic installation of the required Qt for the host.
 
 Example value: `--external 7z`
+
+For WASM: `--autodesktop`
 
 ## Example with all arguments
 
