@@ -257,11 +257,8 @@ Default: `==0.20.*`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
-It is useful with WASM builds using `--autodesktop` as it allows the automatic installation of the required Qt for the host.
 
 Example value: `--external 7z`
-
-For WASM: `--autodesktop`
 
 ## Example with all arguments
 
