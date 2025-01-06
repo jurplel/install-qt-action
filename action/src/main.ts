@@ -186,12 +186,6 @@ class Inputs {
         } else {
           this.arch = "android_armv7";
         }
-      } else if (this.target === "wasm") {
-        if (compareVersions(this.version, ">=", "6.0.0")) {
-          this.arch = "wasm_singlethread";
-        } else {
-          this.arch = "wasm_32";
-        }
       } else if (this.host === "windows") {
         if (compareVersions(this.version, ">=", "6.8.0")) {
           this.arch = "win64_msvc2022_64";
