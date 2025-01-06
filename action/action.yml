@@ -9,7 +9,7 @@ inputs:
     description: Directory to install Qt
   version:
     description: Version of Qt to install
-    default: "5.15.2"
+    default: "6.8.1"
   host:
     description: Host platform
   target:
@@ -52,7 +52,7 @@ inputs:
     description: Location to source aqtinstall from in case of issues
   aqtversion:
     description: Version of aqtinstall to use in case of issues
-    default: ==3.1.*
+    default: ==3.2.*
   py7zrversion:
     description: Version of py7zr to use in case of issues
     default: ==0.20.*
