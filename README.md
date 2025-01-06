@@ -23,7 +23,7 @@ The desired version of Qt to install.
 
 You can also pass in SimpleSpec version numbers, for example `6.2.*`.
 
-Default: `5.15.2` (Last Qt 5 LTS)
+Default: `6.8.1` (Last Qt 6 LTS)
 
 **Please note that for Linux builds, Qt 6+ requires Ubuntu 20.04 or later.**
 
@@ -65,8 +65,6 @@ Windows w/ Qt >= 5.15 && Qt < 6.8: `win64_msvc2019_64`
 Windows w/ Qt >= 6.8: `win64_msvc2022_64`
 
 Android: `android_armv7`
-
-WASM: `wasm_singlethread`
 
 ### `dir`
 This is the directory prefix that Qt will be installed to.
@@ -248,7 +246,7 @@ By default this is unset and ignored.
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==3.1.*`
+Default: `==3.2.*`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
@@ -266,10 +264,10 @@ Example value: `--external 7z`
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '5.15.2'
+        version: '6.8.1'
         host: 'windows'
         target: 'desktop'
-        arch: 'win64_msvc2019_64'
+        arch: 'win64_msvc2022_64'
         dir: '${{ github.workspace }}/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
@@ -280,7 +278,7 @@ Example value: `--external 7z`
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'true'
         tools-only: 'false'
-        aqtversion: '==3.1.*'
+        aqtversion: '==3.2.*'
         py7zrversion: '==0.20.*'
         extra: '--external 7z'
 ```
