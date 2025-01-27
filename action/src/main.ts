@@ -56,6 +56,7 @@ const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
   return `${python} -m ${command} ${args.join(" ")}`;
 };
+
 const execPython = async (command: string, args: readonly string[]): Promise<number> => {
   return exec(pythonCommand(command, args));
 };
@@ -97,6 +98,55 @@ const locateQtArchDir = (installDir: string): string => {
   }
 };
 
+const locateQtWasmHostArchDir = (
+  installDir: string,
+  hostType: "windows" | "mac" | "linux" | "all_os",
+  target: "desktop" | "android" | "ios" | "wasm",
+  version: string
+): string => {
+  // For WASM in all_os mode, use the host builder directory
+  if (hostType === "all_os" && target === "wasm") {
+    const versionDir = path.join(installDir, version);
+
+    switch (process.platform) {
+      case "win32": {
+        // Find mingw directories
+        const mingwPattern = /^win\d+_mingw\d+$/;
+        const mingwArches = glob
+          .sync(`${versionDir}/*/`)
+          .map((dir) => path.basename(dir))
+          .filter((dir) => mingwPattern.test(dir))
+          .sort((a, b) => {
+            const [aBits, aVer] = a
+              .match(/win(\d+)_mingw(\d+)/)
+              ?.slice(1)
+              .map(Number) ?? [0, 0];
+            const [bBits, bVer] = b
+              .match(/win(\d+)_mingw(\d+)/)
+              ?.slice(1)
+              .map(Number) ?? [0, 0];
+            if (aBits !== bBits) return bBits - aBits;
+            return bVer - aVer;
+          });
+
+        if (!mingwArches.length) {
+          throw Error(`Failed to locate a MinGW directory for WASM host in ${versionDir}`);
+        }
+        return path.join(versionDir, mingwArches[0]);
+      }
+      case "darwin":
+        return path.join(versionDir, "clang_64");
+      default:
+        return path.join(
+          versionDir,
+          compareVersions(version, ">=", "6.7.0") ? "linux_gcc_64" : "gcc_64"
+        );
+    }
+  }
+
+  return locateQtArchDir(installDir);
+};
+
 const isAutodesktopSupported = async (): Promise<boolean> => {
   const rawOutput = await getPythonOutput("aqt", ["version"]);
   const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
@@ -135,6 +185,10 @@ class Inputs {
   readonly aqtSource: string;
   readonly aqtVersion: string;
   readonly py7zrVersion: string;
+
+  readonly useCommercial: boolean;
+  readonly user: string;
+  readonly password: string;
 
   constructor() {
     const host = core.getInput("host");
@@ -242,6 +296,10 @@ class Inputs {
 
     this.py7zrVersion = core.getInput("py7zrversion");
 
+    this.useCommercial = Inputs.getBoolInput("use-commercial");
+    this.user = core.getInput("user");
+    this.password = core.getInput("password");
+
     this.src = Inputs.getBoolInput("source");
     this.srcArchives = Inputs.getStringArrayInput("src-archives");
 
@@ -267,6 +325,7 @@ class Inputs {
         this.py7zrVersion,
         this.aqtSource,
         this.aqtVersion,
+        this.useCommercial ? "commercial" : "",
       ],
       this.modules,
       this.archives,
@@ -386,19 +445,34 @@ const run = async (): Promise<void> => {
 
     // Install Qt
     if (inputs.isInstallQtBinaries) {
-      const qtArgs = [
-        inputs.host,
-        inputs.target,
-        inputs.version,
-        ...(inputs.arch ? [inputs.arch] : []),
-        ...autodesktop,
-        ...["--outputdir", inputs.dir],
-        ...flaggedList("--modules", inputs.modules),
-        ...flaggedList("--archives", inputs.archives),
-        ...inputs.extra,
-      ];
-
-      await execPython("aqt install-qt", qtArgs);
+      if (inputs.useCommercial && inputs.user && inputs.password) {
+        const qtArgs = [
+          "install-qt-commercial",
+          inputs.target,
+          ...(inputs.arch ? [inputs.arch] : []),
+          inputs.version,
+          ...["--outputdir", inputs.dir],
+          ...["--user", inputs.user],
+          ...["--password", inputs.password],
+          ...flaggedList("--modules", inputs.modules),
+          ...inputs.extra,
+        ];
+        await execPython("aqt", qtArgs);
+      } else {
+        const qtArgs = [
+          "install-qt",
+          inputs.host,
+          inputs.target,
+          inputs.version,
+          ...(inputs.arch ? [inputs.arch] : []),
+          ...autodesktop,
+          ...["--outputdir", inputs.dir],
+          ...flaggedList("--modules", inputs.modules),
+          ...flaggedList("--archives", inputs.archives),
+          ...inputs.extra,
+        ];
+        await execPython("aqt", qtArgs);
+      }
     }
 
     const installSrcDocExamples = async (
@@ -455,7 +529,7 @@ const run = async (): Promise<void> => {
   }
   // Set environment variables/outputs for binaries
   if (inputs.isInstallQtBinaries) {
-    const qtPath = locateQtArchDir(inputs.dir);
+    const qtPath = locateQtWasmHostArchDir(inputs.dir, inputs.host, inputs.target, inputs.version);
     // Set outputs
     core.setOutput("qtPath", qtPath);
 

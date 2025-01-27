@@ -58,7 +58,7 @@ inputs:
     default: ==3.2.*
   py7zrversion:
     description: Version of py7zr to use in case of issues
-    default: ==0.20.*
+    default: ==0.22.*
   extra:
     description: Any extra arguments to append to the back
   source:
@@ -80,6 +80,15 @@ inputs:
     description: Space-separated list of .7z example archives to install. Used to reduce download/image sizes.
   example-modules:
     description: Space-separated list of additional example modules to install.
+  use-commercial:
+    default: false
+    description: Whether or not to use aqtinstall to install the commercial version of Qt
+  user:
+    default: 'username'
+    description: Your Qt username
+  password:
+    default: 'password'
+    description: Your Qt password
 runs:
   using: "composite"
   steps:
@@ -87,7 +96,7 @@ runs:
     if: ${{ inputs.setup-python  == 'true' }}
     uses: actions/setup-python@v5
     with:
-      python-version: '3.6.x - 3.12.x'
+      python-version: '3.6.x - 3.13.x'
 
   - name: Setup and run aqtinstall
     uses: ./action
@@ -119,3 +128,6 @@ runs:
       example-archives: ${{ inputs.example-archives }}
       example-modules: ${{ inputs.example-modules }}
       extra: ${{ inputs.extra }}
+      use-commercial: ${{ inputs.use-commercial }}
+      user: ${{ inputs.user }}
+      password: ${{ inputs.password }}
