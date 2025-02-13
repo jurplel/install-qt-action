@@ -96,7 +96,7 @@ runs:
     if: ${{ inputs.setup-python  == 'true' }}
     uses: actions/setup-python@v5
     with:
-      python-version: '3.6.x - 3.13.x'
+      python-version: '>=3.9.x'
 
   - name: Setup and run aqtinstall
     uses: ./action
