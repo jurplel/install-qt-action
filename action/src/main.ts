@@ -105,7 +105,7 @@ const locateQtWasmHostArchDir = (
   hostType: "windows" | "mac" | "linux" | "all_os",
   target: "desktop" | "android" | "ios" | "wasm",
   version: string
-): string => {
+): [string, boolean] => {
   // For WASM in all_os mode, use the host builder directory
   if (hostType === "all_os" && target === "wasm") {
     const versionDir = path.join(installDir, version);
@@ -134,15 +134,18 @@ const locateQtWasmHostArchDir = (
         if (!mingwArches.length) {
           throw Error(`Failed to locate a MinGW directory for WASM host in ${versionDir}`);
         }
-        return path.join(versionDir, mingwArches[0]);
+        return [path.join(versionDir, mingwArches[0]), false];
       }
       case "darwin":
-        return path.join(versionDir, "clang_64");
+        return [path.join(versionDir, "clang_64"), false];
       default:
-        return path.join(
-          versionDir,
-          compareVersions(version, ">=", "6.7.0") ? "linux_gcc_64" : "gcc_64"
-        );
+        return [
+          path.join(
+            versionDir,
+            compareVersions(version, ">=", "6.7.0") ? "linux_gcc_64" : "gcc_64"
+          ),
+          false,
+        ];
     }
   }
 
@@ -531,7 +534,12 @@ const run = async (): Promise<void> => {
   }
   // Set environment variables/outputs for binaries
   if (inputs.isInstallQtBinaries) {
-    const [qtPath, requiresParallelDesktop] = locateQtWasmHostArchDir(inputs.dir, inputs.host, inputs.target, inputs.version);
+    const [qtPath, requiresParallelDesktop] = locateQtWasmHostArchDir(
+      inputs.dir,
+      inputs.host,
+      inputs.target,
+      inputs.version
+    );
     // Set outputs
     core.setOutput("qtPath", qtPath);
 
