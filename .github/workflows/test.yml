@@ -96,6 +96,11 @@ jobs:
             qt:
               tools-only-build: true
               add-tools-to-path: false
+          - os: ubuntu-24.04-arm
+            qt:
+              version: "6.8.1"
+              requested: "6.8.1"
+              modules: qtwebengine qtpositioning qtwebchannel
 
 
     steps:
@@ -123,7 +128,7 @@ jobs:
           dir: ${{ matrix.dir }}
           modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
-          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
+          tools: tools_ifw tools_qtcreator_gui,qt.tools.qtcreator_gui
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Install Qt with options and specified aqtversion
@@ -134,7 +139,7 @@ jobs:
           dir: ${{ matrix.dir }}
           modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
-          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
+          tools: tools_ifw tools_qtcreator_gui,qt.tools.qtcreator_gui
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Test QT_ROOT_DIR
@@ -228,7 +233,7 @@ jobs:
         with:
           dir: ${{ matrix.dir }}
           tools-only: true
-          tools: tools_ifw tools_qtcreator,qt.tools.qtcreator tools_cmake tools_ninja tools_conan
+          tools: tools_ifw tools_qtcreator_gui,qt.tools.qtcreator_gui tools_cmake tools_ninja tools_conan
           add-tools-to-path: ${{ matrix.qt.add-tools-to-path }}
           cache: ${{ matrix.cache == 'cached' }}
 
@@ -240,7 +245,7 @@ jobs:
           set -x
 
           # tools_ifw: use `archivegen` to test that Tools/QtInstallerFramework/4.7/bin is added to path
-          # tools_qtcreator: use `qbs` to test that Tools/QtCreator/bin or "Qt Creator.app/Contents/MacOS/" is added to path
+          # tools_qtcreator_gui: use `qbs` to test that Tools/QtCreator/bin or "Qt Creator.app/Contents/MacOS/" is added to path
           # tools_cmake: test that Tools/CMake/bin or Tools/CMake/CMake.app/Contents/bin is added to path
           # tools_ninja: test that Tools/Ninja is added to path
           # tools_conan: test that Tools/Conan is added to path
@@ -270,7 +275,7 @@ jobs:
           [[ -e "../Qt/Tools/Conan/conan" ]]
 
           # tools_ifw: use `archivegen` to test that Tools/QtInstallerFramework/4.7/bin is not added to path
-          # tools_qtcreator: use `qbs` to test that Tools/QtCreator/bin or "Qt Creator.app/Contents/MacOS/" is not added to path
+          # tools_qtcreator_gui: use `qbs` to test that Tools/QtCreator/bin or "Qt Creator.app/Contents/MacOS/" is not added to path
           # tools_cmake: test that Tools/CMake/bin or Tools/CMake/CMake.app/Contents/bin is not added to path
           # tools_ninja: test that Tools/Ninja is not added to path
           # tools_conan: test that Tools/Conan is not added to path
