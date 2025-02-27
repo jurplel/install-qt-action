@@ -74,9 +74,9 @@ When possible, access your Qt directory through the `QT_ROOT_DIR` environment va
 
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
-### `use-commercial` (since `v4.3.0`)
-Whether or not to use `aqtinstall` to install Qt using its official online installer enabling the commercial versions for those owning a license.
-For this to work, you need to also set `aqtsource` to `git+https://github.com/Kidev/aqtinstall.git@install_qt_commercial`.
+### `use-official` (since `v4.3.0`)
+Whether or not to use `aqtinstall` to install Qt using its official online installer (enabling the commercial versions 
+for those owning a license).
 The parameter `host` will then be ignored, as you can only install commercial Qt versions on the OS running the installer.
 Example:
 ```yml
@@ -87,18 +87,18 @@ Example:
         target: 'desktop'
         arch: 'win64_msvc2019_64'
         aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@install_qt_commercial'
-        use-commercial: true
-        user: '****@gmail.com'
-        password: '****'
+        use-official: true
+        email: '****@gmail.com'
+        pw: '****'
 ```
 
 Default: `false`
 
-#### `user`
-If `use-commercial` is true, will use this username/email to authenticate with Qt servers
+#### `email`
+If `use-official` is true, will use this username/email to authenticate with Qt servers
 
-#### `password`
-If `use-commercial` is true, will use this password to authenticate with Qt servers
+#### `pw`
+If `use-official` is true, will use this password to authenticate with Qt servers
 
 ### `install-deps`
 Whether or not to automatically install Qt dependencies on Linux through `apt`.

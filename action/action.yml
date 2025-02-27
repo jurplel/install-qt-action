@@ -77,14 +77,14 @@ inputs:
     description: Space-separated list of .7z example archives to install. Used to reduce download/image sizes.
   example-modules:
     description: Space-separated list of additional example modules to install.
-  use-commercial:
+  use-official:
     default: false
-    description: Whether or not to use aqtinstall to install the commercial version of Qt
-  user:
-    default: 'username'
-    description: Your Qt username
-  password:
-    default: 'password'
+    description: Whether to use aqtinstall to install Qt using the official installer, requires email & pw
+  email:
+    default: ''
+    description: Your Qt email
+  pw:
+    default: ''
     description: Your Qt password
 runs:
   using: node20

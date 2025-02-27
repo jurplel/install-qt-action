@@ -191,9 +191,9 @@ class Inputs {
   readonly aqtVersion: string;
   readonly py7zrVersion: string;
 
-  readonly useCommercial: boolean;
-  readonly user: string;
-  readonly password: string;
+  readonly useOfficial: boolean;
+  readonly email: string;
+  readonly pw: string;
 
   constructor() {
     const host = core.getInput("host");
@@ -301,9 +301,9 @@ class Inputs {
 
     this.py7zrVersion = core.getInput("py7zrversion");
 
-    this.useCommercial = Inputs.getBoolInput("use-commercial");
-    this.user = core.getInput("user");
-    this.password = core.getInput("password");
+    this.useOfficial = Inputs.getBoolInput("use-official");
+    this.email = core.getInput("email");
+    this.pw = core.getInput("pw");
 
     this.src = Inputs.getBoolInput("source");
     this.srcArchives = Inputs.getStringArrayInput("src-archives");
@@ -330,7 +330,7 @@ class Inputs {
         this.py7zrVersion,
         this.aqtSource,
         this.aqtVersion,
-        this.useCommercial ? "commercial" : "",
+        this.useOfficial ? "official" : "",
       ],
       this.modules,
       this.archives,
@@ -450,15 +450,15 @@ const run = async (): Promise<void> => {
 
     // Install Qt
     if (inputs.isInstallQtBinaries) {
-      if (inputs.useCommercial && inputs.user && inputs.password) {
+      if (inputs.useOfficial && inputs.email && inputs.pw) {
         const qtArgs = [
-          "install-qt-commercial",
+          "install-qt-official",
           inputs.target,
           ...(inputs.arch ? [inputs.arch] : []),
           inputs.version,
           ...["--outputdir", inputs.dir],
-          ...["--user", inputs.user],
-          ...["--password", inputs.password],
+          ...["--email", inputs.email],
+          ...["--pw", inputs.pw],
           ...flaggedList("--modules", inputs.modules),
           ...inputs.extra,
         ];
