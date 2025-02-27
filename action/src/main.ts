@@ -56,6 +56,7 @@ const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
   return `${python} -m ${command} ${args.join(" ")}`;
 };
+
 const execPython = async (command: string, args: readonly string[]): Promise<number> => {
   return exec(pythonCommand(command, args));
 };
@@ -99,6 +100,58 @@ const locateQtArchDir = (installDir: string): [string, boolean] => {
   }
 };
 
+const locateQtWasmHostArchDir = (
+  installDir: string,
+  hostType: "windows" | "mac" | "linux" | "all_os",
+  target: "desktop" | "android" | "ios" | "wasm",
+  version: string
+): [string, boolean] => {
+  // For WASM in all_os mode, use the host builder directory
+  if (hostType === "all_os" && target === "wasm") {
+    const versionDir = path.join(installDir, version);
+
+    switch (process.platform) {
+      case "win32": {
+        // Find mingw directories
+        const mingwPattern = /^win\d+_mingw\d+$/;
+        const mingwArches = glob
+          .sync(`${versionDir}/*/`)
+          .map((dir) => path.basename(dir))
+          .filter((dir) => mingwPattern.test(dir))
+          .sort((a, b) => {
+            const [aBits, aVer] = a
+              .match(/win(\d+)_mingw(\d+)/)
+              ?.slice(1)
+              .map(Number) ?? [0, 0];
+            const [bBits, bVer] = b
+              .match(/win(\d+)_mingw(\d+)/)
+              ?.slice(1)
+              .map(Number) ?? [0, 0];
+            if (aBits !== bBits) return bBits - aBits;
+            return bVer - aVer;
+          });
+
+        if (!mingwArches.length) {
+          throw Error(`Failed to locate a MinGW directory for WASM host in ${versionDir}`);
+        }
+        return [path.join(versionDir, mingwArches[0]), false];
+      }
+      case "darwin":
+        return [path.join(versionDir, "clang_64"), false];
+      default:
+        return [
+          path.join(
+            versionDir,
+            compareVersions(version, ">=", "6.7.0") ? "linux_gcc_64" : "gcc_64"
+          ),
+          false,
+        ];
+    }
+  }
+
+  return locateQtArchDir(installDir);
+};
+
 const isAutodesktopSupported = async (): Promise<boolean> => {
   const rawOutput = await getPythonOutput("aqt", ["version"]);
   const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
@@ -106,8 +159,8 @@ const isAutodesktopSupported = async (): Promise<boolean> => {
 };
 
 class Inputs {
-  readonly host: "windows" | "mac" | "linux";
-  readonly target: "desktop" | "android" | "ios";
+  readonly host: "windows" | "mac" | "linux" | "all_os";
+  readonly target: "desktop" | "android" | "ios" | "wasm";
   readonly version: string;
   readonly arch: string;
   readonly dir: string;
@@ -138,6 +191,10 @@ class Inputs {
   readonly aqtVersion: string;
   readonly py7zrVersion: string;
 
+  readonly useOfficial: boolean;
+  readonly email: string;
+  readonly pw: string;
+
   constructor() {
     const host = core.getInput("host");
     // Set host automatically if omitted
@@ -158,19 +215,19 @@ class Inputs {
       }
     } else {
       // Make sure host is one of the allowed values
-      if (host === "windows" || host === "mac" || host === "linux") {
+      if (host === "windows" || host === "mac" || host === "linux" || host === "all_os") {
         this.host = host;
       } else {
-        throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux"`);
+        throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux" | "all_os"`);
       }
     }
 
     const target = core.getInput("target");
     // Make sure target is one of the allowed values
-    if (target === "desktop" || target === "android" || target === "ios") {
+    if (target === "desktop" || target === "android" || target === "ios" || target === "wasm") {
       this.target = target;
     } else {
-      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
+      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios" | "wasm"`);
     }
 
     // An attempt to sanitize non-straightforward version number input
@@ -244,6 +301,10 @@ class Inputs {
 
     this.py7zrVersion = core.getInput("py7zrversion");
 
+    this.useOfficial = Inputs.getBoolInput("use-official");
+    this.email = core.getInput("email");
+    this.pw = core.getInput("pw");
+
     this.src = Inputs.getBoolInput("source");
     this.srcArchives = Inputs.getStringArrayInput("src-archives");
 
@@ -269,6 +330,7 @@ class Inputs {
         this.py7zrVersion,
         this.aqtSource,
         this.aqtVersion,
+        this.useOfficial ? "official" : "",
       ],
       this.modules,
       this.archives,
@@ -388,19 +450,34 @@ const run = async (): Promise<void> => {
 
     // Install Qt
     if (inputs.isInstallQtBinaries) {
-      const qtArgs = [
-        inputs.host,
-        inputs.target,
-        inputs.version,
-        ...(inputs.arch ? [inputs.arch] : []),
-        ...autodesktop,
-        ...["--outputdir", inputs.dir],
-        ...flaggedList("--modules", inputs.modules),
-        ...flaggedList("--archives", inputs.archives),
-        ...inputs.extra,
-      ];
-
-      await execPython("aqt install-qt", qtArgs);
+      if (inputs.useOfficial && inputs.email && inputs.pw) {
+        const qtArgs = [
+          "install-qt-official",
+          inputs.target,
+          ...(inputs.arch ? [inputs.arch] : []),
+          inputs.version,
+          ...["--outputdir", inputs.dir],
+          ...["--email", inputs.email],
+          ...["--pw", inputs.pw],
+          ...flaggedList("--modules", inputs.modules),
+          ...inputs.extra,
+        ];
+        await execPython("aqt", qtArgs);
+      } else {
+        const qtArgs = [
+          "install-qt",
+          inputs.host,
+          inputs.target,
+          inputs.version,
+          ...(inputs.arch ? [inputs.arch] : []),
+          ...autodesktop,
+          ...["--outputdir", inputs.dir],
+          ...flaggedList("--modules", inputs.modules),
+          ...flaggedList("--archives", inputs.archives),
+          ...inputs.extra,
+        ];
+        await execPython("aqt", qtArgs);
+      }
     }
 
     const installSrcDocExamples = async (
@@ -457,7 +534,12 @@ const run = async (): Promise<void> => {
   }
   // Set environment variables/outputs for binaries
   if (inputs.isInstallQtBinaries) {
-    const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir);
+    const [qtPath, requiresParallelDesktop] = locateQtWasmHostArchDir(
+      inputs.dir,
+      inputs.host,
+      inputs.target,
+      inputs.version
+    );
     // Set outputs
     core.setOutput("qtPath", qtPath);
 
