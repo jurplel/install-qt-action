@@ -86,7 +86,6 @@ Example:
         version: '5.15.3'
         target: 'desktop'
         arch: 'win64_msvc2019_64'
-        aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@install_qt_commercial'
         use-official: true
         email: '****@gmail.com'
         pw: '****'
