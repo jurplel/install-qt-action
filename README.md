@@ -87,8 +87,8 @@ Example:
         target: 'desktop'
         arch: 'win64_msvc2019_64'
         use-official: true
-        email: '****@gmail.com'
-        pw: '****'
+        email: ${{ secrets.QT_EMAIL }}
+        pw: ${{ secrets.QT_PW }}
 ```
 
 Default: `false`
