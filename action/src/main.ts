@@ -142,7 +142,7 @@ const locateQtWasmHostArchDir = (
         return [
           path.join(
             versionDir,
-            compareVersions(version, ">=", "6.7.0") ? "linux_gcc_64" : "gcc_64"
+            "gcc_64"
           ),
           false,
         ];
