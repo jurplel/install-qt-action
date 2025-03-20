@@ -100,58 +100,6 @@ const locateQtArchDir = (installDir: string): [string, boolean] => {
   }
 };
 
-const locateQtWasmHostArchDir = (
-  installDir: string,
-  hostType: "windows" | "mac" | "linux" | "all_os",
-  target: "desktop" | "android" | "ios" | "wasm",
-  version: string
-): [string, boolean] => {
-  // For WASM in all_os mode, use the host builder directory
-  if (hostType === "all_os" && target === "wasm") {
-    const versionDir = path.join(installDir, version);
-
-    switch (process.platform) {
-      case "win32": {
-        // Find mingw directories
-        const mingwPattern = /^win\d+_mingw\d+$/;
-        const mingwArches = glob
-          .sync(`${versionDir}/*/`)
-          .map((dir) => path.basename(dir))
-          .filter((dir) => mingwPattern.test(dir))
-          .sort((a, b) => {
-            const [aBits, aVer] = a
-              .match(/win(\d+)_mingw(\d+)/)
-              ?.slice(1)
-              .map(Number) ?? [0, 0];
-            const [bBits, bVer] = b
-              .match(/win(\d+)_mingw(\d+)/)
-              ?.slice(1)
-              .map(Number) ?? [0, 0];
-            if (aBits !== bBits) return bBits - aBits;
-            return bVer - aVer;
-          });
-
-        if (!mingwArches.length) {
-          throw Error(`Failed to locate a MinGW directory for WASM host in ${versionDir}`);
-        }
-        return [path.join(versionDir, mingwArches[0]), false];
-      }
-      case "darwin":
-        return [path.join(versionDir, "clang_64"), false];
-      default:
-        return [
-          path.join(
-            versionDir,
-            "gcc_64"
-          ),
-          false,
-        ];
-    }
-  }
-
-  return locateQtArchDir(installDir);
-};
-
 const isAutodesktopSupported = async (): Promise<boolean> => {
   const rawOutput = await getPythonOutput("aqt", ["version"]);
   const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
@@ -534,12 +482,7 @@ const run = async (): Promise<void> => {
   }
   // Set environment variables/outputs for binaries
   if (inputs.isInstallQtBinaries) {
-    const [qtPath, requiresParallelDesktop] = locateQtWasmHostArchDir(
-      inputs.dir,
-      inputs.host,
-      inputs.target,
-      inputs.version
-    );
+    const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir);
     // Set outputs
     core.setOutput("qtPath", qtPath);
 
