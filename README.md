@@ -77,15 +77,17 @@ Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 ### `use-official` (since `v4.2.0`)
 Whether or not to use `aqtinstall` to install Qt using its official online installer (enabling the commercial versions 
 for those owning a license).
-The parameter `host` will then be ignored, as you can only install commercial Qt versions on the OS running the installer.
+The parameter `host` will then be ignored, as you can only install commercial Qt versions on the OS running the installer.  
+You should use secrets, and store the fields `email` and `pw` inside `QT_EMAIL` and `QT_PW` for example to match the example below.  
+
 Example:
 ```yml
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '5.15.3'
+        version: '6.8.3'
         target: 'desktop'
-        arch: 'win64_msvc2019_64'
+        arch: 'win64_msvc2022_64'
         use-official: true
         email: ${{ secrets.QT_EMAIL }}
         pw: ${{ secrets.QT_PW }}
