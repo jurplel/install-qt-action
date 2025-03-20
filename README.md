@@ -23,7 +23,7 @@ The desired version of Qt to install.
 
 You can also pass in SimpleSpec version numbers, for example `6.2.*`.
 
-Default: `6.8.1` (Last Qt 6 LTS)
+Default: `6.8.3` (Last Qt 6 LTS)
 
 **Please note that for Linux builds, Qt 6+ requires Ubuntu 20.04 or later.**
 
@@ -74,7 +74,7 @@ When possible, access your Qt directory through the `QT_ROOT_DIR` environment va
 
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
-### `use-official` (since `v4.3.0`)
+### `use-official` (since `v4.2.0`)
 Whether or not to use `aqtinstall` to install Qt using its official online installer (enabling the commercial versions 
 for those owning a license).
 The parameter `host` will then be ignored, as you can only install commercial Qt versions on the OS running the installer.
@@ -94,10 +94,12 @@ Example:
 Default: `false`
 
 #### `email`
-If `use-official` is true, will use this username/email to authenticate with Qt servers
+If `use-official` is true, will use this username/email to authenticate with Qt servers.  
+You should use secrets, and store the value inside `QT_EMAIL` for example to match the example above.
 
 #### `pw`
-If `use-official` is true, will use this password to authenticate with Qt servers
+If `use-official` is true, will use this password to authenticate with Qt servers.  
+You should use secrets, and store the value inside `QT_PW` for example to match the example above.
 
 ### `install-deps`
 Whether or not to automatically install Qt dependencies on Linux through `apt`.
@@ -271,7 +273,7 @@ By default this is unset and ignored.
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==3.2.*`
+Default: `>=3.2.1`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
@@ -289,7 +291,7 @@ Example value: `--external 7z`
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.1'
+        version: '6.8.3'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2022_64'
@@ -303,9 +305,12 @@ Example value: `--external 7z`
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'true'
         tools-only: 'false'
-        aqtversion: '==3.2.*'
+        aqtversion: '>=3.2.1'
         py7zrversion: '==0.20.*'
         extra: '--external 7z'
+        use-official: false
+        email: ${{ secrets.QT_EMAIL }}
+        pw: ${{ secrets.QT_PW }}
 ```
 
 ## More info
@@ -317,7 +322,7 @@ On MacOS, if the tool is an app bundle, then the `.app/Contents/MacOS` folder wi
 
 The Qt bin directory is appended to your `path` environment variable.
 `Qt5_DIR` is also set appropriately for CMake if you are using Qt 5.
-In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` are set accordingly. `IQTA_TOOLS` is set to the "Tools" directory if tools are installed as well.
+In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` are set accordingly. `IQTA_TOOLS` is set to the "Tools" directory if tools are installed as well. `QT_HOST_PATH` is set if appropriate (WASM).
 
 Since the Qt bin directory is in your `path`, you will not need to set the `CMAKE_PREFIX_PATH` CMake variable.
 If you wish to do so, you can set it to either `${QT_ROOT_DIR}` or to `${QT_ROOT_DIR}/lib/cmake`.
