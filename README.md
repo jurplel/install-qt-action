@@ -23,7 +23,7 @@ The desired version of Qt to install.
 
 You can also pass in SimpleSpec version numbers, for example `6.2.*`.
 
-Default: `6.8.3` (Last Qt 6 LTS)
+Default: `6.8.2` (Last Qt 6 LTS)
 
 **Please note that for Linux builds, Qt 6+ requires Ubuntu 20.04 or later.**
 
@@ -85,7 +85,7 @@ Example:
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.3'
+        version: '6.8.2'
         target: 'desktop'
         arch: 'win64_msvc2022_64'
         use-official: true
@@ -293,7 +293,7 @@ Example value: `--external 7z`
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.3'
+        version: '6.8.2'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2022_64'
