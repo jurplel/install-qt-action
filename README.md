@@ -32,20 +32,19 @@ This is the host platform of the Qt version you will be installing. It's unlikel
 
 For example, if you are building on Linux and targeting desktop, you would set host to `linux`. If you are building on Linux and targeting android, you would set host to `linux` also. The host platform is the platform that your application will build on, not its target platform.
 
-Possible values: `windows`, `mac`, `linux` or `all_os`_
-`all_os` is incompatible with `aqtinstall < 3.2.0`._
+Possible values: `windows`, `mac`, `linux` or `all_os`.  
+`all_os` is incompatible with `aqtinstall < 3.2.0`.  
 
-Defaults to the current platform it is being run on._
+Defaults to the current platform it is being run on.  
 
 
 ### `target`
 This is the target platform that you will be building for. You will want to set this if you are building for iOS or Android. Please note that iOS builds are supported only on macOS hosts and Win RT builds are only supported on Windows hosts.
 
-Possible values: `desktop`, `android`, `ios`, `winrt` or `wasm`_
-`wasm` is incompatible with `aqtinstall < 3.2.0`._
+Possible values: `desktop`, `android`, `ios`, `winrt` or `wasm`.  
+`wasm` is incompatible with `aqtinstall < 3.2.0`.  
 
-Default: `desktop`
-
+Default: `desktop`  
 
 
 ### `arch`
@@ -80,7 +79,7 @@ When possible, access your Qt directory through the `QT_ROOT_DIR` environment va
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
 ### `use-official` (since `v4.2.*`)
-Whether or not to use `aqtinstall` to install Qt using its official online installer (enabling the commercial versions for those owning a license). Incompatible with `aqtinstall < 3.2.1`._
+Whether or not to use `aqtinstall` to install Qt using its official online installer (enabling the commercial versions for those owning a license). Incompatible with `aqtinstall < 3.2.1`.  
 The parameter `host` will then be ignored, as you can only install commercial Qt versions on the OS running the installer.  
 You should use secrets, and store the fields `email` and `pw` inside `QT_EMAIL` and `QT_PW` for example to match the example below.  
 
@@ -100,11 +99,11 @@ Example:
 Default: `false`
 
 #### `email`
-If `use-official` is true, will use this username/email to authenticate with Qt servers. Incompatible with `aqtinstall < 3.2.1`._
+If `use-official` is true, will use this username/email to authenticate with Qt servers. Incompatible with `aqtinstall < 3.2.1`.  
 You should use secrets, and store the value inside `QT_EMAIL` for example to match the example above.
 
 #### `pw`
-If `use-official` is true, will use this password to authenticate with Qt servers. Incompatible with `aqtinstall < 3.2.1`._
+If `use-official` is true, will use this password to authenticate with Qt servers. Incompatible with `aqtinstall < 3.2.1`.  
 You should use secrets, and store the value inside `QT_PW` for example to match the example above.
 
 ### `install-deps`
