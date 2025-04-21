@@ -9,7 +9,7 @@ inputs:
     description: Directory to install Qt
   version:
     description: Version of Qt to install
-    default: "5.15.2"
+    default: "6.8.3"
   host:
     description: Host platform
   target:
@@ -55,10 +55,10 @@ inputs:
     description: Location to source aqtinstall from in case of issues
   aqtversion:
     description: Version of aqtinstall to use in case of issues
-    default: ==3.1.*
+    default: ==3.2.*
   py7zrversion:
     description: Version of py7zr to use in case of issues
-    default: ==0.20.*
+    default: ==0.22.*
   extra:
     description: Any extra arguments to append to the back
   source:
@@ -80,6 +80,15 @@ inputs:
     description: Space-separated list of .7z example archives to install. Used to reduce download/image sizes.
   example-modules:
     description: Space-separated list of additional example modules to install.
+  use-official:
+    default: false
+    description: Whether to use aqtinstall to install Qt using the official installer, requires email & pw
+  email:
+    default: ''
+    description: Your Qt email
+  pw:
+    default: ''
+    description: Your Qt password
 runs:
   using: "composite"
   steps:
@@ -87,7 +96,7 @@ runs:
     if: ${{ inputs.setup-python  == 'true' }}
     uses: actions/setup-python@v5
     with:
-      python-version: '3.9.x - 3.12.x'
+      python-version: '3.9.x - 3.13.x'
 
   - name: Setup and run aqtinstall
     uses: ./action
@@ -119,3 +128,6 @@ runs:
       example-archives: ${{ inputs.example-archives }}
       example-modules: ${{ inputs.example-modules }}
       extra: ${{ inputs.extra }}
+      use-official: ${{ inputs.use-official }}
+      email: ${{ inputs.email }}
+      pw: ${{ inputs.pw }}
