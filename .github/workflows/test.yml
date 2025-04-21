@@ -101,6 +101,12 @@ jobs:
               version: "6.8.1"
               requested: "6.8.1"
               modules: qtwebengine qtpositioning qtwebchannel
+          - os: windows-11-arm
+            skip-test-project: true
+            qt:
+              version: "6.8.1"
+              requested: "6.8.1"
+              modules: qtpositioning qtwebchannel
 
 
     steps:
@@ -128,7 +134,7 @@ jobs:
           dir: ${{ matrix.dir }}
           modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
-          tools: tools_ifw tools_qtcreator_gui,qt.tools.qtcreator_gui
+          tools: tools_qtcreator_gui,qt.tools.qtcreator_gui
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Install Qt with options and specified aqtversion
@@ -139,7 +145,7 @@ jobs:
           dir: ${{ matrix.dir }}
           modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
-          tools: tools_ifw tools_qtcreator_gui,qt.tools.qtcreator_gui
+          tools: tools_qtcreator_gui,qt.tools.qtcreator_gui
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Test QT_ROOT_DIR
@@ -162,7 +168,7 @@ jobs:
           }
 
       - name: Configure test project on windows
-        if: ${{ matrix.qt.version && startsWith(matrix.os, 'windows') }}
+        if: ${{ matrix.qt.version && startsWith(matrix.os, 'windows') && !matrix.skip-test-project }}
         env:
           QT_VERSION: ${{ matrix.qt.version }}
         run: |
@@ -174,7 +180,7 @@ jobs:
         shell: cmd
 
       - name: Configure test project on unix
-        if: ${{ matrix.qt.version && !startsWith(matrix.os, 'windows') }}
+        if: ${{ matrix.qt.version && !startsWith(matrix.os, 'windows') && !matrix.skip-test-project }}
         env:
           QT_VERSION: ${{ matrix.qt.version }}
         run: |
