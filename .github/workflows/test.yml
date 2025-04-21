@@ -29,8 +29,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
+          - ubuntu-24.04
           - ubuntu-22.04
-          - ubuntu-20.04
           - windows-2022
           - windows-2019
           - macos-13
@@ -66,20 +66,20 @@ jobs:
               version: "6.7.0"
               requested: "6.7.0"
               modules: qtwebengine qtpositioning qtwebchannel
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             src-doc-examples: true
             source: true
             src-archives: qtcharts
             check-dir: ../Qt/5.15.2/Src
             check: qtcharts/src/src.pro
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             src-doc-examples: true
             documentation: true
             doc-archives: qmake
             doc-modules: qtcharts qtwebengine
             check-dir: ../Qt/Docs/Qt-5.15.2
             check: qmake/qmake-tutorial.html qtcharts/qtcharts-index.html qtwebengine/qtwebengine-index.html
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             src-doc-examples: true
             examples: true
             example-archives: qtsensors
@@ -92,7 +92,7 @@ jobs:
               version: "5.15.2"
               requested: "5.15"
               modules: qtwebengine
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             qt:
               tools-only-build: true
               add-tools-to-path: false
