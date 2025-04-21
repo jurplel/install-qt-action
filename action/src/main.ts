@@ -11,8 +11,6 @@ import { exec, getExecOutput } from "@actions/exec";
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
 
-const nativePath = process.platform === "win32" ? path.win32.normalize : path.normalize;
-
 const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
   return compare(v1, v2, op);
 };
@@ -40,7 +38,7 @@ const binlessToolDirectories = ["Conan", "Ninja"];
 
 const toolsPaths = (installDir: string): string[] => {
   const binlessPaths: string[] = binlessToolDirectories
-    .map((dir) => `${installDir}/Tools/${dir}`)
+    .map((dir) => path.join(installDir, "Tools", dir))
     .filter((dir) => dirExists(dir));
   return [
     "Tools/**/bin",
@@ -50,13 +48,15 @@ const toolsPaths = (installDir: string): string[] => {
     "Tools/*/*.app/**/bin",
   ]
     .flatMap((p: string): string[] => glob.sync(`${installDir}/${p}`))
-    .concat(binlessPaths);
+    .concat(binlessPaths)
+    .map((p) => path.resolve(p));
 };
 
 const pythonCommand = (command: string, args: readonly string[]): string => {
   const python = process.platform === "win32" ? "python" : "python3";
   return `${python} -m ${command} ${args.join(" ")}`;
 };
+
 const execPython = async (command: string, args: readonly string[]): Promise<number> => {
   return exec(pythonCommand(command, args));
 };
@@ -72,27 +72,31 @@ const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
   return listArgs.length ? [flag, ...listArgs] : [];
 };
 
-const locateQtArchDir = (installDir: string): string => {
+const locateQtArchDir = (installDir: string): [string, boolean] => {
   // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
   // This makes a list of all the viable arch directories that contain a qmake file.
   const qtArchDirs = glob
     .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
-    .map((s) => s.replace(/\/bin\/qmake[^/]*$/, ""));
+    .map((s) => path.resolve(s, "..", ".."));
 
   // For Qt6 mobile and wasm installations, and Qt6 Windows on ARM installations,
   // a standard desktop Qt installation must exist alongside the requested architecture.
   // In these cases, we must select the first item that ends with 'android*', 'ios', 'wasm*' or 'msvc*_arm64'.
-  const requiresParallelDesktop = qtArchDirs.filter((p) =>
-    p.match(/6\.\d+\.\d+\/(android[^/]*|ios|wasm[^/]*|msvc[^/]*_arm64)$/)
-  );
+  const requiresParallelDesktop = qtArchDirs.filter((archPath) => {
+    const archDir = path.basename(archPath);
+    const versionDir = path.basename(path.join(archPath, ".."));
+    return (
+      versionDir.match(/^6\.\d+\.\d+$/) && archDir.match(/^(android.*|ios|wasm.*|msvc.*_arm64)$/)
+    );
+  });
   if (requiresParallelDesktop.length) {
     // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
-    return requiresParallelDesktop[0];
+    return [requiresParallelDesktop[0], true];
   } else if (!qtArchDirs.length) {
     throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
   } else {
     // NOTE: if multiple Qt installations exist, this may not select the desired directory
-    return qtArchDirs[0];
+    return [qtArchDirs[0], false];
   }
 };
 
@@ -103,8 +107,8 @@ const isAutodesktopSupported = async (): Promise<boolean> => {
 };
 
 class Inputs {
-  readonly host: "windows" | "mac" | "linux";
-  readonly target: "desktop" | "android" | "ios";
+  readonly host: "windows" | "mac" | "linux" | "all_os";
+  readonly target: "desktop" | "android" | "ios" | "wasm";
   readonly version: string;
   readonly arch: string;
   readonly dir: string;
@@ -135,6 +139,10 @@ class Inputs {
   readonly aqtVersion: string;
   readonly py7zrVersion: string;
 
+  readonly useOfficial: boolean;
+  readonly email: string;
+  readonly pw: string;
+
   constructor() {
     const host = core.getInput("host");
     // Set host automatically if omitted
@@ -155,19 +163,19 @@ class Inputs {
       }
     } else {
       // Make sure host is one of the allowed values
-      if (host === "windows" || host === "mac" || host === "linux") {
+      if (host === "windows" || host === "mac" || host === "linux" || host === "all_os") {
         this.host = host;
       } else {
-        throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux"`);
+        throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux" | "all_os"`);
       }
     }
 
     const target = core.getInput("target");
     // Make sure target is one of the allowed values
-    if (target === "desktop" || target === "android" || target === "ios") {
+    if (target === "desktop" || target === "android" || target === "ios" || target === "wasm") {
       this.target = target;
     } else {
-      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios"`);
+      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios" | "wasm"`);
     }
 
     // An attempt to sanitize non-straightforward version number input
@@ -204,7 +212,7 @@ class Inputs {
     if (!dir) {
       throw TypeError(`"dir" input may not be empty`);
     }
-    this.dir = `${dir}/Qt`;
+    this.dir = path.resolve(dir, "Qt");
 
     this.modules = Inputs.getStringArrayInput("modules");
 
@@ -241,6 +249,10 @@ class Inputs {
 
     this.py7zrVersion = core.getInput("py7zrversion");
 
+    this.useOfficial = Inputs.getBoolInput("use-official");
+    this.email = core.getInput("email");
+    this.pw = core.getInput("pw");
+
     this.src = Inputs.getBoolInput("source");
     this.srcArchives = Inputs.getStringArrayInput("src-archives");
 
@@ -266,6 +278,7 @@ class Inputs {
         this.py7zrVersion,
         this.aqtSource,
         this.aqtVersion,
+        this.useOfficial ? "official" : "",
       ],
       this.modules,
       this.archives,
@@ -370,7 +383,7 @@ const run = async (): Promise<void> => {
   // Install Qt and tools if not cached
   if (!internalCacheHit) {
     // Install dependencies via pip
-    await execPython("pip install", ["setuptools", "wheel", `"py7zr${inputs.py7zrVersion}"`]);
+    await execPython("pip install", ["setuptools>=70.1.0", `"py7zr${inputs.py7zrVersion}"`]);
 
     // Install aqtinstall separately: allows aqtinstall to override py7zr if required
     if (inputs.aqtSource.length > 0) {
@@ -385,19 +398,34 @@ const run = async (): Promise<void> => {
 
     // Install Qt
     if (inputs.isInstallQtBinaries) {
-      const qtArgs = [
-        inputs.host,
-        inputs.target,
-        inputs.version,
-        ...(inputs.arch ? [inputs.arch] : []),
-        ...autodesktop,
-        ...["--outputdir", inputs.dir],
-        ...flaggedList("--modules", inputs.modules),
-        ...flaggedList("--archives", inputs.archives),
-        ...inputs.extra,
-      ];
-
-      await execPython("aqt install-qt", qtArgs);
+      if (inputs.useOfficial && inputs.email && inputs.pw) {
+        const qtArgs = [
+          "install-qt-official",
+          inputs.target,
+          ...(inputs.arch ? [inputs.arch] : []),
+          inputs.version,
+          ...["--outputdir", inputs.dir],
+          ...["--email", inputs.email],
+          ...["--pw", inputs.pw],
+          ...flaggedList("--modules", inputs.modules),
+          ...inputs.extra,
+        ];
+        await execPython("aqt", qtArgs);
+      } else {
+        const qtArgs = [
+          "install-qt",
+          inputs.host,
+          inputs.target,
+          inputs.version,
+          ...(inputs.arch ? [inputs.arch] : []),
+          ...autodesktop,
+          ...["--outputdir", inputs.dir],
+          ...flaggedList("--modules", inputs.modules),
+          ...flaggedList("--archives", inputs.archives),
+          ...inputs.extra,
+        ];
+        await execPython("aqt", qtArgs);
+      }
     }
 
     const installSrcDocExamples = async (
@@ -445,35 +473,44 @@ const run = async (): Promise<void> => {
 
   // Add tools to path
   if (inputs.addToolsToPath && inputs.tools.length) {
-    toolsPaths(inputs.dir).map(nativePath).forEach(core.addPath);
+    toolsPaths(inputs.dir).forEach(core.addPath);
   }
 
   // Set environment variables/outputs for tools
   if (inputs.tools.length && inputs.setEnv) {
-    core.exportVariable("IQTA_TOOLS", nativePath(`${inputs.dir}/Tools`));
+    core.exportVariable("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
   }
   // Set environment variables/outputs for binaries
   if (inputs.isInstallQtBinaries) {
-    const qtPath = nativePath(locateQtArchDir(inputs.dir));
+    const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir);
     // Set outputs
     core.setOutput("qtPath", qtPath);
 
     // Set env variables
     if (inputs.setEnv) {
       if (process.platform === "linux") {
-        setOrAppendEnvVar("LD_LIBRARY_PATH", nativePath(`${qtPath}/lib`));
+        setOrAppendEnvVar("LD_LIBRARY_PATH", path.resolve(qtPath, "lib"));
       }
       if (process.platform !== "win32") {
-        setOrAppendEnvVar("PKG_CONFIG_PATH", nativePath(`${qtPath}/lib/pkgconfig`));
+        setOrAppendEnvVar("PKG_CONFIG_PATH", path.resolve(qtPath, "lib", "pkgconfig"));
       }
       // If less than qt6, set Qt5_DIR variable
       if (compareVersions(inputs.version, "<", "6.0.0")) {
-        core.exportVariable("Qt5_DIR", nativePath(`${qtPath}/lib/cmake`));
+        core.exportVariable("Qt5_DIR", path.resolve(qtPath, "lib", "cmake"));
       }
       core.exportVariable("QT_ROOT_DIR", qtPath);
-      core.exportVariable("QT_PLUGIN_PATH", nativePath(`${qtPath}/plugins`));
-      core.exportVariable("QML2_IMPORT_PATH", nativePath(`${qtPath}/qml`));
-      core.addPath(nativePath(`${qtPath}/bin`));
+      core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
+      core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
+      if (requiresParallelDesktop) {
+        const hostPrefix = await fs.promises
+          .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
+          .then((data) => data.match(/^HostPrefix=(.*)$/m)?.[1].trim() ?? "")
+          .catch(() => "");
+        if (hostPrefix) {
+          core.exportVariable("QT_HOST_PATH", path.resolve(qtPath, "bin", hostPrefix));
+        }
+      }
+      core.addPath(path.resolve(qtPath, "bin"));
     }
   }
 };

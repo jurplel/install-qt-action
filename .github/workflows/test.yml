@@ -29,8 +29,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
+          - ubuntu-24.04
           - ubuntu-22.04
-          - ubuntu-20.04
           - windows-2022
           - windows-2019
           - macos-13
@@ -60,20 +60,26 @@ jobs:
           - cached
           - uncached
         include:
-          - os: ubuntu-20.04
+          - os: windows-latest
+            dir: '/'
+            qt:
+              version: "6.7.0"
+              requested: "6.7.0"
+              modules: qtwebengine qtpositioning qtwebchannel
+          - os: ubuntu-22.04
             src-doc-examples: true
             source: true
             src-archives: qtcharts
             check-dir: ../Qt/5.15.2/Src
             check: qtcharts/src/src.pro
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             src-doc-examples: true
             documentation: true
             doc-archives: qmake
             doc-modules: qtcharts qtwebengine
             check-dir: ../Qt/Docs/Qt-5.15.2
             check: qmake/qmake-tutorial.html qtcharts/qtcharts-index.html qtwebengine/qtwebengine-index.html
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             src-doc-examples: true
             examples: true
             example-archives: qtsensors
@@ -86,7 +92,7 @@ jobs:
               version: "5.15.2"
               requested: "5.15"
               modules: qtwebengine
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             qt:
               tools-only-build: true
               add-tools-to-path: false
@@ -114,6 +120,7 @@ jobs:
         if: ${{ !matrix.aqtversion && matrix.qt.version }}
         uses: ./
         with:
+          dir: ${{ matrix.dir }}
           modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
@@ -124,23 +131,29 @@ jobs:
         uses: ./
         with:
           aqtversion: ${{ matrix.aqtversion }}
+          dir: ${{ matrix.dir }}
           modules: ${{ matrix.qt.modules }}
           version: ${{ matrix.qt.requested }}
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator
           cache: ${{ matrix.cache == 'cached' }}
 
+      - name: Test QT_ROOT_DIR
+        if: ${{ matrix.qt.version }}
+        shell: bash
+        run: |
+          set -x
+          # Check that QT_ROOT_DIR contains a qmake of some kind
+          ls "${QT_ROOT_DIR}/bin/" | grep qmake
+
       - name: Switch macOS Xcode version with older Qt versions
-        if: ${{ matrix.qt.version && (startsWith(matrix.os, 'macos-13') || startsWith(matrix.os, 'macos-14')) }}
+        if: ${{ matrix.qt.version && startsWith(matrix.os, 'macos-13') }}
         shell: pwsh
         env:
           QT_VERSION: ${{ matrix.qt.version }}
         run: |
-          if ([version]$env:QT_VERSION -ge [version]"6.5.3") {
-              # GitHub macOS 13/14 runners use Xcode 15.0.x by default which has a known linker issue causing crashes if the artifact is run on macOS <= 12
-              sudo xcode-select --switch /Applications/Xcode_15.2.app
-          } else {
-              # Keep older Qt versions on Xcode 14 due to concern over QTBUG-117484
-              sudo xcode-select --switch /Applications/Xcode_14.3.1.app
+          if ([version]$env:QT_VERSION -lt [version]'6.5.3') {
+            # Workaround for QTBUG-117225
+            sudo xcode-select --switch /Applications/Xcode_14.3.1.app
           }
 
       - name: Configure test project on windows
@@ -174,6 +187,7 @@ jobs:
         if: ${{ matrix.source }}
         uses: ./
         with:
+          dir: ${{ matrix.dir }}
           version: "5.15.2"
           source: true
           no-qt-binaries: true
@@ -183,6 +197,7 @@ jobs:
         if: ${{ matrix.documentation }}
         uses: ./
         with:
+          dir: ${{ matrix.dir }}
           version: "5.15.2"
           documentation: true
           no-qt-binaries: true
@@ -193,6 +208,7 @@ jobs:
         if: ${{ matrix.examples }}
         uses: ./
         with:
+          dir: ${{ matrix.dir }}
           version: "5.15.2"
           examples: true
           no-qt-binaries: true
@@ -210,6 +226,7 @@ jobs:
         if: ${{ matrix.qt.tools-only-build }}
         uses: ./
         with:
+          dir: ${{ matrix.dir }}
           tools-only: true
           tools: tools_ifw tools_qtcreator,qt.tools.qtcreator tools_cmake tools_ninja tools_conan
           add-tools-to-path: ${{ matrix.qt.add-tools-to-path }}
