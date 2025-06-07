@@ -32,7 +32,7 @@ This is the host platform of the Qt version you will be installing. It's unlikel
 
 For example, if you are building on Linux and targeting desktop, you would set host to `linux`. If you are building on Linux and targeting android, you would set host to `linux` also. The host platform is the platform that your application will build on, not its target platform.
 
-Possible values: `windows`, `mac`, `linux` or `all_os`.  
+Possible values: `windows`, `windows_arm64`, `mac`, `linux`, `linux_arm64` or `all_os`.  
 `all_os` is used for wasm, and incompatible with `aqtinstall < 3.2.0`.  
 
 Defaults to the current platform it is being run on.  
@@ -67,6 +67,8 @@ Windows w/ Qt >= 5.9 && Qt < 5.15: `win64_msvc2017_64`
 Windows w/ Qt >= 5.15 && Qt < 6.8: `win64_msvc2019_64`
 
 Windows w/ Qt >= 6.8: `win64_msvc2022_64`
+
+Windows (ARM64) w/ Qt >= 6.8: `win64_msvc2022_arm64`
 
 Android: `android_armv7`
 
@@ -278,12 +280,12 @@ By default this is unset and ignored.
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==3.2.*`
+Default: `==3.3.*`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==0.22.*`
+Default: `==1.0.*`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
@@ -310,8 +312,8 @@ Example value: `--external 7z`
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'true'
         tools-only: 'false'
-        aqtversion: '==3.2.*'
-        py7zrversion: '==0.22.*'
+        aqtversion: '==3.3.*'
+        py7zrversion: '==1.0.*'
         extra: '--external 7z'
         use-official: false
         email: ${{ secrets.QT_EMAIL }}
