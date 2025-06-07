@@ -92,11 +92,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-  - name: Setup Python 
+  - name: Setup Python
     if: ${{ inputs.setup-python  == 'true' }}
     uses: actions/setup-python@v5
     with:
-      python-version: '3.9.x - 3.13.x'
+      python-version: '>=3.9.0 <=3.13.3'
 
   - name: Setup and run aqtinstall
     uses: jurplel/install-qt-action/action@v4
