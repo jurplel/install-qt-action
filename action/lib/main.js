@@ -95,19 +95,21 @@ const getPythonOutput = (command, args) => __awaiter(void 0, void 0, void 0, fun
 const flaggedList = (flag, listArgs) => {
     return listArgs.length ? [flag, ...listArgs] : [];
 };
-const locateQtArchDir = (installDir) => {
+const locateQtArchDir = (installDir, host) => {
     // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
     // This makes a list of all the viable arch directories that contain a qmake file.
     const qtArchDirs = glob
         .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
         .map((s) => path.resolve(s, "..", ".."));
-    // For Qt6 mobile and wasm installations, and Qt6 Windows on ARM installations,
+    // For Qt6 mobile and wasm installations, and Qt6 Windows on ARM cross-compiled installations,
     // a standard desktop Qt installation must exist alongside the requested architecture.
     // In these cases, we must select the first item that ends with 'android*', 'ios', 'wasm*' or 'msvc*_arm64'.
     const requiresParallelDesktop = qtArchDirs.filter((archPath) => {
         const archDir = path.basename(archPath);
         const versionDir = path.basename(path.join(archPath, ".."));
-        return (versionDir.match(/^6\.\d+\.\d+$/) && archDir.match(/^(android.*|ios|wasm.*|msvc.*_arm64)$/));
+        return (versionDir.match(/^6\.\d+\.\d+$/) &&
+            (archDir.match(/^(android.*|ios|wasm.*)$/) ||
+                (archDir.match(/^msvc.*_arm64$/) && host !== "windows_arm64")));
     });
     if (requiresParallelDesktop.length) {
         // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
@@ -133,7 +135,7 @@ class Inputs {
         if (!host) {
             switch (process.platform) {
                 case "win32": {
-                    this.host = "windows";
+                    this.host = process.arch === "arm64" ? "windows_arm64" : "windows";
                     break;
                 }
                 case "darwin": {
@@ -141,18 +143,23 @@ class Inputs {
                     break;
                 }
                 default: {
-                    this.host = "linux";
+                    this.host = process.arch === "arm64" ? "linux_arm64" : "linux";
                     break;
                 }
             }
         }
         else {
             // Make sure host is one of the allowed values
-            if (host === "windows" || host === "mac" || host === "linux" || host === "all_os") {
+            if (host === "windows" ||
+                host === "windows_arm64" ||
+                host === "mac" ||
+                host === "linux" ||
+                host === "linux_arm64" ||
+                host === "all_os") {
                 this.host = host;
             }
             else {
-                throw TypeError(`host: "${host}" is not one of "windows" | "mac" | "linux" | "all_os"`);
+                throw TypeError(`host: "${host}" is not one of "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os"`);
             }
         }
         const target = core.getInput("target");
@@ -193,6 +200,9 @@ class Inputs {
                 else {
                     this.arch = "win64_msvc2017_64";
                 }
+            }
+            else if (this.host === "windows_arm64") {
+                this.arch = "win64_msvc2022_arm64";
             }
         }
         const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
@@ -436,7 +446,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     // Set environment variables/outputs for binaries
     if (inputs.isInstallQtBinaries) {
-        const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir);
+        const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir, inputs.host);
         // Set outputs
         core.setOutput("qtPath", qtPath);
         // Set env variables
