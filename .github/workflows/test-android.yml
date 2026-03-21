@@ -10,8 +10,13 @@ jobs:
       matrix:
         os:
           - ubuntu-22.04
+          - ubuntu-24.04
+          - windows-11-arm
           - windows-2022
+          - windows-2025
+          - macos-14
           - macos-15
+          - macos-26
         qt:
           - version: "5.15.2"
             ndk-version: r21e
@@ -25,11 +30,11 @@ jobs:
             example-modules:  qtsensors
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: action/
 
