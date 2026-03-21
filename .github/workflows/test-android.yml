@@ -15,7 +15,9 @@ jobs:
           - windows-2025
           - macos-14
           - macos-15
+          - macos-15-intel
           - macos-26
+          - macos-26-intel
         qt:
           - version: "5.15.2"
             ndk-version: r21e

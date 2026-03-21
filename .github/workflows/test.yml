@@ -35,7 +35,9 @@ jobs:
           - windows-2025
           - macos-14
           - macos-15
+          - macos-15-intel
           - macos-26
+          - macos-26-intel
         aqtversion:
           - null  # use whatever the default is
         src-doc-examples:
