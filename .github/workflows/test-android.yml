@@ -11,7 +11,6 @@ jobs:
         os:
           - ubuntu-22.04
           - ubuntu-24.04
-          - windows-11-arm
           - windows-2022
           - windows-2025
           - macos-14
