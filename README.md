@@ -285,7 +285,7 @@ Default: `==3.3.*`
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==1.0.*`
+Default: `==1.1.*`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
@@ -313,7 +313,7 @@ Example value: `--external 7z`
         set-env: 'true'
         tools-only: 'false'
         aqtversion: '==3.3.*'
-        py7zrversion: '==1.0.*'
+        py7zrversion: '==1.1.*'
         extra: '--external 7z'
         use-official: false
         email: ${{ secrets.QT_EMAIL }}

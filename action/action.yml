@@ -55,7 +55,7 @@ inputs:
     default: ==3.3.*
   py7zrversion:
     description: Version of py7zr to use in case of issues
-    default: ==1.0.*
+    default: ==1.1.*
   extra:
     description: Any extra arguments to append to the back
   source:
