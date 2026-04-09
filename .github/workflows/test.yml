@@ -89,7 +89,7 @@ jobs:
             check-dir: ../Qt/Examples/Qt-5.15.2
             check: charts/charts.pro sensors/sensors.pro webengine/webengine.pro
           - os: ubuntu-22.04
-            aqtversion: "==3.1.*"
+            aqtversion: "==3.3.*"
             qt:
               version: "5.15.2"
               requested: "5.15"
