@@ -13,8 +13,6 @@ jobs:
           - ubuntu-24.04
           - windows-2022
           - windows-2025
-          - macos-15
-          - macos-15-intel
           - macos-26
           - macos-26-intel
         qt:
