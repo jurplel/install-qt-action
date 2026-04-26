@@ -26,6 +26,7 @@ jobs:
           github.event.pull_request.user.login == 'dependabot[bot]'
         )
       )
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
