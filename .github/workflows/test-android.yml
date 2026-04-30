@@ -1,9 +1,31 @@
 name: CI-android
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      # The following input and its usage are based on the "rclone/rclone" project.
+      # https://github.com/rclone/rclone/blob/c1f5df209024c79028c98134b703b31d599befac/.github/workflows/build.yml#L24
+      # Copyright (C) 2012 by Nick Craig-Wood http://www.craig-wood.com/nick/. Licensed under MIT.
+      manual:
+        description: Manual run (bypass default conditions)
+        required: true
+        type: choice
+        default: 'TRUE'
+        options:
+          - 'TRUE'
 
 jobs:
   test:
+    if: >-
+      inputs.manual || (
+        github.repository == 'jurplel/install-qt-action' && (
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name ||
+          github.event.pull_request.user.login == 'dependabot[bot]'
+        )
+      )
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
