@@ -27,7 +27,7 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
 const dirExists = (dir: string): boolean => {
   try {
     return fs.statSync(dir).isDirectory();
-  } catch (err) {
+  } catch {
     return false;
   }
 };
@@ -87,7 +87,7 @@ const locateQtArchDir = (installDir: string, host: string): [string, boolean] =>
     const versionDir = path.basename(path.join(archPath, ".."));
     return (
       versionDir.match(/^6\.\d+\.\d+$/) &&
-      (archDir.match(/^(android.*|ios|wasm.*)$/) ||
+      (archDir.match(/^(android.*|ios|wasm.*)$/) ??
         (archDir.match(/^msvc.*_arm64$/) && host !== "windows_arm64"))
     );
   });
