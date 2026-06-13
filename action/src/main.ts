@@ -87,7 +87,9 @@ const locateQtArchDir = (installDir: string, host: string): [string, boolean] =>
     const versionDir = path.basename(path.join(archPath, ".."));
     return (
       versionDir.match(/^6\.\d+\.\d+$/) &&
-      (archDir.match(/^(android.*|ios|wasm.*)$/) ??
+      (archDir.match(
+        /^(android.*|ios|wasm.*)$/
+      ) /* Was "||", @typescript-eslint/prefer-nullish-coalescing */ ??
         (archDir.match(/^msvc.*_arm64$/) && host !== "windows_arm64"))
     );
   });
