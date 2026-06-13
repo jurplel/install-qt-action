@@ -21,7 +21,8 @@
     "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
     "compare-versions": "^6.1.1",
-    "glob": "^13.0.6"
+    "glob": "^13.0.6",
+    "source-map-support": "^0.5.21"
   },
   "devDependencies": {
     "@types/glob": "^9.0.0",
