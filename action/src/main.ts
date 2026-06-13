@@ -10,7 +10,7 @@ import { exec, getExecOutput } from "@actions/exec";
 
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
-import "source-map-support/register";
+import "source-map-support/register.js";
 
 const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
   return compare(v1, v2, op);
