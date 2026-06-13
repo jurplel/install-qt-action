@@ -10,6 +10,7 @@ import { exec, getExecOutput } from "@actions/exec";
 
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
+import "source-map-support/register";
 
 const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
   return compare(v1, v2, op);
@@ -533,7 +534,7 @@ const run = async (): Promise<void> => {
 void run()
   .catch((err) => {
     if (err instanceof Error) {
-      core.setFailed(err);
+      core.setFailed(err.stack ?? err);
     } else {
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       core.setFailed(`unknown error: ${err}`);
