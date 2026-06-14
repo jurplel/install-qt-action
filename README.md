@@ -21,11 +21,13 @@ this project. These changes are summarized here, to help you upgrade your existi
 ### `version`
 The desired version of Qt to install.
 
-You can also pass in SimpleSpec version numbers, for example `6.2.*`.
+You can also pass in [SimpleSpec version](https://pypi.org/project/semantic-version/#the-simplespec-scheme) ranges or use wildcards, for example `6.2.*` or `>=6.2.0,<6.5.0`.  
+**Please note that beta releases of new Qt versions are not labelled and will not be excluded - you need set your ranges and wildcard patterns accordingly.**
 
 Default: `6.8.3` (Last Qt 6 LTS)
 
-**Please note that for Linux builds, Qt 6+ requires Ubuntu 20.04 or later.**
+> [!NOTE]
+> For Linux builds, Qt 6+ requires Ubuntu 20.04 or later GHA runners.
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
