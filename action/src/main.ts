@@ -482,7 +482,7 @@ const run = async (): Promise<void> => {
   // Save automatic cache
   if (!internalCacheHit && inputs.cache) {
     const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
-    core.info(`Automatic cache saved with id ${cacheId}`);
+    core.info(`Automatic cache saved with key "${inputs.cacheKey}", cache id is "${cacheId}"`);
   }
 
   // Add tools to path
