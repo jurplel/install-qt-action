@@ -10,7 +10,7 @@ import { exec, getExecOutput } from "@actions/exec";
 
 import * as glob from "glob";
 import { compare, CompareOperator } from "compare-versions";
-import "source-map-support/register";
+import "source-map-support/register.js";
 
 const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean => {
   return compare(v1, v2, op);
@@ -28,7 +28,7 @@ const setOrAppendEnvVar = (name: string, value: string): void => {
 const dirExists = (dir: string): boolean => {
   try {
     return fs.statSync(dir).isDirectory();
-  } catch (err) {
+  } catch {
     return false;
   }
 };
@@ -88,7 +88,9 @@ const locateQtArchDir = (installDir: string, host: string): [string, boolean] =>
     const versionDir = path.basename(path.join(archPath, ".."));
     return (
       versionDir.match(/^6\.\d+\.\d+$/) &&
-      (archDir.match(/^(android.*|ios|wasm.*)$/) ||
+      (archDir.match(
+        /^(android.*|ios|wasm.*)$/
+      ) /* Was "||", @typescript-eslint/prefer-nullish-coalescing */ ??
         (archDir.match(/^msvc.*_arm64$/) && host !== "windows_arm64"))
     );
   });
@@ -561,7 +563,7 @@ const run = async (): Promise<void> => {
   // Save automatic cache
   if (!internalCacheHit && inputs.cache) {
     const cacheId = await cache.saveCache([inputs.dir], cacheKey);
-    core.info(`Automatic cache saved with id ${cacheId}`);
+    core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
   }
 
   // Add tools to path
