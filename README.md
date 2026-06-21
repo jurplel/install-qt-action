@@ -25,8 +25,7 @@ You can also pass in [SimpleSpec version](https://pypi.org/project/semantic-vers
 
 Default: `6.8.3` (Last Qt 6 LTS)
 
-> [!NOTE]
-> For Linux builds, Qt 6+ requires Ubuntu 20.04 or later GHA runners.
+**Please note that for Linux builds, Qt 6+ requires Ubuntu 20.04 or later.**
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
