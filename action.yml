@@ -58,7 +58,7 @@ inputs:
     default: ==3.3.*
   py7zrversion:
     description: Version of py7zr to use in case of issues
-    default: ==1.1.*
+    default: ==1.1.0  # was "==1.1.*", use an older version as a workaround for Bad7zFile on Windows. Cache invalidation let us find this upstream bug.
   extra:
     description: Any extra arguments to append to the back
   source:

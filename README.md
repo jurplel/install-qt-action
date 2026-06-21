@@ -285,7 +285,7 @@ Default: `==3.3.*`
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
 
-Default: `==1.1.*`
+Default: `==1.1.0`
 
 ### `extra`
 This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
