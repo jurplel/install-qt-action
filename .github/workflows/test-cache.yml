@@ -1,0 +1,196 @@
+name: Cache Test for SimpleSpec
+
+# This workflow will if "aqtinstall list-qt ... --spec ..." or its caller goes wrong.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      # The following input and its usage are based on the "rclone/rclone" project.
+      # https://github.com/rclone/rclone/blob/c1f5df209024c79028c98134b703b31d599befac/.github/workflows/build.yml#L24
+      # Copyright (C) 2012 by Nick Craig-Wood http://www.craig-wood.com/nick/. Licensed under MIT.
+      manual:
+        description: Manual run (bypass default conditions)
+        required: true
+        type: choice
+        default: 'TRUE'
+        options:
+          - 'TRUE'
+
+# The cache is global, so do not mess it up.
+# Read:
+# - Control the concurrency of workflows and jobs - GitHub Docs
+#   https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+concurrency:
+  group: iqta-spec-cache-test
+
+# See:
+# - Force deletion of caches overriding default cache eviction policy § Tips and workarounds
+#   https://github.com/actions/cache/blob/27d5ce7f107fe9357f9df03efb73ab90386fccae/tips-and-workarounds.md#force-deletion-of-caches-overriding-default-cache-eviction-policy
+
+# Do not use multiple jobs or matrix as runners with different `os.release()` will be used, then cache will miss.
+jobs:
+  test:
+    if: >-
+      inputs.manual || (
+        github.repository == 'jurplel/install-qt-action' && (
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name ||
+          github.event.pull_request.user.login == 'dependabot[bot]'
+        )
+      )
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      # `actions:write` permission is required to delete caches
+      actions: write
+      contents: read
+    env:
+      CACHE_KEY_PREFIX: iqta-spec-cache-test-
+      # for GitHub CLI (gh)
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: action/
+      - run: |
+          cd action
+          npm ci || npm install
+          npm run build
+        shell: bash
+
+      - name: Prologue - purge existing cache entries
+        run: |
+          set -e; set -u;
+
+          echo "Fetching list of cache key"
+          cacheIds="$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')"
+
+          count="$(grep -c "$CACHE_KEY_PREFIX" <<<"$cacheIds" || true)"
+          echo "Found $count cache entry/entries"
+
+          if [[ "$count" -gt 1 ]]; then
+            echo '::error ::Found inconsistent test environment, exiting'
+            exit 1
+          fi
+          if [[ "$count" -eq 0 ]]; then
+            exit 0
+          fi
+
+          echo "Deleting caches..."
+          for cacheId in $cacheIds; do
+              (
+                set -x;
+                gh cache delete $cacheId;
+              )
+          done
+          echo "Done"
+
+      # - Qt is commercial-only LTS, so we can safely test "6.*.3" for released LTS.
+      #
+      # - Version specifications (the Spec class) § Reference — python-semanticversion latest documentation
+      #   https://python-semanticversion.readthedocs.io/en/latest/reference.html#version-specifications-the-spec-class
+      #
+      # There is no output from this action about hitting or missing cache, though.
+      #
+      # Since this action is written using a composite, no "INPUT_" env vars are available to use. See:
+      # - `inputs` § Metadata syntax reference - GitHub Docs
+      #   https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax#inputs
+      # - INPUT_* environment variables are missing in composite actions · Issue #665 · actions/runner
+      #   https://github.com/actions/runner/issues/665
+      - name: Install Qt with cache MISSING
+        uses: ./
+        with:
+          # unchanged fields
+          arch: 'linux_gcc_64'
+          target: desktop
+          cache: true
+          cache-key-prefix: ${{ env.CACHE_KEY_PREFIX }}
+          # variable fields
+          dir: /tmp/Qt
+          version: ">6.0.0,<6.9.0"
+      - name: Count and make sure only one cache entry saved
+        run: set -eux; [[ "$(grep -c "$CACHE_KEY_PREFIX" <<<"$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')")" -ne 1 ]] && exit 1 || true
+      - run: rm -r /tmp/Qt
+
+      - name: Install Qt, should hit cache
+        uses: ./
+        with:
+          arch: 'linux_gcc_64'
+          target: desktop
+          cache: true
+          cache-key-prefix: ${{ env.CACHE_KEY_PREFIX }}
+          dir: /tmp/Qt
+          version: "~=6.8.0"
+      - name: Count and make sure only one cache entry saved
+        run: set -eux; [[ "$(grep -c "$CACHE_KEY_PREFIX" <<<"$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')")" -ne 1 ]] && exit 1 || true
+      - run: rm -r /tmp/Qt
+
+      - name: Install Qt, should hit cache
+        uses: ./
+        with:
+          arch: 'linux_gcc_64'
+          target: desktop
+          cache: true
+          cache-key-prefix: ${{ env.CACHE_KEY_PREFIX }}
+          dir: /tmp/Qt
+          version: "<6.9"
+      - name: Count and make sure only one cache entry saved
+        run: set -eux; [[ "$(grep -c "$CACHE_KEY_PREFIX" <<<"$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')")" -ne 1 ]] && exit 1 || true
+      - run: rm -r /tmp/Qt
+
+      - name: Install Qt, should hit cache
+        uses: ./
+        with:
+          arch: 'linux_gcc_64'
+          target: desktop
+          cache: true
+          cache-key-prefix: ${{ env.CACHE_KEY_PREFIX }}
+          dir: /tmp/Qt
+          version: "<=6.8.3"
+      - name: Count and make sure only one cache entry saved
+        run: set -eux; [[ "$(grep -c "$CACHE_KEY_PREFIX" <<<"$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')")" -ne 1 ]] && exit 1 || true
+      - run: rm -r /tmp/Qt
+
+      - name: Install Qt, should hit cache
+        uses: ./
+        with:
+          arch: 'linux_gcc_64'
+          target: desktop
+          cache: true
+          cache-key-prefix: ${{ env.CACHE_KEY_PREFIX }}
+          dir: /tmp/Qt
+          version: "6.8.*"
+      - name: Count and make sure only one cache entry saved
+        run: set -eux; [[ "$(grep -c "$CACHE_KEY_PREFIX" <<<"$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')")" -ne 1 ]] && exit 1 || true
+      - run: rm -r /tmp/Qt
+
+      - name: Install Qt, should hit cache
+        uses: ./
+        with:
+          arch: 'linux_gcc_64'
+          target: desktop
+          cache: true
+          cache-key-prefix: ${{ env.CACHE_KEY_PREFIX }}
+          dir: /tmp/Qt
+          version: "6.8.3"
+      - name: Count and make sure only one cache entry saved
+        run: set -eux; [[ "$(grep -c "$CACHE_KEY_PREFIX" <<<"$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')")" -ne 1 ]] && exit 1 || true
+      - run: rm -r /tmp/Qt
+
+      - name: Epilogue - count and make sure only one cache entry saved
+        run: |
+          set -e; set -u;
+
+          echo "Fetching list of cache key"
+          cacheIds="$(gh cache list --key "$CACHE_KEY_PREFIX" --json key --jq '.[].key')"
+
+          if [[ "$(grep -c "$CACHE_KEY_PREFIX" <<<"$cacheIds")" -ne 1 ]]; then
+            echo '::error ::Found multiple cache saved, exiting'
+            exit 1
+          fi

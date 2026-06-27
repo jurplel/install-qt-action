@@ -111,7 +111,7 @@ const isAutodesktopSupported = async (): Promise<boolean> => {
   return match ? compareVersions(match[1], ">=", "3.0.0") : false;
 };
 
-class Inputs {
+type Inputs = {
   readonly host: "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os";
   readonly target: "desktop" | "android" | "ios" | "wasm";
   readonly version: string;
@@ -147,196 +147,285 @@ class Inputs {
   readonly useOfficial: boolean;
   readonly email: string;
   readonly pw: string;
+};
 
-  constructor() {
-    const host = core.getInput("host");
+const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> => {
+  const parseBoolInput = (input: string): boolean => {
+    return input.toLowerCase() === "true";
+  };
+  const parseStringArrayInput = (input: string): string[] => {
+    return input ? input.split(" ") : [];
+  };
+
+  const fetchRequestedQtVersion = async (
+    host: string,
+    target: string,
+    version: string
+  ): Promise<string> => {
+    core.info(`Resolving Qt version ${version}...`);
+    const rawOutput = await getPythonOutput("aqt", [
+      "list-qt",
+      host,
+      target,
+      "--spec",
+      version,
+      "--latest-version",
+    ]);
+    const match = rawOutput.trim().match(/^\d+\.\d+\.\d+$/);
+    if (!match) {
+      throw Error(`No available Qt version found by specified inputs. Output:\n${rawOutput}`);
+    }
+    return match[0];
+  };
+
+  // The order of properties should match the "inputs" definition in
+  // "action/action.yml" for readability.
+  const rawInputs = {
+    dir: core.getInput("dir"),
+    version: core.getInput("version"),
+    host: core.getInput("host"),
+    target: core.getInput("target"),
+    arch: core.getInput("arch"),
+    installDeps: core.getInput("install-deps"),
+    modules: core.getInput("modules"),
+    archives: core.getInput("archives"),
+    cache: core.getInput("cache"),
+    cacheKeyPrefix: core.getInput("cache-key-prefix"),
+    tools: core.getInput("tools"),
+    addToolsToPath: core.getInput("add-tools-to-path"),
+    setEnv: core.getInput("set-env"),
+    noQtBinaries: core.getInput("no-qt-binaries"),
+    toolsOnly: core.getInput("tools-only"),
+    aqtSource: core.getInput("aqtsource"),
+    aqtVersion: core.getInput("aqtversion"),
+    py7zrVersion: core.getInput("py7zrversion"),
+    extra: core.getInput("extra"),
+    source: core.getInput("source"),
+    srcArchives: core.getInput("src-archives"),
+    documentation: core.getInput("documentation"),
+    docArchives: core.getInput("doc-archives"),
+    docModules: core.getInput("doc-modules"),
+    examples: core.getInput("examples"),
+    exampleArchives: core.getInput("example-archives"),
+    exampleModules: core.getInput("example-modules"),
+    useOfficial: core.getInput("use-official"),
+    email: core.getInput("email"),
+    pw: core.getInput("pw"),
+  };
+
+  // The "version" property will be populated per remote data fetched by aqt,
+  // so installing aqt and related packages is required here.
+  {
+    // Install dependencies via pip
+    await execPython("pip install", ["setuptools>=70.1.0", `"py7zr${rawInputs.py7zrVersion}"`]);
+
+    // Install aqtinstall separately: allows aqtinstall to override py7zr if required
+    if (rawInputs.aqtSource.length > 0) {
+      await execPython("pip install", [`"${rawInputs.aqtSource}"`]);
+    } else {
+      await execPython("pip install", [`"aqtinstall${rawInputs.aqtVersion}"`]);
+    }
+  }
+
+  const host = ((): "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os" => {
     // Set host automatically if omitted
-    if (!host) {
+    if (!rawInputs.host) {
       switch (process.platform) {
         case "win32": {
-          this.host = process.arch === "arm64" ? "windows_arm64" : "windows";
-          break;
+          return process.arch === "arm64" ? "windows_arm64" : "windows";
         }
         case "darwin": {
-          this.host = "mac";
-          break;
+          return "mac";
         }
         default: {
-          this.host = process.arch === "arm64" ? "linux_arm64" : "linux";
-          break;
+          return process.arch === "arm64" ? "linux_arm64" : "linux";
         }
       }
     } else {
       // Make sure host is one of the allowed values
       if (
-        host === "windows" ||
-        host === "windows_arm64" ||
-        host === "mac" ||
-        host === "linux" ||
-        host === "linux_arm64" ||
-        host === "all_os"
+        rawInputs.host === "windows" ||
+        rawInputs.host === "windows_arm64" ||
+        rawInputs.host === "mac" ||
+        rawInputs.host === "linux" ||
+        rawInputs.host === "linux_arm64" ||
+        rawInputs.host === "all_os"
       ) {
-        this.host = host;
+        return rawInputs.host;
       } else {
         throw TypeError(
-          `host: "${host}" is not one of "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os"`
+          `host: "${rawInputs.host}" is not one of "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os"`
         );
       }
     }
+  })();
 
-    const target = core.getInput("target");
+  const target = ((): "android" | "desktop" | "ios" | "wasm" => {
     // Make sure target is one of the allowed values
-    if (target === "desktop" || target === "android" || target === "ios" || target === "wasm") {
-      this.target = target;
+    if (
+      rawInputs.target === "desktop" ||
+      rawInputs.target === "android" ||
+      rawInputs.target === "ios" ||
+      rawInputs.target === "wasm"
+    ) {
+      return rawInputs.target;
     } else {
-      throw TypeError(`target: "${target}" is not one of "desktop" | "android" | "ios" | "wasm"`);
+      throw TypeError(
+        `target: "${rawInputs.target}" is not one of "desktop" | "android" | "ios" | "wasm"`
+      );
     }
+  })();
 
-    // An attempt to sanitize non-straightforward version number input
-    this.version = core.getInput("version");
+  // The aqtinstall supports SimpleSpec (semver). To make all "compareVersions()" happy,
+  // we have to fetch the requested Qt version here and always use that version in all
+  // subsequent work, for example, generating cache key.
+  const version = await fetchRequestedQtVersion(host, target, rawInputs.version);
 
-    this.arch = core.getInput("arch");
+  const arch = ((): string => {
     // Set arch automatically if omitted
-    if (!this.arch) {
-      if (this.target === "android") {
-        if (
-          compareVersions(this.version, ">=", "5.14.0") &&
-          compareVersions(this.version, "<", "6.0.0")
-        ) {
-          this.arch = "android";
+    if (!rawInputs.arch) {
+      if (target === "android") {
+        if (compareVersions(version, ">=", "5.14.0") && compareVersions(version, "<", "6.0.0")) {
+          return "android";
         } else {
-          this.arch = "android_armv7";
+          return "android_armv7";
         }
-      } else if (this.host === "windows") {
-        if (compareVersions(this.version, ">=", "6.8.0")) {
-          this.arch = "win64_msvc2022_64";
-        } else if (compareVersions(this.version, ">=", "5.15.0")) {
-          this.arch = "win64_msvc2019_64";
-        } else if (compareVersions(this.version, "<", "5.6.0")) {
-          this.arch = "win64_msvc2013_64";
-        } else if (compareVersions(this.version, "<", "5.9.0")) {
-          this.arch = "win64_msvc2015_64";
+      } else if (host === "windows") {
+        if (compareVersions(version, ">=", "6.8.0")) {
+          return "win64_msvc2022_64";
+        } else if (compareVersions(version, ">=", "5.15.0")) {
+          return "win64_msvc2019_64";
+        } else if (compareVersions(version, "<", "5.6.0")) {
+          return "win64_msvc2013_64";
+        } else if (compareVersions(version, "<", "5.9.0")) {
+          return "win64_msvc2015_64";
         } else {
-          this.arch = "win64_msvc2017_64";
+          return "win64_msvc2017_64";
         }
-      } else if (this.host === "windows_arm64") {
-        this.arch = "win64_msvc2022_arm64";
+      } else if (host === "windows_arm64") {
+        return "win64_msvc2022_arm64";
       }
     }
+    return rawInputs.arch;
+  })();
 
-    const dir = core.getInput("dir") || process.env.RUNNER_WORKSPACE;
-    if (!dir) {
-      throw TypeError(`"dir" input may not be empty`);
-    }
-    this.dir = path.resolve(dir, "Qt");
+  const inputs = {
+    host: host,
+    target: target,
+    version: version,
+    arch: arch,
 
-    this.modules = Inputs.getStringArrayInput("modules");
+    dir: ((): string => {
+      const dir = rawInputs.dir || process.env.RUNNER_WORKSPACE;
+      if (!dir) {
+        throw TypeError(`"dir" input may not be empty`);
+      }
+      return path.resolve(dir, "Qt");
+    })(),
 
-    this.archives = Inputs.getStringArrayInput("archives");
+    modules: parseStringArrayInput(rawInputs.modules),
 
-    this.tools = Inputs.getStringArrayInput("tools").map(
+    archives: parseStringArrayInput(rawInputs.archives),
+
+    tools: parseStringArrayInput(rawInputs.tools).map(
       // The tools inputs have the tool name, variant, and arch delimited by a comma
       // aqt expects spaces instead
       (tool: string): string => tool.replace(/,/g, " ")
-    );
+    ),
 
-    this.addToolsToPath = Inputs.getBoolInput("add-tools-to-path");
+    addToolsToPath: parseBoolInput(rawInputs.addToolsToPath),
 
-    this.extra = Inputs.getStringArrayInput("extra");
+    extra: parseStringArrayInput(rawInputs.extra),
 
-    const installDeps = core.getInput("install-deps").toLowerCase();
-    if (installDeps === "nosudo") {
-      this.installDeps = "nosudo";
-    } else {
-      this.installDeps = installDeps === "true";
-    }
+    installDeps: ((): boolean | "nosudo" => {
+      if (rawInputs.installDeps.toLowerCase() === "nosudo") {
+        return "nosudo";
+      } else {
+        return parseBoolInput(rawInputs.installDeps);
+      }
+    })(),
 
-    this.cache = Inputs.getBoolInput("cache");
+    cache: parseBoolInput(rawInputs.cache),
 
-    this.cacheKeyPrefix = core.getInput("cache-key-prefix");
+    cacheKeyPrefix: rawInputs.cacheKeyPrefix,
 
-    this.isInstallQtBinaries =
-      !Inputs.getBoolInput("tools-only") && !Inputs.getBoolInput("no-qt-binaries");
+    isInstallQtBinaries:
+      !parseBoolInput(rawInputs.toolsOnly) && !parseBoolInput(rawInputs.noQtBinaries),
 
-    this.setEnv = Inputs.getBoolInput("set-env");
+    setEnv: parseBoolInput(rawInputs.setEnv),
 
-    this.aqtSource = core.getInput("aqtsource");
-    this.aqtVersion = core.getInput("aqtversion");
+    aqtSource: rawInputs.aqtSource,
+    aqtVersion: rawInputs.aqtVersion,
 
-    this.py7zrVersion = core.getInput("py7zrversion");
+    py7zrVersion: rawInputs.py7zrVersion,
 
-    this.useOfficial = Inputs.getBoolInput("use-official");
-    this.email = core.getInput("email");
-    this.pw = core.getInput("pw");
+    useOfficial: parseBoolInput(rawInputs.useOfficial),
+    email: rawInputs.email,
+    pw: rawInputs.pw,
 
-    this.src = Inputs.getBoolInput("source");
-    this.srcArchives = Inputs.getStringArrayInput("src-archives");
+    src: parseBoolInput(rawInputs.source),
+    srcArchives: parseStringArrayInput(rawInputs.srcArchives),
 
-    this.doc = Inputs.getBoolInput("documentation");
-    this.docModules = Inputs.getStringArrayInput("doc-modules");
-    this.docArchives = Inputs.getStringArrayInput("doc-archives");
+    doc: parseBoolInput(rawInputs.documentation),
+    docModules: parseStringArrayInput(rawInputs.docModules),
+    docArchives: parseStringArrayInput(rawInputs.docArchives),
 
-    this.example = Inputs.getBoolInput("examples");
-    this.exampleModules = Inputs.getStringArrayInput("example-modules");
-    this.exampleArchives = Inputs.getStringArrayInput("example-archives");
-  }
+    example: parseBoolInput(rawInputs.examples),
+    exampleModules: parseStringArrayInput(rawInputs.exampleModules),
+    exampleArchives: parseStringArrayInput(rawInputs.exampleArchives),
+  };
 
-  public get cacheKey(): string {
-    let cacheKey = this.cacheKeyPrefix;
+  // Then, generate the cache key with the exact available Qt version.
+  const cacheKey = ((): string => {
+    let _cacheKey = inputs.cacheKeyPrefix;
     for (const keyStringArray of [
       [
-        this.host,
+        inputs.host,
         os.release(),
-        this.target,
-        this.arch,
-        this.version,
-        this.dir,
-        this.py7zrVersion,
-        this.aqtSource,
-        this.aqtVersion,
-        this.useOfficial ? "official" : "",
+        inputs.target,
+        inputs.arch,
+        inputs.version,
+        inputs.dir,
+        inputs.py7zrVersion,
+        inputs.aqtSource,
+        inputs.aqtVersion,
+        inputs.useOfficial ? "official" : "",
       ],
-      this.modules,
-      this.archives,
-      this.extra,
-      this.tools,
-      this.src ? "src" : "",
-      this.srcArchives,
-      this.doc ? "doc" : "",
-      this.docArchives,
-      this.docModules,
-      this.example ? "example" : "",
-      this.exampleArchives,
-      this.exampleModules,
+      inputs.modules,
+      inputs.archives,
+      inputs.extra,
+      inputs.tools,
+      inputs.src ? "src" : "",
+      inputs.srcArchives,
+      inputs.doc ? "doc" : "",
+      inputs.docArchives,
+      inputs.docModules,
+      inputs.example ? "example" : "",
+      inputs.exampleArchives,
+      inputs.exampleModules,
     ]) {
       for (const keyString of keyStringArray) {
         if (keyString) {
-          cacheKey += `-${keyString}`;
+          _cacheKey += `-${keyString}`;
         }
       }
     }
     // Cache keys cannot contain commas
-    cacheKey = cacheKey.replace(/,/g, "-");
+    _cacheKey = _cacheKey.replace(/,/g, "-");
     // Cache keys cannot be larger than 512 characters
     const maxKeyLength = 512;
-    if (cacheKey.length > maxKeyLength) {
-      const hashedCacheKey = crypto.createHash("sha256").update(cacheKey).digest("hex");
-      cacheKey = `${this.cacheKeyPrefix}-${hashedCacheKey}`;
+    if (_cacheKey.length > maxKeyLength) {
+      const hashedCacheKey = crypto.createHash("sha256").update(_cacheKey).digest("hex");
+      _cacheKey = `${inputs.cacheKeyPrefix}-${hashedCacheKey}`;
     }
-    return cacheKey;
-  }
+    return _cacheKey;
+  })();
 
-  private static getBoolInput(name: string): boolean {
-    return core.getInput(name).toLowerCase() === "true";
-  }
-  private static getStringArrayInput(name: string): string[] {
-    const content = core.getInput(name);
-    return content ? content.split(" ") : [];
-  }
-}
+  return { inputs, cacheKey };
+};
 
 const run = async (): Promise<void> => {
-  const inputs = new Inputs();
+  const { inputs, cacheKey } = await resolveInputs();
 
   // Qt installer assumes basic requirements that are not installed by
   // default on Ubuntu.
@@ -387,7 +476,7 @@ const run = async (): Promise<void> => {
   // Restore internal cache
   let internalCacheHit = false;
   if (inputs.cache) {
-    const cacheHitKey = await cache.restoreCache([inputs.dir], inputs.cacheKey);
+    const cacheHitKey = await cache.restoreCache([inputs.dir], cacheKey);
     if (cacheHitKey) {
       core.info(`Automatic cache hit with key "${cacheHitKey}"`);
       internalCacheHit = true;
@@ -398,16 +487,6 @@ const run = async (): Promise<void> => {
 
   // Install Qt and tools if not cached
   if (!internalCacheHit) {
-    // Install dependencies via pip
-    await execPython("pip install", ["setuptools>=70.1.0", `"py7zr${inputs.py7zrVersion}"`]);
-
-    // Install aqtinstall separately: allows aqtinstall to override py7zr if required
-    if (inputs.aqtSource.length > 0) {
-      await execPython("pip install", [`"${inputs.aqtSource}"`]);
-    } else {
-      await execPython("pip install", [`"aqtinstall${inputs.aqtVersion}"`]);
-    }
-
     // This flag will install a parallel desktop version of Qt, only where required.
     // aqtinstall will automatically determine if this is necessary.
     const autodesktop = (await isAutodesktopSupported()) ? ["--autodesktop"] : [];
@@ -483,8 +562,8 @@ const run = async (): Promise<void> => {
 
   // Save automatic cache
   if (!internalCacheHit && inputs.cache) {
-    const cacheId = await cache.saveCache([inputs.dir], inputs.cacheKey);
-    core.info(`Automatic cache saved with key "${inputs.cacheKey}", cache id is "${cacheId}"`);
+    const cacheId = await cache.saveCache([inputs.dir], cacheKey);
+    core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
   }
 
   // Add tools to path
