@@ -21,7 +21,7 @@ this project. These changes are summarized here, to help you upgrade your existi
 ### `version`
 The desired version of Qt to install.
 
-You can also pass in [SimpleSpec version](https://pypi.org/project/semantic-version/#the-simplespec-scheme) ranges or use wildcards, for example `6.2.*` or `>=6.2.0,<6.5.0`. Beta releases will not be excluded if the version range is too large (e.g., `>=6.*.*`); you need to set ranges and wildcard patterns accordingly.**
+You can also pass in [SimpleSpec version](https://pypi.org/project/semantic-version/#the-simplespec-scheme) ranges or use wildcards, for example `6.2.*` or `>=6.2.0,<6.5.0`. Beta releases will not be excluded if the version range is too large (e.g., `>=6.*.*`); you need to set ranges and wildcard patterns accordingly.
 
 Default: `6.8.3` (Last Qt 6 LTS)
 
