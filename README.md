@@ -23,7 +23,7 @@ The desired version of Qt to install.
 
 You can also pass in [SimpleSpec version](https://pypi.org/project/semantic-version/#the-simplespec-scheme) ranges or use wildcards, for example `6.2.*` or `>=6.2.0,<6.5.0`. Beta releases will not be excluded if the version range is too large (e.g., `>=6.*.*`); you need to set ranges and wildcard patterns accordingly.
 
-Default: `6.8.3` (Last Qt 6 LTS)
+Default: `6.8.*` (Latest Qt 6 LTS)
 
 **Please note that for Linux builds, Qt 6+ requires Ubuntu 20.04 or later.**
 
@@ -90,7 +90,7 @@ Example:
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.3'
+        version: '6.8.*'
         target: 'desktop'
         arch: 'win64_msvc2022_64'
         use-official: true
@@ -298,7 +298,7 @@ Example value: `--external 7z`
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.3'
+        version: '6.8.*'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2022_64'
