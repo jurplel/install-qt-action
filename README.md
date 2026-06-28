@@ -56,21 +56,20 @@ This is the target architecture that your program will be built for.
 
 You can find a full list of architectures easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
-**Default values:**
-
-Windows w/ Qt < 5.6: `win64_msvc2013_64`
-
-Windows w/ Qt >= 5.6 && Qt < 5.9: `win64_msvc2015_64`
-
-Windows w/ Qt >= 5.9 && Qt < 5.15: `win64_msvc2017_64`
-
-Windows w/ Qt >= 5.15 && Qt < 6.8: `win64_msvc2019_64`
-
-Windows w/ Qt >= 6.8: `win64_msvc2022_64`
-
-Windows (ARM64) w/ Qt >= 6.8: `win64_msvc2022_arm64`
-
-Android: `android_armv7`
+Default: Depends on OS, Qt version and CPU architecture:
+- Windows (x86)
+  - Qt <5.6: `win64_msvc2013_64`
+  - Qt >=5.6,<5.9: `win64_msvc2015_64`
+  - Qt >=5.9,<5.15: `win64_msvc2017_64`
+  - Qt >=5.15,<6.8: `win64_msvc2019_64`
+  - Qt >=6.8: `win64_msvc2022_64`
+- Windows (ARM)
+  - Qt >=6.8: `win64_msvc2022_arm64`
+- Android
+  - Qt >=5.14,<6.0: `android`
+  - Qt >=6.0: `android_armv7`
+ 
+For Linux and macOS, there are no defaults set. The value will be dynamically determined by aqtinstall if not provided.
 
 ### `dir`
 This is the directory prefix that Qt will be installed to.
