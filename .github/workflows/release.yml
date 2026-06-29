@@ -10,7 +10,7 @@ on:
     inputs:
       version:
         description: |
-          In the form of "vX.Y.Z". There should already be a "vX" branch.
+          In the form of "vX.Y.Z". Existing "vX" branches will be updated; missing "vX" branches will be created.
         required: true
         type: string
 
@@ -143,6 +143,7 @@ jobs:
 
           cd action
 
+          # Let it crash if files to be deleted do not exist.
           if [[ "$DIST_EXISTING" == 'true' ]]; then
             rm ./lib/main.js
             rm -r ./node_modules
