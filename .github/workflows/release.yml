@@ -1,7 +1,7 @@
 name: Release
 
-# In this script, I prefer hand-made shell scripts than concreate
-#   actions, especially 3rd ones, to reveal the acutal logic.
+# In this script, I prefer hand-made shell scripts to concrete
+#   actions, especially 3rd-party ones, to reveal the actual logic.
 
 on:
   workflow_dispatch:
