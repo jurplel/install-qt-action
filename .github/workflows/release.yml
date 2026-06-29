@@ -142,7 +142,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          set -eux
+          set -eu  # no "set -x"!
 
           git push --atomic "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
             "HEAD:$TARGET_BRANCH" \
