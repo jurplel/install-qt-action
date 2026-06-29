@@ -64,7 +64,7 @@ jobs:
           set -eux
 
           version='${{ steps.info.outputs.tag }}'
-          if git rev-parse "$version" >/dev/null 2>&1; then
+          if git rev-parse --verify "refs/tags/$version" >/dev/null 2>&1; then
             echo "Tag $version already exists."
             exit 1
           fi
