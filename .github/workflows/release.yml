@@ -140,7 +140,7 @@ jobs:
           TAG: ${{ steps.info.outputs.tag }}
           TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ env.GITHUB_REPOSITORY }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -eux
 
@@ -148,6 +148,7 @@ jobs:
             "HEAD:$TARGET_BRANCH" \
             "refs/tags/$TAG"
 
+      # If this step fails, we can manually release a new version on GitHub Web UI.
       - name: Create tag and release with generated notes
         shell: bash
         env:
