@@ -19,6 +19,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # This is not the same as "github.ref_name" that's the branch specified in the popup
+  #   after clicking the "Run workflow" button for "workflow_dispatch" workflows.
   SOURCE_BRANCH: master
 
 jobs:
@@ -174,6 +176,9 @@ jobs:
 
           git tag "$TAG"
 
+      # Search "x-access-token" in:
+      # - Authenticating as a GitHub App installation - GitHub Docs
+      #   https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation
       - name: Update branch and push the tag
         shell: bash
         env:
@@ -182,7 +187,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          set -eu  # no "set -x"!
+          set -eu  # no "set -x", otherwise not safe for tokens.
 
           git push --atomic "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
             "HEAD:$TARGET_BRANCH" \
