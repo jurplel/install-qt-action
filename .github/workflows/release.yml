@@ -1,0 +1,151 @@
+name: Release
+
+# In this script, I prefer hand-made shell scripts than concreate
+#   actions, especially 3rd ones, to reveal the acutal logic.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: |
+          In the form of "vX.Y.Z". There should already be a "vX" branch.
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  SOURCE_BRANCH: master
+
+jobs:
+  release:
+    name: Release ${{ inputs.version }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Extract version information
+        id: info
+        shell: bash
+        run: |
+          set -eux
+
+          if ! [[ '${{ inputs.version }}' =~ ^v(([0-9]+)\.[0-9]+\.[0-9]+)$ ]]; then
+            exit 1
+          fi
+          full_version="${BASH_REMATCH[1]}"
+          major_version="${BASH_REMATCH[2]}"
+
+          echo "tag=v$full_version" >> "$GITHUB_OUTPUT"
+          echo "target_branch=v$major_version" >> "$GITHUB_OUTPUT"
+
+      # Ref:
+      # - No documentation for git email and username causes actions to use 41898282+github-actions[bot]@users.noreply.github.com
+      #   https://github.com/orgs/community/discussions/119597
+      - name: Configure Git identity
+        shell: bash
+        run: |
+          set -eux
+
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0  # all branches and tags.
+          ref: ${{ steps.info.outputs.target_branch }}
+
+      - name: Refuse to overwrite existing tag
+        shell: bash
+        run: |
+          set -eux
+
+          version='${{ steps.info.outputs.tag }}'
+          if git rev-parse "$version" >/dev/null 2>&1; then
+            echo "Tag $version already exists."
+            exit 1
+          fi
+
+      - name: Merge branch '${{ env.SOURCE_BRANCH }}'
+        shell: bash
+        run: |
+          set -eux
+
+          # Merge all commits from the source branch since the previous merge point.
+          # The source branch itself remains untouched.
+          source='${{ env.SOURCE_BRANCH }}'
+          target='${{ steps.info.outputs.target_branch }}'
+          # Record the current commit hash.
+          existing_commit="$(git rev-parse HEAD)"
+
+          git merge --no-ff "origin/$source" -m "Merge branch '$source' into $target for ${{ steps.info.outputs.tag }}"
+
+          # The git-merge exits with "Already up to date." and code 0, so we have to check it manually.
+          # This should not happen if this workflow is already in the source branch and it is triggered
+          # at the source branch. Since we're using "workflow_dispatch", you may need to read:
+          # - Provide clarity in documentation on "Use workflow from" Dropdown when running Manual Workflow
+          #   https://github.com/orgs/community/discussions/112371
+          if [[ "$existing_commit" == "$(git rev-parse HEAD)" ]]; then
+            echo "Source branch $source has not been updated since the last commit on branch $target."
+            exit 1
+          fi
+
+      # Do NOT cache anything.
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version: 24
+
+      - name: Remove old Node.js files, recreate new ones, and commit them if they are changed
+        shell: bash
+        run: |
+          set -eux
+
+          cd action
+
+          rm ./lib/main.js
+          rm -r ./node_modules
+
+          npm ci
+          npm run build
+          npm prune --omit=dev
+
+          git add ./lib/main.js
+          git add --force ./node_modules
+
+          if ! git diff --exit-code; then
+            echo 'Unexpected file changes detected.'
+            exit 1
+          fi
+
+          if ! git diff --cached --exit-code --quiet; then
+            git commit -m 'Build ${{ steps.info.outputs.tag }}'
+          fi
+
+          git tag '${{ steps.info.outputs.tag }}'
+
+      - name: Update branch and push the tag
+        shell: bash
+        run: |
+          set -eux
+
+          git push origin \
+            HEAD:'${{ steps.info.outputs.target_branch }}' \
+            refs/tags/'${{ steps.info.outputs.tag }}'
+
+      - name: Create tag and release with generated notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eux
+
+          # Use "--verify-tag" to make sure GitHub can see the tag.
+          gh release create '${{ steps.info.outputs.tag }}' \
+            --title 'install-qt-action ${{ steps.info.outputs.tag }}' \
+            --target '${{ steps.info.outputs.target_branch }}' \
+            --generate-notes \
+            --latest \
+            --verify-tag
