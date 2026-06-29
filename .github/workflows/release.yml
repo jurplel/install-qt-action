@@ -123,8 +123,14 @@ jobs:
           git add ./lib/main.js
           git add --force ./node_modules
 
+          untracked_files="$(git ls-files --others --exclude-standard)"
+          if [[ -n "$untracked_files" ]]; then
+            echo "Unexpected untracked files detected: $untracked_files"
+            exit 1
+          fi
+
           if ! git diff --exit-code; then
-            echo 'Unexpected file changes detected.'
+            echo 'Unexpected tracked file changes detected.'
             exit 1
           fi
 
