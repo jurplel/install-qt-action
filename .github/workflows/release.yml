@@ -99,7 +99,7 @@ jobs:
         run: |
           set -eux
 
-          git switch "$TARGET_BRANCH"
+          git switch -c "$TARGET_BRANCH" --track "origin/$TARGET_BRANCH"
 
           # Record the current commit hash.
           existing_commit="$(git rev-parse HEAD)"
