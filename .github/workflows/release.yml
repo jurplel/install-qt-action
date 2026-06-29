@@ -81,7 +81,7 @@ jobs:
         run: |
           set -eux
 
-          if git show-branch "$TARGET_BRANCH"; then
+          if git show-branch "origin/$TARGET_BRANCH"; then
             echo "existing=true" >> "$GITHUB_OUTPUT"
           else
             echo "existing=false" >> "$GITHUB_OUTPUT"
