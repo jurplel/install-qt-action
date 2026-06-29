@@ -58,6 +58,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           fetch-depth: 0  # all branches and tags.
+          persist-credentials: false  # otherwise malicious or unexpected git-pushes may happen.
           ref: ${{ steps.info.outputs.target_branch }}
 
       - name: Refuse to overwrite existing tag
@@ -138,10 +139,12 @@ jobs:
         env:
           TAG: ${{ steps.info.outputs.tag }}
           TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ env.GITHUB_REPOSITORY }}
         run: |
           set -eux
 
-          git push --atomic origin \
+          git push --atomic "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
             "HEAD:$TARGET_BRANCH" \
             "refs/tags/$TAG"
 
