@@ -131,7 +131,7 @@ jobs:
         run: |
           set -eux
 
-          git push origin \
+          git push --atomic origin \
             HEAD:'${{ steps.info.outputs.target_branch }}' \
             refs/tags/'${{ steps.info.outputs.tag }}'
 
