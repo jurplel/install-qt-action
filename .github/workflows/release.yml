@@ -1,6 +1,8 @@
 name: Release
 
-# In this script, I prefer hand-made shell scripts to concrete
+# Trigger this workflow on GitHub Web UI. If GitHub is down, we don't need to do anything.
+
+# In bash shell scripts of this workflow, I prefer hand-made shell scripts to concrete
 #   actions, especially 3rd-party ones, to reveal the actual logic.
 
 on:
