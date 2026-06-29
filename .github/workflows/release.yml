@@ -59,7 +59,7 @@ jobs:
         with:
           fetch-depth: 0  # all branches and tags.
           persist-credentials: false  # otherwise malicious or unexpected git-pushes may happen.
-          ref: ${{ steps.info.outputs.target_branch }}
+          ref: ${{ env.SOURCE_BRANCH }}  # the target branch may not exist for now, but the source one must be there.
 
       - name: Refuse to overwrite existing tag
         shell: bash
@@ -73,9 +73,24 @@ jobs:
             exit 1
           fi
 
+      - name: Check if the target branch '${{ steps.info.outputs.target_branch }}' exists
+        id: check_target_branch
+        shell: bash
+        env:
+          TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
+        run: |
+          set -eux
+
+          if git show-branch "$TARGET_BRANCH"; then
+            echo "existing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "existing=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # Merge all commits from the source branch since the previous merge point.
       # The source branch itself remains untouched.
-      - name: Merge branch '${{ env.SOURCE_BRANCH }}'
+      - name: Merge branch '${{ env.SOURCE_BRANCH }}' if branch '${{ steps.info.outputs.target_branch }}' exists
+        if: ${{ steps.check_target_branch.outputs.existing == 'true' }}
         shell: bash
         env:
           SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
@@ -83,6 +98,8 @@ jobs:
           TAG: ${{ steps.info.outputs.tag }}
         run: |
           set -eux
+
+          git switch "$TARGET_BRANCH"
 
           # Record the current commit hash.
           existing_commit="$(git rev-parse HEAD)"
@@ -99,6 +116,16 @@ jobs:
             exit 1
           fi
 
+      - name: Create branch '${{ steps.info.outputs.target_branch }}' for new major versions
+        if: ${{ steps.check_target_branch.outputs.existing == 'false' }}
+        shell: bash
+        env:
+          TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
+        run: |
+          set -eux
+
+          git switch -c "$TARGET_BRANCH"
+
       # Do NOT cache anything.
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
@@ -107,14 +134,17 @@ jobs:
       - name: Remove old Node.js files, recreate new ones, and commit them if they are changed
         shell: bash
         env:
+          DIST_EXISTING: ${{ steps.check_target_branch.outputs.existing }}
           TAG: ${{ steps.info.outputs.tag }}
         run: |
           set -eux
 
           cd action
 
-          rm ./lib/main.js
-          rm -r ./node_modules
+          if [[ "$DIST_EXISTING" == 'true' ]]; then
+            rm ./lib/main.js
+            rm -r ./node_modules
+          fi
 
           npm ci
           npm run build
