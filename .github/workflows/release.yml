@@ -3,7 +3,7 @@ name: Release
 # Trigger this workflow on GitHub Web UI. If GitHub is down, we don't need to do anything.
 
 # In bash shell scripts of this workflow, I prefer hand-made shell scripts to concrete
-#   actions, especially 3rd-party ones, to reveal the actual logic.
+# actions, especially 3rd-party ones, to reveal the actual logic.
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ concurrency:
 
 env:
   # This is not the same as "github.ref_name" that's the branch specified in the popup
-  #   after clicking the "Run workflow" button for "workflow_dispatch" workflows.
+  # after clicking the "Run workflow" button for "workflow_dispatch" workflows.
   SOURCE_BRANCH: master
 
 jobs:
