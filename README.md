@@ -63,7 +63,7 @@ Default: Depends on OS, Qt version and CPU architecture:
   - Qt >=5.9,<5.15: `win64_msvc2017_64`
   - Qt >=5.15,<6.8: `win64_msvc2019_64`
   - Qt >=6.8: `win64_msvc2022_64`
-- Windows (ARM)
+- Windows (ARM64)
   - Qt >=6.8: `win64_msvc2022_arm64`
 - Android
   - Qt >=5.14,<6.0: `android`
