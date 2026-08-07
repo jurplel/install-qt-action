@@ -1,10 +1,10 @@
 name: Cache Test for SimpleSpec
 
-# This workflow will if "aqtinstall list-qt ... --spec ..." or its caller goes wrong.
+# This workflow will fail if "aqtinstall list-qt ... --spec ..." or its caller goes wrong.
+# Due to permission issues, this workflow should not run for PRs.
 
 on:
   push:
-  pull_request:
   workflow_dispatch:
     inputs:
       # The following input and its usage are based on the "rclone/rclone" project.
@@ -33,13 +33,8 @@ concurrency:
 jobs:
   test:
     if: >-
-      inputs.manual || (
-        github.repository == 'jurplel/install-qt-action' && (
-          github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name ||
-          github.event.pull_request.user.login == 'dependabot[bot]'
-        )
-      )
+      inputs.manual ||
+      github.repository == 'jurplel/install-qt-action'
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
