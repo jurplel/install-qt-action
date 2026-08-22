@@ -7,10 +7,18 @@ name: Release
 
 on:
   workflow_dispatch:
+    # The "Use workflow from" branch selected in the "Run workflow" dialog, based on
+    # previous experiments, ONLY determines:
+    # - the revision of the workflow file itself being used;
+    # - the value of "github.ref" ($GITHUB_REF).
+    # To ensure that all releases are based on the default branch, we have
+    # "env.SOURCE_BRANCH" below and always checkout all branches by "actions/checkout".
+    # Therefore, we do not use the value of "github.ref" in the release process.
     inputs:
       version:
         description: |
-          In the form of "vX.Y.Z". Existing "vX" branches will be updated; missing "vX" branches will be created.
+          The version number of the new release. In the form of "vX.Y.Z".
+          Existing "vX" branches will be updated; missing "vX" branches will be created.
         required: true
         type: string
 
@@ -19,8 +27,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # This is not the same as "github.ref_name" that's the branch specified in the popup
-  # after clicking the "Run workflow" button for "workflow_dispatch" workflows.
   SOURCE_BRANCH: master
 
 jobs:
@@ -59,11 +65,11 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-      # The actual checked-out branch "github.ref_name" is not important.
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           fetch-depth: 0  # all branches and tags.
-          persist-credentials: false  # otherwise malicious or unexpected git-pushes may happen.
+          persist-credentials: false  # otherwise malicious or unexpected git-pushes may happen
+                                      # due to the job-level "permissions.contents: write".
 
       - name: Refuse to overwrite existing tag
         shell: bash
