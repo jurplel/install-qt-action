@@ -57,7 +57,7 @@ This is the target architecture that your program will be built for.
 You can find a full list of architectures easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
 Default: Depends on OS, Qt version and CPU architecture:
-- Windows (x86)
+- Windows (x64)
   - Qt <5.6: `win64_msvc2013_64`
   - Qt >=5.6,<5.9: `win64_msvc2015_64`
   - Qt >=5.9,<5.15: `win64_msvc2017_64`
