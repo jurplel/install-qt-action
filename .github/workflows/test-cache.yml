@@ -59,6 +59,14 @@ jobs:
           npm run build
         shell: bash
 
+      # See the root "action.yml" file.
+      - name: Use local built internal action (hack)
+        run: |
+          sed -i.bak 's|uses: $/action|uses: ./action|' action.yml
+          diff -u action.yml.bak action.yml
+          git status --porcelain
+        shell: bash
+
       - name: Prologue - purge existing cache entries
         run: |
           set -e; set -u;

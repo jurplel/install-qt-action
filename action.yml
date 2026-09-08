@@ -99,6 +99,11 @@ runs:
       python-version: '>=3.10.0'
 
   - name: Setup and run aqtinstall
+    # The dollar sign:
+    # - Reference same-repository actions with self-repository syntax - GitHub Changelog
+    #   https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/
+    # To run tests in this repository, we need to replace "$/action" with "./action"
+    # because a "lib/main.js" file is expected, but we don't have one in non-tagging branches.
     uses: $/action
     with:
       dir: ${{ inputs.dir }}
