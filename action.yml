@@ -92,6 +92,27 @@ inputs:
 runs:
   using: "composite"
   steps:
+  - name: Check the existence of built JavaScript action
+    shell: python  # we must have a default Python here.
+    working-directory: ${{ github.action_path }}  # $GITHUB_ACTION_PATH; composite actions only.
+    run: |
+      from pathlib import Path
+
+      if Path('./action/lib/main.js').exists():
+          exit(0)
+
+      message = ' '.join((
+        'This TypeScript action cannot be used before building within Node.js environment.',
+        'Maybe you are currently using non-tagging branches, for example, the "master" branch.',
+        'Only v* branches have built JavaScript action file.',
+        'If you would like to test unreleased changes, please refer to the CI workflows',
+        'in our repository: https://github.com/jurplel/install-qt-action .',
+        'Exiting...',
+      ))
+      print(f'::error title=Action not built::{message}')
+
+      exit(1)
+
   - name: Setup Python
     if: ${{ inputs.setup-python  == 'true' }}
     uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
