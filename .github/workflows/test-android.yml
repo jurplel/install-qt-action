@@ -68,6 +68,14 @@ jobs:
           cd action
           npm run build
 
+      # See the root "action.yml" file.
+      - name: Use local built internal action (hack)
+        run: |
+          sed -i.bak 's|uses: $/action|uses: ./action|' action.yml
+          diff -u action.yml.bak action.yml || true
+          git status --porcelain
+        shell: bash
+
       - name: Install Qt
         uses: ./
         with:
