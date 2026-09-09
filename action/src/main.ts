@@ -282,7 +282,8 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
   const version = await fetchRequestedQtVersion(host, target, rawInputs.version);
 
   const arch = ((): string => {
-    // Set arch automatically if omitted
+    // Set arch automatically if omitted.
+    // Don't forget to update docs when new default arch is being added.
     if (!rawInputs.arch) {
       if (target === "android") {
         if (compareVersions(version, ">=", "5.14.0") && compareVersions(version, "<", "6.0.0")) {
