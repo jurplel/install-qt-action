@@ -58,15 +58,15 @@ You can find a full list of architectures easily by using [this awesome website]
 
 Default: A popular choice calculated from the host (`host`), Qt version (`version`), and target (`target`):
 - Android Target
-  - Qt >=5.14,<6.0: `android`
   - Qt >=6.0: `android_armv7`
+  - Qt >=5.14,<6.0: `android`
 - or:
   - Windows x64 Host
-    - Qt <5.6: `win64_msvc2013_64`
-    - Qt >=5.6,<5.9: `win64_msvc2015_64`
-    - Qt >=5.9,<5.15: `win64_msvc2017_64`
-    - Qt >=5.15,<6.8: `win64_msvc2019_64`
     - Qt >=6.8: `win64_msvc2022_64`
+    - Qt >=5.15,<6.8: `win64_msvc2019_64`
+    - Qt >=5.9,<5.15: `win64_msvc2017_64`
+    - Qt >=5.6,<5.9: `win64_msvc2015_64`
+    - Qt <5.6: `win64_msvc2013_64`
   - Windows ARM64 Host
     - Qt >=6.8: `win64_msvc2022_arm64`
  
