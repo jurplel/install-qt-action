@@ -53,11 +53,15 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: action/
+
       - run: |
           cd action
           npm ci || npm install
-          npm run build
         shell: bash
+
+      - run: |
+          cd action
+          npm run build
 
       # See the root "action.yml" file.
       - name: Use local built internal action (hack)
