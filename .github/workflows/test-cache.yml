@@ -98,7 +98,7 @@ jobs:
           done
           echo "Done"
 
-      # - Qt is commercial-only LTS, so we can safely test "6.*.3" for released LTS.
+      # - Qt is commercial-only LTS, so we open-source license holders can safely test "6.8.3", the latest patch release.
       #
       # - Version specifications (the Spec class) § Reference — python-semanticversion latest documentation
       #   https://python-semanticversion.readthedocs.io/en/latest/reference.html#version-specifications-the-spec-class
