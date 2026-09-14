@@ -50,7 +50,7 @@ env:
 
 jobs:
   release:
-    name: Release ${{ inputs.version }}
+    name: Release (${{ inputs.version }}, ${{ inputs.use_pat }})
     permissions:
       contents: write
     runs-on: ubuntu-26.04
@@ -141,7 +141,6 @@ jobs:
         env:
           SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
           TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
-          TAG: ${{ steps.info.outputs.tag }}
         run: |
           set -eux
 
@@ -153,7 +152,6 @@ jobs:
             --no-commit \
             --no-ff \
             --strategy 'ours' \
-            -m "Build $TAG after merging branch '$SOURCE_BRANCH' into $TARGET_BRANCH" \
             "origin/$SOURCE_BRANCH"
 
           # Empty the working tree.
@@ -180,9 +178,10 @@ jobs:
         with:
           node-version: 24
 
-      - name: Recreate Node.js files and finalize the merge commit
+      - name: Recreate Node.js files and create the new commit
         shell: bash
         env:
+          TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
           TAG: ${{ steps.info.outputs.tag }}
         run: |
           set -eux
@@ -207,8 +206,10 @@ jobs:
             exit 1
           fi
 
-          # Finalize the pending merge.
-          git commit --no-edit --date=now
+          # Finalize the pending merge commit or create the new commit.
+          git commit \
+            -m "Build $TAG on branch $TARGET_BRANCH" \
+            --date=now
 
           git tag "$TAG"
 
