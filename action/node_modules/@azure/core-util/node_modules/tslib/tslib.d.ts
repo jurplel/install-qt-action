@@ -123,7 +123,7 @@ export declare function __generator(thisArg: any, body: Function): any;
  * Creates bindings for all enumerable properties of `m` on `exports`
  *
  * @param m The source object
- * @param exports The `exports` object.
+ * @param o The `exports` object.
  */
 export declare function __exportStar(m: any, o: any): void;
 
@@ -428,3 +428,33 @@ export declare function __classPrivateFieldIn(
  * @param objectKey The property key to re-export as. Defaults to `key`.
  */
 export declare function __createBinding(object: object, target: object, key: PropertyKey, objectKey?: PropertyKey): void;
+
+/**
+ * Adds a disposable resource to a resource-tracking environment object.
+ * @param env A resource-tracking environment object.
+ * @param value Either a Disposable or AsyncDisposable object, `null`, or `undefined`.
+ * @param async When `true`, `AsyncDisposable` resources can be added. When `false`, `AsyncDisposable` resources cannot be added.
+ * @returns The {@link value} argument.
+ *
+ * @throws {TypeError} If {@link value} is not an object, or if either `Symbol.dispose` or `Symbol.asyncDispose` are not
+ * defined, or if {@link value} does not have an appropriate `Symbol.dispose` or `Symbol.asyncDispose` method.
+ */
+export declare function __addDisposableResource<T>(env: { stack: { value?: unknown, dispose?: Function, async: boolean }[]; error: unknown; hasError: boolean; }, value: T, async: boolean): T;
+
+/**
+ * Disposes all resources in a resource-tracking environment object.
+ * @param env A resource-tracking environment object.
+ * @returns A {@link Promise} if any resources in the environment were marked as `async` when added; otherwise, `void`.
+ *
+ * @throws {SuppressedError} if an error thrown during disposal would have suppressed a prior error from disposal or the
+ * error recorded in the resource-tracking environment object.
+ * @seealso {@link __addDisposableResource}
+ */
+export declare function __disposeResources(env: { stack: { value?: unknown, dispose?: Function, async: boolean }[]; error: unknown; hasError: boolean; }): any;
+
+/**
+ * Transforms a relative import specifier ending in a non-declaration TypeScript file extension to its JavaScript file extension counterpart.
+ * @param path The import specifier.
+ * @param preserveJsx Causes '*.tsx' to transform to '*.jsx' instead of '*.js'. Should be true when `--jsx` is set to `preserve`.
+ */
+export declare function __rewriteRelativeImportExtension(path: string, preserveJsx?: boolean): string;

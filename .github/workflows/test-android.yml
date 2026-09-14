@@ -1,9 +1,32 @@
 name: CI-android
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      # The following input and its usage are based on the "rclone/rclone" project.
+      # https://github.com/rclone/rclone/blob/c1f5df209024c79028c98134b703b31d599befac/.github/workflows/build.yml#L24
+      # Copyright (C) 2012 by Nick Craig-Wood http://www.craig-wood.com/nick/. Licensed under MIT.
+      manual:
+        description: Manual run (bypass default conditions)
+        required: true
+        type: choice
+        default: 'TRUE'
+        options:
+          - 'TRUE'
 
 jobs:
   test:
+    if: >-
+      inputs.manual || (
+        github.repository == 'jurplel/install-qt-action' && (
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name ||
+          github.event.pull_request.user.login == 'dependabot[bot]'
+        )
+      )
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -13,9 +36,6 @@ jobs:
           - ubuntu-24.04
           - windows-2022
           - windows-2025
-          - macos-14
-          - macos-15
-          - macos-15-intel
           - macos-26
           - macos-26-intel
         qt:
@@ -31,9 +51,9 @@ jobs:
             example-modules:  qtsensors
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24
           cache: npm
@@ -47,6 +67,14 @@ jobs:
       - run: |
           cd action
           npm run build
+
+      # See the root "action.yml" file.
+      - name: Use local built internal action (hack)
+        run: |
+          sed -i.bak 's|uses: $/action|uses: ./action|' action.yml
+          diff -u action.yml.bak action.yml || true
+          git status --porcelain
+        shell: bash
 
       - name: Install Qt
         uses: ./

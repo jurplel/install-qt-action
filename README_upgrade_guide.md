@@ -1,7 +1,7 @@
 # Upgrading `install-qt-action`
 
 ## v4
-* Updated `aqtinstall` to version 3.1.* by default.
+* Updated `aqtinstall` to version 3.1.* or newer by default.
 * Use the `--autodesktop` flag to automatically install the desktop version of Qt, parallel to any WASM or mobile
   versions of Qt 6.2 and above.
   * If your action installed Qt 6.2+ for Android or WASM using `install-qt-action@v3`, then your action would have

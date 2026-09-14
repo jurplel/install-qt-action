@@ -58,7 +58,8 @@ inputs:
     default: ==3.3.*
   py7zrversion:
     description: Version of py7zr to use in case of issues
-    default: ==1.0.*
+    default: ==1.1.0  # was "==1.1.*"
+    # Use an older version as a workaround for Bad7zFile on Windows. Cache invalidation let us find this upstream bug.
   extra:
     description: Any extra arguments to append to the back
   source:
@@ -92,14 +93,59 @@ inputs:
 runs:
   using: "composite"
   steps:
+  - name: Check the existence of built JavaScript action
+    shell: python  # we must have a default Python here.
+    working-directory: ${{ github.action_path }}  # $GITHUB_ACTION_PATH; composite actions only.
+    run: |
+      from pathlib import Path
+
+      if Path('./action/lib/main.js').exists():
+          exit(0)
+
+      message = ' '.join((
+        'This TypeScript action cannot be used before building within Node.js environment.',
+        'Maybe you are currently using non-tagging branches, for example, the "master" branch.',
+        'Only v* branches have built JavaScript action file.',
+        'If you would like to test unreleased changes, please refer to the CI workflows',
+        'in our repository: https://github.com/jurplel/install-qt-action .',
+        'Exiting...',
+      ))
+      print(f'::error title=Action not built::{message}')
+
+      exit(1)
+
+  - name: Check Python version for potential bugs and notify users
+    if: ${{ inputs.setup-python  != 'true' }}
+    shell: python  # we must have a default Python here.
+    run: |
+      import platform
+      import sys
+
+      if (3, 14, ) <= (sys.version_info.major, sys.version_info.minor, ):
+          exit(0)
+
+      message = ' '.join((
+        f'The current running Python version {platform.python_version()} is older than 3.14.',
+        'It works fine with aqtinstall in most cases, but may have bugs with file type detection.',
+        'If you are experiencing errors related to "zipfile.BadZipFile", please upgrade Python.',
+        'For details, please see upstream report:',
+        'https://github.com/miurahr/aqtinstall/issues/1042',
+      ))
+      print(f'::notice title=Old Python detected::{message}')
+
   - name: Setup Python
     if: ${{ inputs.setup-python  == 'true' }}
-    uses: actions/setup-python@v6
+    uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
     with:
-      python-version: '>=3.9.0 <=3.13.3'
+      python-version: '>=3.14.0'
 
   - name: Setup and run aqtinstall
-    uses: jurplel/install-qt-action/action@v4
+    # The dollar sign:
+    # - Reference same-repository actions with self-repository syntax - GitHub Changelog
+    #   https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/
+    # To run tests in this repository, we need to replace "$/action" with "./action"
+    # because a "lib/main.js" file is expected, but we don't have one in non-tagging branches.
+    uses: $/action
     with:
       dir: ${{ inputs.dir }}
       version: ${{ inputs.version }}
