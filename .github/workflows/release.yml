@@ -50,7 +50,7 @@ env:
 
 jobs:
   release:
-    name: Release ${{ inputs.version }}
+    name: Release (${{ inputs.version }}, ${{ inputs.use_pat }})
     permissions:
       contents: write
     runs-on: ubuntu-26.04
