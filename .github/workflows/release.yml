@@ -21,6 +21,25 @@ on:
           Existing "vX" branches will be updated; missing "vX" branches will be created.
         required: true
         type: string
+      use_pat:
+        # "PAT" stands for "Personal Access Tokens". To bypass branches/tags protection,
+        # only perm "Contents: write" is enough.
+        # Don't forget to add "Write (Roles)" into the "Bypass list" of corresponding rulesets.
+        # Adding "Write (Roles)" will essentially disable the safety net in response to human's
+        # error, so it's recommended to remove the bypass item after a successful release ASAP.
+        # It's also recommended to invalidate the PAT after creating a successful release.
+        #
+        # "secrets.GITHUB_TOKEN" can be used here if no protection rule applied. Read:
+        # - [Feature Request] Allow github actions to bypass branch protection rules in certain specific circumstances
+        #   https://github.com/orgs/community/discussions/13836
+        description: |
+          Use configured secret "IQTA_RELEASE_PAT" instead of built-in "GITHUB_TOKEN" to update
+          branches and tags.
+          The repository may have branch protection rules (branch ruleset), so a PAT that can
+          bypass corresponding protection is required.
+          Check comments in the workflow file for details.
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -202,21 +221,21 @@ jobs:
           TAG: ${{ steps.info.outputs.tag }}
           TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
 
-          # "PAT" stands for "Personal Access Tokens". To bypass branches/tags protection,
-          # only perm "Contents: write" is enough.
-          # Don't forget to add "Write (Roles)" into the "Bypass list" of corresponding rulesets.
-          # Adding "Write (Roles)" will essentially disable the safety net in response to human's
-          # error, so it's recommended to remove the bypass item after a successful release ASAP.
-          # "secrets.GITHUB_TOKEN" can be used here if no protection rule applied. Read:
-          # - [Feature Request] Allow github actions to bypass branch protection rules in certain specific circumstances
-          #   https://github.com/orgs/community/discussions/13836
-          GH_TOKEN: ${{ secrets.IQTA_RELEASE_PAT }}
+          USE_PAT: ${{ inputs.use_pat }}
+          PAT: ${{ secrets.IQTA_RELEASE_PAT }}
+          BUILTIN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
           GH_REPO: ${{ github.repository }}
         run: |
           set -eu  # no "set -x", otherwise not safe for tokens.
 
-          git push --atomic "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
+          if [[ "$USE_PAT" == 'true' ]]; then
+            token="$PAT"
+          else
+            token="$BUILTIN_TOKEN"
+          fi
+
+          git push --atomic "https://x-access-token:${token}@github.com/${GH_REPO}.git" \
             "HEAD:$TARGET_BRANCH" \
             "refs/tags/$TAG"
 
