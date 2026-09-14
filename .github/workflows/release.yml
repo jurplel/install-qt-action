@@ -21,6 +21,25 @@ on:
           Existing "vX" branches will be updated; missing "vX" branches will be created.
         required: true
         type: string
+      use_pat:
+        # "PAT" stands for "Personal Access Tokens". To bypass branches/tags protection,
+        # only perm "Contents: write" is enough.
+        # Don't forget to add "Write (Roles)" into the "Bypass list" of corresponding rulesets.
+        # Adding "Write (Roles)" will essentially disable the safety net in response to human's
+        # error, so it's recommended to remove the bypass item after a successful release ASAP.
+        # It's also recommended to invalidate the PAT after creating a successful release.
+        #
+        # "secrets.GITHUB_TOKEN" can be used here if no protection rule applied. Read:
+        # - [Feature Request] Allow github actions to bypass branch protection rules in certain specific circumstances
+        #   https://github.com/orgs/community/discussions/13836
+        description: |
+          Use configured secret "IQTA_RELEASE_PAT" instead of built-in "GITHUB_TOKEN" to update
+          branches and tags.
+          The repository may have branch protection rules (branch ruleset), so a PAT that can
+          bypass corresponding protection is required.
+          Check comments in the workflow file for details.
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -97,9 +116,26 @@ jobs:
             echo "existing=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Refuse release if '${{ env.SOURCE_BRANCH }}' is already merged into '${{ steps.info.outputs.target_branch }}'
+        if: ${{ steps.check_target_branch.outputs.existing == 'true' }}
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
+          TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
+        run: |
+          set -eux
+
+          if git merge-base \
+              --is-ancestor \
+              "origin/$SOURCE_BRANCH" \
+              "origin/$TARGET_BRANCH"; then
+            echo "No new commits from $SOURCE_BRANCH to release into $TARGET_BRANCH."
+            exit 1
+          fi
+
       # Merge all commits from the source branch since the previous merge point.
       # The source branch itself remains untouched.
-      - name: Merge branch '${{ env.SOURCE_BRANCH }}' if branch '${{ steps.info.outputs.target_branch }}' exists
+      - name: Start merging branch '${{ env.SOURCE_BRANCH }}' if branch '${{ steps.info.outputs.target_branch }}' exists
         if: ${{ steps.check_target_branch.outputs.existing == 'true' }}
         shell: bash
         env:
@@ -111,20 +147,22 @@ jobs:
 
           git switch -c "$TARGET_BRANCH" --track "origin/$TARGET_BRANCH"
 
-          # Record the current commit hash.
-          existing_commit="$(git rev-parse HEAD)"
+          # Preserve continuous history by starting a merge commit.
+          # The "ours" strategy guarantees that this merge has no content conflicts.
+          git merge \
+            --no-commit \
+            --no-ff \
+            --strategy 'ours' \
+            -m "Build $TAG after merging branch '$SOURCE_BRANCH' into $TARGET_BRANCH" \
+            "origin/$SOURCE_BRANCH"
 
-          git merge --no-ff "origin/$SOURCE_BRANCH" -m "Merge branch '$SOURCE_BRANCH' into $TARGET_BRANCH for $TAG"
+          # Empty the working tree.
+          git rm -r .
+          git clean -xfd
 
-          # The git-merge exits with "Already up to date." and code 0, so we have to check it manually.
-          # This should not happen if this workflow is already in the source branch and it is triggered
-          # at the source branch. Since we're using "workflow_dispatch", you may need to read:
-          # - Provide clarity in documentation on "Use workflow from" Dropdown when running Manual Workflow
-          #   https://github.com/orgs/community/discussions/112371
-          if [[ "$existing_commit" == "$(git rev-parse HEAD)" ]]; then
-            echo "Source branch $SOURCE_BRANCH has not been updated since the last commit on branch $TARGET_BRANCH."
-            exit 1
-          fi
+          # Sync with the "SOURCE_BRANCH" branch.
+          git checkout "origin/$SOURCE_BRANCH" -- .
+          git add .
 
       - name: Create branch '${{ steps.info.outputs.target_branch }}' for new major versions
         if: ${{ steps.check_target_branch.outputs.existing == 'false' }}
@@ -142,21 +180,14 @@ jobs:
         with:
           node-version: 24
 
-      - name: Remove old Node.js files, recreate new ones, and commit them if they are changed
+      - name: Recreate Node.js files and finalize the merge commit
         shell: bash
         env:
-          DIST_EXISTING: ${{ steps.check_target_branch.outputs.existing }}
           TAG: ${{ steps.info.outputs.tag }}
         run: |
           set -eux
 
           cd action
-
-          # Let it crash if files to be deleted do not exist.
-          if [[ "$DIST_EXISTING" == 'true' ]]; then
-            rm ./lib/main.js
-            rm -r ./node_modules
-          fi
 
           npm ci
           npm run build
@@ -176,9 +207,8 @@ jobs:
             exit 1
           fi
 
-          if ! git diff --cached --exit-code --quiet; then
-            git commit -m "Build $TAG"
-          fi
+          # Finalize the pending merge.
+          git commit --no-edit --date=now
 
           git tag "$TAG"
 
@@ -191,21 +221,21 @@ jobs:
           TAG: ${{ steps.info.outputs.tag }}
           TARGET_BRANCH: ${{ steps.info.outputs.target_branch }}
 
-          # "PAT" stands for "Personal Access Tokens". To bypass branches/tags protection,
-          # only perm "Contents: write" is enough.
-          # Don't forget to add "Write (Roles)" into the "Bypass list" of corresponding rulesets.
-          # Adding "Write (Roles)" will essentially disable the safety net in response to human's
-          # error, so it's recommended to remove the bypass item after a successful release ASAP.
-          # "secrets.GITHUB_TOKEN" can be used here if no protection rule applied. Read:
-          # - [Feature Request] Allow github actions to bypass branch protection rules in certain specific circumstances
-          #   https://github.com/orgs/community/discussions/13836
-          GH_TOKEN: ${{ secrets.IQTA_RELEASE_PAT }}
+          USE_PAT: ${{ inputs.use_pat }}
+          PAT: ${{ secrets.IQTA_RELEASE_PAT }}
+          BUILTIN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
           GH_REPO: ${{ github.repository }}
         run: |
           set -eu  # no "set -x", otherwise not safe for tokens.
 
-          git push --atomic "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
+          if [[ "$USE_PAT" == 'true' ]]; then
+            token="$PAT"
+          else
+            token="$BUILTIN_TOKEN"
+          fi
+
+          git push --atomic "https://x-access-token:${token}@github.com/${GH_REPO}.git" \
             "HEAD:$TARGET_BRANCH" \
             "refs/tags/$TAG"
 
