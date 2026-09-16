@@ -40,15 +40,40 @@ jobs:
           - macos-26-intel
         qt:
           - version: "5.15.2"
+            requested: "5.15.2"
             ndk-version: r21e
             modules:
             example-archives: qtbase qtsensors
             example-modules:
+            example-project: accelbubble
           - version: "6.3.2"
+            requested: "6.3.2"
             ndk-version: r21e
             modules: qtsensors
             example-archives: qtbase
             example-modules:  qtsensors
+            example-project: accelbubble
+          # https://doc.qt.io/archives/qt-6.7/supported-platforms.html
+          # https://wiki.qt.io/Qt_6.7_Release
+          - version: "6.7.3"
+            requested: ">=6.7.*,<6.8.0"
+            ndk-version: r26b
+            modules: qtsensors
+            example-archives: qtbase
+            example-modules:  qtsensors
+            example-project: sensorsshowcase  # since Qt 6.5
+          # https://doc.qt.io/qt-6.10/supported-platforms.html
+          # https://wiki.qt.io/Qt_6.10_Release
+          - version: "6.10.3"
+            requested: "<6.11.0"
+            ndk-version: r27c
+            modules: qtsensors
+            example-archives: qtbase
+            example-modules:  qtsensors
+            example-project: sensorsshowcase  # since Qt 6.5
+          # Installing Qt 6.11 on Windows is broken till aqtinstall v3.3.0 (the latest version so far)
+          # - version: "6.11.2"
+          #   ...
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -81,7 +106,7 @@ jobs:
         with:
           target: android
           modules: ${{ matrix.qt.modules }}
-          version: ${{ matrix.qt.version }}
+          version: ${{ matrix.qt.requested }}
           examples: true
           example-archives: ${{ matrix.qt.example-archives }}
           example-modules:  ${{ matrix.qt.example-modules }}
@@ -107,16 +132,16 @@ jobs:
         # Links to NDK are at https://github.com/android/ndk/wiki/Unsupported-Downloads
         run: |
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
-            export TARGET_ARCH="linux"
+            TARGET_ARCH="linux"
           elif [[ "${RUNNER_OS}" == "Windows" ]]; then
-            export TARGET_ARCH="windows"
+            TARGET_ARCH="windows"
           else
-            export TARGET_ARCH="darwin"
+            TARGET_ARCH="darwin"
           fi
-          export NDK_VER_NUM=$(echo ${{ matrix.qt.ndk-version }} | sed -e 's/r(\d+).*/$1/g')
-          # If it's less than 23, append -x86_64
+          NDK_VER_NUM=$(echo ${{ matrix.qt.ndk-version }} | sed -E -e 's/r([0-9]+).*/\1/g')
+          # If it's older than 23, append -x86_64
           if (( "${NDK_VER_NUM}" < 23 )); then
-            export TARGET_ARCH="${TARGET_ARCH}-x86_64"
+            TARGET_ARCH="${TARGET_ARCH}-x86_64"
           fi;
           curl -O "https://dl.google.com/android/repository/android-ndk-${{ matrix.qt.ndk-version }}-${TARGET_ARCH}.zip"
           unzip "android-ndk-${{ matrix.qt.ndk-version }}-${TARGET_ARCH}.zip"
@@ -124,9 +149,10 @@ jobs:
       - name: Build test project
         env:
           QT_VERSION: ${{ matrix.qt.version }}
+          EXAMPLE_PROJECT: ${{ matrix.qt.example-project }}
         run: |
           export ANDROID_NDK_ROOT=$(pwd)/android-ndk-${{ matrix.qt.ndk-version }}
-          cd ../Qt/Examples/Qt-${{ matrix.qt.version }}/sensors/accelbubble
+          cd ../Qt/Examples/Qt-${QT_VERSION}/sensors/${EXAMPLE_PROJECT}
           qmake || qmake.bat
           make
         shell: bash
