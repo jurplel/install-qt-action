@@ -62,10 +62,24 @@ const execPython = async (command: string, args: readonly string[]): Promise<num
   return exec(pythonCommand(command, args));
 };
 
+/** Both stdout and stderr will be printed in console. */
 const getPythonOutput = async (command: string, args: readonly string[]): Promise<string> => {
   // Aqtinstall prints to both stderr and stdout, depending on the command.
   // This function assumes we don't care which is which, and we want to see it all.
   const out = await getExecOutput(pythonCommand(command, args));
+  return out.stdout + out.stderr;
+};
+
+/**
+ * Returns Python or aqtinstall output even when the command exits with a non-zero code.
+ * Both stdout and stderr will be printed in console.
+ */
+const tryGetPythonOutput = async (command: string, args: readonly string[]): Promise<string> => {
+  // Aqtinstall prints to both stderr and stdout, depending on the command.
+  // This function assumes we don't care which is which, and we want to see it all.
+  const out = await getExecOutput(pythonCommand(command, args), undefined, {
+    ignoreReturnCode: true,
+  });
   return out.stdout + out.stderr;
 };
 
@@ -105,10 +119,15 @@ const locateQtArchDir = (installDir: string, host: string): [string, boolean] =>
   }
 };
 
-const isAutodesktopSupported = async (): Promise<boolean> => {
+const aqtinstallVersion = async (): Promise<string | null> => {
   const rawOutput = await getPythonOutput("aqt", ["version"]);
   const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
-  return match ? compareVersions(match[1], ">=", "3.0.0") : false;
+  return match?.at(1) ?? null;
+};
+
+const isAutodesktopSupported = async (): Promise<boolean> => {
+  const version = await aqtinstallVersion();
+  return version ? compareVersions(version, ">=", "3.0.0") : false;
 };
 
 type Inputs = {
@@ -161,9 +180,9 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     host: string,
     target: string,
     version: string
-  ): Promise<string> => {
-    core.info(`Resolving Qt version ${version}...`);
-    const rawOutput = await getPythonOutput("aqt", [
+  ): Promise<string | null> => {
+    core.info(`Resolving Qt version "${version}" with host "${host}" and target "${target}"...`);
+    const rawOutput = await tryGetPythonOutput("aqt", [
       "list-qt",
       host,
       target,
@@ -172,10 +191,7 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
       "--latest-version",
     ]);
     const match = rawOutput.trim().match(/^\d+\.\d+\.\d+$/);
-    if (!match) {
-      throw Error(`No available Qt version found by specified inputs. Output:\n${rawOutput}`);
-    }
-    return match[0];
+    return match?.[0] ?? null;
   };
 
   // The order of properties should match the "inputs" definition in
@@ -227,39 +243,6 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     }
   }
 
-  const host = ((): "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os" => {
-    // Set host automatically if omitted
-    if (!rawInputs.host) {
-      switch (process.platform) {
-        case "win32": {
-          return process.arch === "arm64" ? "windows_arm64" : "windows";
-        }
-        case "darwin": {
-          return "mac";
-        }
-        default: {
-          return process.arch === "arm64" ? "linux_arm64" : "linux";
-        }
-      }
-    } else {
-      // Make sure host is one of the allowed values
-      if (
-        rawInputs.host === "windows" ||
-        rawInputs.host === "windows_arm64" ||
-        rawInputs.host === "mac" ||
-        rawInputs.host === "linux" ||
-        rawInputs.host === "linux_arm64" ||
-        rawInputs.host === "all_os"
-      ) {
-        return rawInputs.host;
-      } else {
-        throw TypeError(
-          `host: "${rawInputs.host}" is not one of "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os"`
-        );
-      }
-    }
-  })();
-
   const target = ((): "android" | "desktop" | "ios" | "wasm" => {
     // Make sure target is one of the allowed values
     if (
@@ -276,10 +259,72 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     }
   })();
 
+  const { host, version: requestedQtVersion } = await (async (): Promise<{
+    host: "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os";
+    version: string | null;
+  }> => {
+    // Set host automatically if omitted
+    if (!rawInputs.host) {
+      // No "all_os".
+      const platformHost = ((): "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" => {
+        switch (process.platform) {
+          case "win32": {
+            return process.arch === "arm64" ? "windows_arm64" : "windows";
+          }
+          case "darwin": {
+            return "mac";
+          }
+          default: {
+            return process.arch === "arm64" ? "linux_arm64" : "linux";
+          }
+        }
+      })();
+
+      const aqtVersion = await aqtinstallVersion();
+
+      if (
+        /* Neither Android nor WASM */
+        !["android", "wasm"].includes(target) ||
+        /* Unsupported or unrecognizable aqt */
+        (aqtVersion ? compareVersions(aqtVersion, "<", "3.2.0") : true)
+      ) {
+        return { host: platformHost, version: null };
+      }
+
+      // Try the new "all_os".
+      // See comments below for the reason of calling "fetchRequestedQtVersion()".
+      const version = await fetchRequestedQtVersion("all_os", target, rawInputs.version);
+      if (version) {
+        return { host: "all_os", version };
+      }
+      return { host: platformHost, version: null };
+    } else {
+      // Make sure host is one of the allowed values
+      if (
+        rawInputs.host === "windows" ||
+        rawInputs.host === "windows_arm64" ||
+        rawInputs.host === "mac" ||
+        rawInputs.host === "linux" ||
+        rawInputs.host === "linux_arm64" ||
+        rawInputs.host === "all_os"
+      ) {
+        return { host: rawInputs.host, version: null };
+      } else {
+        throw TypeError(
+          `host: "${rawInputs.host}" is not one of "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os"`
+        );
+      }
+    }
+  })();
+
   // The aqtinstall supports SimpleSpec (semver). To make all "compareVersions()" happy,
   // we have to fetch the requested Qt version here and always use that version in all
   // subsequent work, for example, generating cache key.
-  const version = await fetchRequestedQtVersion(host, target, rawInputs.version);
+  const version =
+    requestedQtVersion ?? (await fetchRequestedQtVersion(host, target, rawInputs.version));
+  if (!version) {
+    throw Error("No available Qt version found by specified inputs.");
+  }
 
   const arch = ((): string => {
     // Set arch automatically if omitted.
