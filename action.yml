@@ -94,30 +94,40 @@ runs:
   using: "composite"
   steps:
   - name: Check the existence of built JavaScript action
-    shell: python  # we must have a default Python here.
+    shell: bash
     working-directory: ${{ github.action_path }}  # $GITHUB_ACTION_PATH; composite actions only.
     run: |
-      from pathlib import Path
+      if [[ -f './action/lib/main.js' ]]; then
+        exit 0
+      fi
 
-      if Path('./action/lib/main.js').exists():
-          exit(0)
+      # Workflow commands must be in one line.
+      printf '%s' \
+        '::error title=Action not built::' \
+        'This TypeScript action cannot be used before building within Node.js environment. ' \
+        'Maybe you are currently using non-tagging branches, for example, the "master" branch. ' \
+        'Only v* branches have built JavaScript action file. ' \
+        'If you would like to test unreleased changes, please refer to the CI workflows ' \
+        'in our repository: https://github.com/jurplel/install-qt-action . ' \
+        'Exiting... '
 
-      message = ' '.join((
-        'This TypeScript action cannot be used before building within Node.js environment.',
-        'Maybe you are currently using non-tagging branches, for example, the "master" branch.',
-        'Only v* branches have built JavaScript action file.',
-        'If you would like to test unreleased changes, please refer to the CI workflows',
-        'in our repository: https://github.com/jurplel/install-qt-action .',
-        'Exiting...',
-      ))
-      print(f'::error title=Action not built::{message}')
-
-      exit(1)
+      exit 1
 
   - name: Check Python version for potential bugs and notify users
     if: ${{ inputs.setup-python  != 'true' }}
-    shell: python  # we must have a default Python here.
+    shell: bash
     run: |
+      if command -v python >/dev/null 2>&1; then
+        PYTHON='python'
+      elif command -v python3 >/dev/null 2>&1; then
+        PYTHON='python3'
+      else
+        echo '::error title=Python not found::Neither "python" nor "python3" found in system.'
+        exit 1
+      fi
+
+      exec "$PYTHON" - <<'EOF'
+
       import platform
       import sys
 
@@ -132,6 +142,8 @@ runs:
         'https://github.com/miurahr/aqtinstall/issues/1042',
       ))
       print(f'::notice title=Old Python detected::{message}')
+
+      EOF
 
   - name: Setup Python
     if: ${{ inputs.setup-python  == 'true' }}
