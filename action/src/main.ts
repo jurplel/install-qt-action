@@ -62,25 +62,44 @@ const execPython = async (command: string, args: readonly string[]): Promise<num
   return exec(pythonCommand(command, args));
 };
 
-/** Both stdout and stderr will be printed in console. */
-const getPythonOutput = async (command: string, args: readonly string[]): Promise<string> => {
-  // Aqtinstall prints to both stderr and stdout, depending on the command.
-  // This function assumes we don't care which is which, and we want to see it all.
+/**
+ * Both stdout and stderr will be printed in console.
+ * Non-zero exit code results in crash.
+ */
+const getPythonOutput = async (
+  command: string,
+  args: readonly string[]
+): Promise<{
+  stdout: string;
+  stderr: string;
+}> => {
   const out = await getExecOutput(pythonCommand(command, args));
-  return out.stdout + out.stderr;
+  return {
+    stdout: out.stdout,
+    stderr: out.stderr,
+  };
 };
 
 /**
- * Returns Python or aqtinstall output even when the command exits with a non-zero code.
+ * Returns result of Python or aqtinstall run even when the command exits with a non-zero code.
  * Both stdout and stderr will be printed in console.
  */
-const tryGetPythonOutput = async (command: string, args: readonly string[]): Promise<string> => {
-  // Aqtinstall prints to both stderr and stdout, depending on the command.
-  // This function assumes we don't care which is which, and we want to see it all.
+const tryRunPython = async (
+  command: string,
+  args: readonly string[]
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}> => {
   const out = await getExecOutput(pythonCommand(command, args), undefined, {
     ignoreReturnCode: true,
   });
-  return out.stdout + out.stderr;
+  return {
+    exitCode: out.exitCode,
+    stdout: out.stdout,
+    stderr: out.stderr,
+  };
 };
 
 const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
@@ -120,8 +139,11 @@ const locateQtArchDir = (installDir: string, host: string): [string, boolean] =>
 };
 
 const aqtinstallVersion = async (): Promise<string | null> => {
-  const rawOutput = await getPythonOutput("aqt", ["version"]);
-  const match = rawOutput.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
+  const output = await getPythonOutput("aqt", ["version"]);
+  // "aqtinstall" has printed the version number to STDERR since v1.2.0,
+  // which introduced the "version" command.
+  // This can also matches development version such as "aqtinstall(aqt) v1.2.0.dev1".
+  const match = output.stderr.match(/aqtinstall\(aqt\)\s+v(\d+\.\d+\.\d+)/);
   return match?.at(1) ?? null;
 };
 
@@ -182,7 +204,7 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     version: string
   ): Promise<string | null> => {
     core.info(`Resolving Qt version "${version}" with host "${host}" and target "${target}"...`);
-    const rawOutput = await tryGetPythonOutput("aqt", [
+    const result = await tryRunPython("aqt", [
       "list-qt",
       host,
       target,
@@ -190,7 +212,7 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
       version,
       "--latest-version",
     ]);
-    const match = rawOutput.trim().match(/^\d+\.\d+\.\d+$/);
+    const match = result.stdout.trim().match(/^\d+\.\d+\.\d+$/);
     return match?.[0] ?? null;
   };
 
