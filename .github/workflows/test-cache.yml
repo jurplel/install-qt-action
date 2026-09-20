@@ -102,7 +102,7 @@ jobs:
       # - Qt is commercial-only LTS, so we open-source license holders can safely test "6.8.3", the latest patch release.
       #
       # - Version specifications (the Spec class) § Reference — python-semanticversion latest documentation
-      #   https://python-semanticversion.readthedocs.io/en/latest/reference.html#version-specifications-the-spec-class
+      #   https://python-semanticversion.readthedocs.io/en/latest/reference.html#semantic_version.SimpleSpec
       #
       # There is no output from this action about hitting or missing cache, though.
       #
