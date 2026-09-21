@@ -37,13 +37,12 @@ jobs:
           cache: npm
           cache-dependency-path: action/
 
-      - run: |
-          cd action
-          npm ci || npm install
-        shell: bash
+      - name: Lint code
+        run: |
+          set -ex
 
-      - run: |
           cd action
+          npm ci
           npm run lint
 
   test:
@@ -149,14 +148,14 @@ jobs:
           cache: npm
           cache-dependency-path: action/
 
-      - run: |
-          cd action
-          npm ci || npm install
-        shell: bash
+      - name: Build action
+        run: |
+          set -ex
 
-      - run: |
           cd action
+          npm ci
           npm run build
+        shell: bash
 
       # See the root "action.yml" file.
       - name: Use local built internal action (hack)
