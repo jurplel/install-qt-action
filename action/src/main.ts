@@ -203,15 +203,11 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     target: string,
     version: string
   ): Promise<string | null> => {
-    core.info(`Resolving Qt version "${version}" with host "${host}" and target "${target}"...`);
-    const result = await tryRunPython("aqt", [
-      "list-qt",
-      host,
-      target,
-      "--spec",
-      version,
-      "--latest-version",
-    ]);
+    const result = await core.group(
+      `Resolve available Qt version "${version}" with host "${host}" and target "${target}"`,
+      async () =>
+        tryRunPython("aqt", ["list-qt", host, target, "--spec", version, "--latest-version"])
+    );
     const match = result.stdout.trim().match(/^\d+\.\d+\.\d+$/);
     return match?.[0] ?? null;
   };
@@ -253,7 +249,7 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
 
   // The "version" property will be populated per remote data fetched by aqt,
   // so installing aqt and related packages is required here.
-  {
+  await core.group("Install Python dependencies", async () => {
     // Install dependencies via pip
     await execPython("pip install", ["setuptools>=70.1.0", `"py7zr${rawInputs.py7zrVersion}"`]);
 
@@ -263,7 +259,7 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     } else {
       await execPython("pip install", [`"aqtinstall${rawInputs.aqtVersion}"`]);
     }
-  }
+  });
 
   const target = ((): "android" | "desktop" | "ios" | "wasm" => {
     // Make sure target is one of the allowed values
@@ -531,26 +527,31 @@ const run = async (): Promise<void> => {
 
       const updateCommand = "apt-get update";
       const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
-      if (inputs.installDeps === "nosudo") {
-        await exec(updateCommand);
-        await exec(installCommand);
-      } else {
-        await exec(`sudo ${updateCommand}`);
-        await exec(`sudo ${installCommand}`);
-      }
+      await core.group("Install Linux system dependencies", async () => {
+        if (inputs.installDeps === "nosudo") {
+          await exec(updateCommand);
+          await exec(installCommand);
+        } else {
+          await exec(`sudo ${updateCommand}`);
+          await exec(`sudo ${installCommand}`);
+        }
+      });
     }
   }
 
   // Restore internal cache
   let internalCacheHit = false;
   if (inputs.cache) {
-    const cacheHitKey = await cache.restoreCache([inputs.dir], cacheKey);
-    if (cacheHitKey) {
-      core.info(`Automatic cache hit with key "${cacheHitKey}"`);
-      internalCacheHit = true;
-    } else {
-      core.info("Automatic cache miss, will cache this run");
-    }
+    internalCacheHit = await core.group("Check and restore cache", async () => {
+      const cacheHitKey = await cache.restoreCache([inputs.dir], cacheKey);
+      if (cacheHitKey) {
+        core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+        return true;
+      } else {
+        core.info("Automatic cache miss, will cache this run");
+        return false;
+      }
+    });
   }
 
   // Install Qt and tools if not cached
@@ -573,7 +574,9 @@ const run = async (): Promise<void> => {
           ...flaggedList("--modules", inputs.modules),
           ...inputs.extra,
         ];
-        await execPython("aqt", qtArgs);
+        await core.group("Install Qt via the official installer", async () =>
+          execPython("aqt", qtArgs)
+        );
       } else {
         const qtArgs = [
           "install-qt",
@@ -587,7 +590,7 @@ const run = async (): Promise<void> => {
           ...flaggedList("--archives", inputs.archives),
           ...inputs.extra,
         ];
-        await execPython("aqt", qtArgs);
+        await core.group("Install Qt", async () => execPython("aqt", qtArgs));
       }
     }
 
@@ -596,6 +599,11 @@ const run = async (): Promise<void> => {
       archives: readonly string[],
       modules: readonly string[]
     ): Promise<void> => {
+      const fullnames: Record<typeof flavor, string> = {
+        src: "source",
+        doc: "documentation",
+        example: "examples",
+      };
       const qtArgs = [
         inputs.host,
         // Aqtinstall < 2.0.4 requires `inputs.target` here, but that's deprecated
@@ -605,7 +613,9 @@ const run = async (): Promise<void> => {
         ...flaggedList("--modules", modules),
         ...inputs.extra,
       ];
-      await execPython(`aqt install-${flavor}`, qtArgs);
+      await core.group(`Install ${fullnames[flavor]}`, async () =>
+        execPython(`aqt install-${flavor}`, qtArgs)
+      );
     };
 
     // Install source, docs, & examples
@@ -624,14 +634,18 @@ const run = async (): Promise<void> => {
       const toolArgs = [inputs.host, inputs.target, tool];
       toolArgs.push("--outputdir", inputs.dir);
       toolArgs.push(...inputs.extra);
-      await execPython("aqt install-tool", toolArgs);
+      await core.group(`Install tool "${tool}"`, async () =>
+        execPython("aqt install-tool", toolArgs)
+      );
     }
   }
 
   // Save automatic cache
   if (!internalCacheHit && inputs.cache) {
-    const cacheId = await cache.saveCache([inputs.dir], cacheKey);
-    core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
+    await core.group("Save cache", async () => {
+      const cacheId = await cache.saveCache([inputs.dir], cacheKey);
+      core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
+    });
   }
 
   // Add tools to path
