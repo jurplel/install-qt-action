@@ -345,32 +345,62 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
   }
 
   const arch = ((): string => {
+    if (rawInputs.arch) {
+      return rawInputs.arch;
+    }
+
     // Set arch automatically if omitted.
     // Don't forget to update docs when new default arch is being added.
-    if (!rawInputs.arch) {
-      if (target === "android") {
-        if (compareVersions(version, ">=", "5.14.0") && compareVersions(version, "<", "6.0.0")) {
-          return "android";
-        } else {
-          return "android_armv7";
-        }
-      } else if (host === "windows") {
-        if (compareVersions(version, ">=", "6.8.0")) {
-          return "win64_msvc2022_64";
-        } else if (compareVersions(version, ">=", "5.15.0")) {
-          return "win64_msvc2019_64";
-        } else if (compareVersions(version, "<", "5.6.0")) {
-          return "win64_msvc2013_64";
-        } else if (compareVersions(version, "<", "5.9.0")) {
-          return "win64_msvc2015_64";
-        } else {
-          return "win64_msvc2017_64";
-        }
-      } else if (host === "windows_arm64") {
-        return "win64_msvc2022_arm64";
+    //
+    // This block should provide at least the same functionality as aqtinstall.
+    // We've added more branches to provide more default values based on v3.3.0:
+    // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/installer.py#L246-L273
+    //   https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/tests/test_cli.py#L131-L160
+    // Our downstream patches will be marked with comments.
+    if (host === "linux" && target === "desktop") {
+      if (compareVersions(version, ">=", "6.7.0")) {
+        return "linux_gcc_64";
+      } else {
+        return "gcc_64";
+      }
+    } else if (host === "linux_arm64" && target === "desktop") {
+      return "linux_gcc_arm64";
+    } else if (host === "mac" && target === "desktop") {
+      return "clang_64";
+    } else if (host === "mac" && target === "ios") {
+      return "ios";
+    } else if (target === "android") {
+      if (
+        compareVersions(version, ">=", "5.14.0") &&
+        /* ADD */ compareVersions(version, "<", "6.0.0")
+      ) {
+        return "android";
+      } else {
+        /* ADD */ return "android_armv7";
+      }
+    } else if (host === "windows_arm64" && target === "desktop") {
+      /* FIX */ return "win64_msvc2022_arm64";
+    }
+    // ADD begin
+    else if (host === "windows") {
+      if (compareVersions(version, ">=", "6.8.0")) {
+        return "win64_msvc2022_64";
+      } else if (compareVersions(version, ">=", "5.15.0")) {
+        return "win64_msvc2019_64";
+      } else if (compareVersions(version, "<", "5.6.0")) {
+        return "win64_msvc2013_64";
+      } else if (compareVersions(version, "<", "5.9.0")) {
+        return "win64_msvc2015_64";
+      } else {
+        return "win64_msvc2017_64";
       }
     }
-    return rawInputs.arch;
+    // ADD end
+
+    throw new Error(
+      `Unable to provide an "arch" based on inputs, please specify one. 
+        Feel free to open issues to ask if you are uncertain of the proper value.`
+    );
   })();
 
   const inputs = {
