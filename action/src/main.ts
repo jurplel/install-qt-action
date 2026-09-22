@@ -596,7 +596,7 @@ const run = async (): Promise<void> => {
         const qtArgs = [
           "install-qt-official",
           inputs.target,
-          ...(inputs.arch ? [inputs.arch] : []),
+          inputs.arch,
           inputs.version,
           ...["--outputdir", inputs.dir],
           ...["--email", inputs.email],
@@ -613,7 +613,7 @@ const run = async (): Promise<void> => {
           inputs.host,
           inputs.target,
           inputs.version,
-          ...(inputs.arch ? [inputs.arch] : []),
+          inputs.arch,
           ...autodesktop,
           ...["--outputdir", inputs.dir],
           ...flaggedList("--modules", inputs.modules),
