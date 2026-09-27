@@ -387,12 +387,12 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
         return "win64_msvc2022_64";
       } else if (compareVersions(version, ">=", "5.15.0")) {
         return "win64_msvc2019_64";
-      } else if (compareVersions(version, "<", "5.6.0")) {
-        return "win64_msvc2013_64";
-      } else if (compareVersions(version, "<", "5.9.0")) {
+      } else if (compareVersions(version, ">=", "5.9.0")) {
+        return "win64_msvc2017_64";
+      } else if (compareVersions(version, ">=", "5.6.0")) {
         return "win64_msvc2015_64";
       } else {
-        return "win64_msvc2017_64";
+        return "win64_msvc2013_64";
       }
     }
     // ADD end
