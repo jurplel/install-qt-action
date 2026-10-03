@@ -59,22 +59,22 @@ This is the target architecture that your program will be built for.
 You can find a full list of architectures easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
 Default: A popular and reasonable choice calculated from the host (`host`), Qt version (`version`), and target (`target`):
-- Linux <i>x64</i> host & <i>Desktop</i> target
-  - Qt <kbd>>=6.7</kbd>: `linux_gcc_64`
-  - Qt <kbd><6.7</kbd>: `gcc_64`
-- Linux <i>ARM64</i> host & <i>Desktop</i> target: `linux_gcc_arm64`
-- <i>macOS</i> host & <i>Desktop</i> target: `clang_64`
-- <i>macOS</i> host & <i>iOS</i> target: `ios`
-- <i>Android</i> target
-  - Qt <kbd>>=6.0</kbd>: `android_armv7`
-  - Qt <kbd>>=5.14,<6.0</kbd>: `android`
-- Windows <i>ARM64</i> host & <i>Desktop</i> target: `win64_msvc2022_arm64`
-- Windows <i>x64</i> host
-  - Qt <kbd>>=6.8</kbd>: `win64_msvc2022_64`
-  - Qt <kbd>>=5.15,<6.8</kbd>: `win64_msvc2019_64`
-  - Qt <kbd>>=5.9,<5.15</kbd>: `win64_msvc2017_64`
-  - Qt <kbd>>=5.6,<5.9</kbd>: `win64_msvc2015_64`
-  - Qt <kbd><5.6</kbd>: `win64_msvc2013_64`
+- Linux x64 Host & Desktop Target
+  - Qt `>=6.7`: `linux_gcc_64`
+  - Qt `<6.7`: `gcc_64`
+- Linux ARM64 Host & Desktop Target: `linux_gcc_arm64`
+- macOS Host & Desktop Target: `clang_64`
+- macOS Host & iOS Target: `ios`
+- Android Target
+  - Qt `>=6.0`: `android`
+  - Qt `>=5.14,<6.0`: `android`
+- Windows ARM64 Host & Desktop Target: `win64_msvc2022_arm64`
+- Windows x64 Host
+  - Qt `>=6.8`: `win64_msvc2022_64`
+  - Qt `>=5.15,<6.8`: `win64_msvc2019_64`
+  - Qt `>=5.9,<5.15`: `win64_msvc2017_64`
+  - Qt `>=5.6,<5.9`: `win64_msvc2015_64`
+  - Qt `<5.6`: `win64_msvc2013_64`
 
 ### `dir`
 This is the directory prefix that Qt will be installed to.
