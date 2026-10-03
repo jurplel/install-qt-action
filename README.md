@@ -66,7 +66,7 @@ Default: A popular and reasonable choice calculated from the host (`host`), Qt v
 - macOS Host & Desktop Target: `clang_64`
 - macOS Host & iOS Target: `ios`
 - Android Target
-  - Qt `>=6.0`: `android`
+  - Qt `>=6.0`: `android_armv7`
   - Qt `>=5.14,<6.0`: `android`
 - Windows ARM64 Host & Desktop Target: `win64_msvc2022_arm64`
 - Windows x64 Host
