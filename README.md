@@ -70,11 +70,11 @@ Default: A popular and reasonable choice calculated from the host (`host`), Qt v
   - Qt <kbd>>=5.14,<6.0</kbd>: `android`
 - Windows <i>ARM64</i> host & <i>Desktop</i> target: `win64_msvc2022_arm64`
 - Windows <i>x64</i> host
-    - Qt <kbd>>=6.8</kbd>: `win64_msvc2022_64`
-    - Qt <kbd>>=5.15,<6.8</kbd>: `win64_msvc2019_64`
-    - Qt <kbd>>=5.9,<5.15</kbd>: `win64_msvc2017_64`
-    - Qt <kbd>>=5.6,<5.9</kbd>: `win64_msvc2015_64`
-    - Qt <kbd><5.6</kbd>: `win64_msvc2013_64`
+  - Qt <kbd>>=6.8</kbd>: `win64_msvc2022_64`
+  - Qt <kbd>>=5.15,<6.8</kbd>: `win64_msvc2019_64`
+  - Qt <kbd>>=5.9,<5.15</kbd>: `win64_msvc2017_64`
+  - Qt <kbd>>=5.6,<5.9</kbd>: `win64_msvc2015_64`
+  - Qt <kbd><5.6</kbd>: `win64_msvc2013_64`
 
 ### `dir`
 This is the directory prefix that Qt will be installed to.
