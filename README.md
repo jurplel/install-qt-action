@@ -61,13 +61,14 @@ You can find a full list of architectures easily by using [this awesome website]
 Default: A popular and reasonable choice calculated from the host (`host`), Qt version (`version`), and target (`target`):
 - Linux x64 Host & Desktop Target
   - Qt `>=6.7`: `linux_gcc_64`
-  - or: `gcc_64`
+  - Qt `<6.7`: `gcc_64`
 - Linux ARM64 Host & Desktop Target: `linux_gcc_arm64`
 - macOS Host & Desktop Target: `clang_64`
 - macOS Host & iOS Target: `ios`
 - Android Target
+  - Qt `>=6.0`: `android_armv7`
   - Qt `>=5.14,<6.0`: `android`
-  - or: `android_armv7`
+  - Qt `<5.14`: `android_armv7`
 - Windows ARM64 Host & Desktop Target: `win64_msvc2022_arm64`
 - Windows x64 Host
   - Qt `>=6.8`: `win64_msvc2022_64`
