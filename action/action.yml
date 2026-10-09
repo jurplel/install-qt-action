@@ -16,7 +16,7 @@ inputs:
     description: Target platform for build
     default: desktop
   arch:
-    description: Architecture for Windows/Android
+    description: Architecture or build variant
   install-deps:
     description: Whether or not to install Qt dependencies on Linux
     default: true
@@ -87,6 +87,15 @@ inputs:
   pw:
     default: ''
     description: Your Qt password
+outputs:
+  host:
+    description: Host platform of the installed Qt
+  target:
+    description: Target platform for build of the installed Qt
+  version:
+    description: Exact version of the installed Qt
+  arch:
+    description: Architecture or build variant of the installed Qt
 runs:
   using: node24
   main: lib/main.js

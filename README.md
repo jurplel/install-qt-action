@@ -50,7 +50,7 @@ Default: `desktop`
 
 
 ### `arch`
-This is the target architecture that your program will be built for.
+This is the target architecture or build variant that your program will be built against.
 
 **Linux x86 packages are not supported by this action.** Qt does not offer pre-built Linux x86 packages. Please consider using your distro's repository or building from source manually.
 
@@ -298,10 +298,27 @@ This input can be used to append arguments to the end of the aqtinstall command 
 
 Example value: `--external 7z`
 
+## Outputs
+
+Some [options](#Options) have default values and may be omitted. The outputs below report the resulting resolved values, including the exact version selected from a SimpleSpec, for use in later workflow steps.
+
+### `host`
+Host platform of the installed Qt.
+
+### `target`
+Target platform for build of the installed Qt.
+
+### `version`
+Exact version of the installed Qt. No SimpleSpec.
+
+### `arch`
+Architecture or build variant of the installed Qt.
+
 ## Example with more arguments
 
 ```yml
     - name: Install Qt
+      id: install-qt
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.8.3'
@@ -324,6 +341,16 @@ Example value: `--external 7z`
         use-official: false
         email: ${{ secrets.QT_EMAIL }}
         pw: ${{ secrets.QT_PW }}
+
+    - name: Check result
+      env:
+        QT_VER:    ${{ steps.install-qt.outputs.version }}
+        QT_TARGET: ${{ steps.install-qt.outputs.target }}
+        QT_ARCH:   ${{ steps.install-qt.outputs.arch }}
+        QT_HOST:   ${{ steps.install-qt.outputs.host }}
+      run: |
+        echo "Qt $QT_VER ($QT_TARGET/$QT_ARCH on $QT_HOST) has been installed in '$QT_ROOT_DIR':"
+        ls "$QT_ROOT_DIR"
 ```
 
 ## More info

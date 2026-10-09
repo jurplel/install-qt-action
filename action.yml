@@ -16,7 +16,7 @@ inputs:
     description: Target platform for build
     default: desktop
   arch:
-    description: Architecture for Windows/Android
+    description: Architecture or build variant
   install-deps:
     description: Whether or not to install Qt dependencies on Linux
     default: true
@@ -90,6 +90,19 @@ inputs:
   pw:
     default: ''
     description: Your Qt password
+outputs:
+  host:
+    description: Host platform of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.host }}
+  target:
+    description: Target platform for build of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.target }}
+  version:
+    description: Exact version of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.version }}
+  arch:
+    description: Architecture or build variant of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.arch }}
 runs:
   using: "composite"
   steps:
@@ -152,6 +165,7 @@ runs:
       python-version: '>=3.14.0'
 
   - name: Setup and run aqtinstall
+    id: aqtinstall
     # The dollar sign:
     # - Reference same-repository actions with self-repository syntax - GitHub Changelog
     #   https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/
