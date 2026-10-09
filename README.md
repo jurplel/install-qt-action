@@ -68,6 +68,7 @@ Default: A popular and reasonable choice calculated from the host (`host`), Qt v
 - Android Target
   - Qt `>=6.0`: `android_armv7`
   - Qt `>=5.14,<6.0`: `android`
+  - Qt `<5.14`: `android_armv7`
 - Windows ARM64 Host & Desktop Target: `win64_msvc2022_arm64`
 - Windows x64 Host
   - Qt `>=6.8`: `win64_msvc2022_64`
