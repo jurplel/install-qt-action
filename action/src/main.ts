@@ -106,36 +106,125 @@ const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
   return listArgs.length ? [flag, ...listArgs] : [];
 };
 
-const locateQtArchDir = (installDir: string, host: string): [string, boolean] => {
-  // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
-  // This makes a list of all the viable arch directories that contain a qmake file.
-  const qtArchDirs = glob
-    .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
-    .map((s) => path.resolve(s, "..", ".."));
-
-  // For Qt6 mobile and wasm installations, and Qt6 Windows on ARM cross-compiled installations,
-  // a standard desktop Qt installation must exist alongside the requested architecture.
-  // In these cases, we must select the first item that ends with 'android*', 'ios', 'wasm*' or 'msvc*_arm64'.
-  const requiresParallelDesktop = qtArchDirs.filter((archPath) => {
-    const archDir = path.basename(archPath);
-    const versionDir = path.basename(path.join(archPath, ".."));
-    return (
-      versionDir.match(/^6\.\d+\.\d+$/) &&
-      (archDir.match(
-        /^(android.*|ios|wasm.*)$/
-      ) /* Was "||", @typescript-eslint/prefer-nullish-coalescing */ ??
-        (archDir.match(/^msvc.*_arm64$/) && host !== "windows_arm64"))
-    );
-  });
-  if (requiresParallelDesktop.length) {
-    // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
-    return [requiresParallelDesktop[0], true];
-  } else if (!qtArchDirs.length) {
-    throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
-  } else {
-    // NOTE: if multiple Qt installations exist, this may not select the desired directory
-    return [qtArchDirs[0], false];
+/** In installation of "linux desktop 6.4.2 gcc_64", for example, qmake is at '6.4.2/gcc_64/bin/qmake'. */
+const calculateQtArchDir = (host: string, version: string, arch: string): string => {
+  // These two blocks are written based on the logic in aqtinstall v3.3.0:
+  // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/metadata.py#L485-L516
+  // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/metadata.py#L529-L531
+  let versionDir = version;
+  if (compareVersions(version, "=", "5.9.0")) {
+    // Changing dir name between patch versions? You've got to be kidding me.
+    versionDir = "5.9";
   }
+
+  let archDir = arch;
+  if (["linux", "linux_arm64"].includes(host) && arch.startsWith("linux_")) {
+    // "linux_gcc_arm64" -> "gcc_arm64"
+    archDir = arch.substring("linux_".length);
+  } else if (host === "mac" && compareVersions(version, ">=", "6.1.2") && arch === "clang_64") {
+    // Changing dir name between patch versions, again?
+    archDir = "macos";
+  } else {
+    const matchWhole = arch.match(/^win(32|64)_(\w+)$/);
+    if (matchWhole) {
+      const [bits, name] = matchWhole.slice(1);
+      if (name.startsWith("llvm_")) {
+        // "win64_llvm_mingw" -> "llvm-mingw_64"
+        const tail = name.substring("llvm_".length);
+        archDir = `llvm-${tail}_${bits}`;
+      } else if (name.startsWith("msvc")) {
+        if (name.endsWith("_cross_compiled")) {
+          // "win64_msvc2022_arm64_cross_compiled" -> "msvc2022_arm64"
+          archDir = name.substring(0, name.length - "_cross_compiled".length);
+        } else {
+          // "win32_msvc2015" -> "msvc2015"
+          // "win64_msvc2019_arm64" -> "msvc2019_arm64"
+          // "win64_msvc2022_64" -> "msvc2022_64"
+          archDir = name;
+        }
+      } else {
+        // "win32_mingw53" -> "mingw53_32"
+        // "win64_mingw" -> "mingw_64"
+        archDir = `${name}_${bits}`;
+      }
+    }
+  }
+
+  return path.join(versionDir, archDir);
+};
+
+/** A lightweight sanitize check that discovers malformed installation in which no qmake file is placed. */
+const checkQtArchDir = (installDir: string, qtArchDir: string): string => {
+  const qtPath = path.resolve(installDir, qtArchDir);
+  {
+    const qmakePaths = glob.sync(
+      [
+        ...["qmake", "qmake.exe", "qmake.bat"], // Both Qt 5 and Qt 6
+        ...["qmake6", "qmake6.exe", "qmake6.bat"], // Qt 6 only
+      ],
+      { cwd: path.resolve(qtPath, "bin") }
+    );
+    if (qmakePaths.length === 0) {
+      throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
+    }
+  }
+  return qtPath;
+};
+
+/**
+ * For Qt 6 mobile and wasm installations, and Qt 6 Windows on ARM cross-compiled installations,
+ * a standard desktop Qt installation must exist alongside the requested architecture.
+ * Qt 5 related content in this function is for notes only.
+ *
+ * See:
+ * - Fix docs qt6 wasm mobile by ddalcino · Pull Request #638 · miurahr/aqtinstall
+ *   https://github.com/miurahr/aqtinstall/pull/638
+ */
+const calculateParallelDesktopRequirement = (
+  host: string,
+  target: string,
+  version: string,
+  arch: string
+): boolean => {
+  // Coarse-grained check; should not hurt due to subsequent checks.
+  if (compareVersions(version, "<", "6.0.0")) {
+    return false;
+  }
+
+  // The "arch":
+  // - Android:
+  //   - "android" in Qt 5.14~5.15. It contains all four architectures.
+  //   - "android_arm64_v8a", "android_armv7", "android_x86", and "android_x86_64" in other versions.
+  // - iOS is "ios".
+  // - WASM:
+  //   - "wasm_32" in Qt 5.13~5.15 & Qt 6.2~6.4.
+  //   - "wasm_singlethread" and "wasm_multithread" since Qt 6.5.
+  //
+  // Refs:
+  // - New Features in Qt 5.13 - Qt Wiki
+  //   https://wiki.qt.io/New_Features_in_Qt_5.13
+  // - Qt 6.2 LTS Released
+  //   https://www.qt.io/blog/qt-6.2-lts-released
+  // - Qt for WebAssembly | Qt 6.5
+  //   https://doc.qt.io/qt-6.5/wasm.html
+  if (["android", "ios", "wasm"].includes(target) || /^wasm_.+$/.test(arch)) {
+    return true;
+  }
+
+  // The "arch":
+  // On Windows x64, not "win64_msvc2022_arm64_cross_compiled" since Qt 6.8,
+  // but "win64_msvc2022_arm64" in Qt 6.2~6.7.
+  //
+  // Refs:
+  // - Qt 6.2 LTS Released
+  //   https://www.qt.io/blog/qt-6.2-lts-released
+  // - Qt 6.8 LTS Released!
+  //   https://www.qt.io/blog/qt-6.8-released
+  if (/^win64_msvc(?:\d{4})_arm64$/.test(arch) && host !== "windows_arm64") {
+    return true;
+  }
+
+  return false;
 };
 
 const aqtinstallVersion = async (): Promise<string | null> => {
@@ -569,7 +658,7 @@ const run = async (): Promise<void> => {
     }
   }
 
-  // Restore internal cache
+  // Restore automatic cache
   let internalCacheHit = false;
   if (inputs.cache) {
     internalCacheHit = await core.group("Check and restore cache", async () => {
@@ -670,14 +759,6 @@ const run = async (): Promise<void> => {
     }
   }
 
-  // Save automatic cache
-  if (!internalCacheHit && inputs.cache) {
-    await core.group("Save cache", async () => {
-      const cacheId = await cache.saveCache([inputs.dir], cacheKey);
-      core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
-    });
-  }
-
   // Add tools to path
   if (inputs.addToolsToPath && inputs.tools.length) {
     toolsPaths(inputs.dir).forEach(core.addPath);
@@ -687,38 +768,67 @@ const run = async (): Promise<void> => {
   if (inputs.tools.length && inputs.setEnv) {
     core.exportVariable("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
   }
-  // Set environment variables/outputs for binaries
+  // Check binaries and set environment variables/outputs
   if (inputs.isInstallQtBinaries) {
-    const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir, inputs.host);
+    const qtArchDir = calculateQtArchDir(inputs.host, inputs.version, inputs.arch);
+    const qtPath = checkQtArchDir(inputs.dir, qtArchDir);
+
     // Set outputs
+    // - Resolved inputs
+    core.setOutput("host", inputs.host);
+    core.setOutput("target", inputs.target);
+    core.setOutput("version", inputs.version);
+    core.setOutput("arch", inputs.arch);
+    // - Calculated values
     core.setOutput("qtPath", qtPath);
 
     // Set env variables
     if (inputs.setEnv) {
+      // Append to env vars.
       if (process.platform === "linux") {
         setOrAppendEnvVar("LD_LIBRARY_PATH", path.resolve(qtPath, "lib"));
       }
       if (process.platform !== "win32") {
         setOrAppendEnvVar("PKG_CONFIG_PATH", path.resolve(qtPath, "lib", "pkgconfig"));
       }
-      // If less than qt6, set Qt5_DIR variable
+
+      // Create or overwrite env vars.
+      //
+      // If older than Qt 6, set Qt5_DIR variable
       if (compareVersions(inputs.version, "<", "6.0.0")) {
         core.exportVariable("Qt5_DIR", path.resolve(qtPath, "lib", "cmake"));
       }
       core.exportVariable("QT_ROOT_DIR", qtPath);
       core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
       core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
+
+      const requiresParallelDesktop = calculateParallelDesktopRequirement(
+        inputs.host,
+        inputs.target,
+        inputs.version,
+        inputs.arch
+      );
       if (requiresParallelDesktop) {
         const hostPrefix = await fs.promises
           .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
-          .then((data) => data.match(/^HostPrefix=(.*)$/m)?.[1].trim() ?? "")
-          .catch(() => "");
+          .then((data) => data.match(/^HostPrefix=(.+)$/m)?.[1].trim() ?? null)
+          .catch(() => null);
         if (hostPrefix) {
           core.exportVariable("QT_HOST_PATH", path.resolve(qtPath, "bin", hostPrefix));
+        } else {
+          core.warning(`Cannot set "QT_HOST_PATH" due to lack of required information`);
         }
       }
       core.addPath(path.resolve(qtPath, "bin"));
     }
+  }
+
+  // If everything goes well, save automatic cache.
+  if (!internalCacheHit && inputs.cache) {
+    await core.group("Save cache", async () => {
+      const cacheId = await cache.saveCache([inputs.dir], cacheKey);
+      core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
+    });
   }
 };
 
