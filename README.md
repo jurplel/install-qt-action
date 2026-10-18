@@ -1,4 +1,12 @@
 # `install-qt-action`
+- [Installation](#installation)
+- [Inputs](#inputs)
+- [Outputs](#outputs)
+- [Example configuration](#example-with-more-arguments)
+- [More information](#more-information)
+
+
+## Installation
 
 Installing Qt on Github Actions workflows manually is the worst.
 
@@ -10,13 +18,17 @@ You know what's easier than dealing with that? Just using this:
 
 All done.
 
-## Upgrade Guides
-Each new major version of this project includes changes that can break workflows written to use an older version of
-this project. These changes are summarized here, to help you upgrade your existing workflows.
+> [!NOTE]
+> Each new major version of this project includes changes that can break workflows written to use an older version of
+> this project. These changes are summarized here, to help you upgrade your existing workflows.
+>
+> [Upgrade guide to newer major versions of `install-qt-action`](README_upgrade_guide.md)
 
-[Upgrading `install-qt-action`](README_upgrade_guide.md)
 
-## Options
+## Inputs
+[`version`](#version) [`host`](#host) [`target`](#target) [`arch`](#arch) [`dir`](#dir) [`use-official`](#use-official-since-v42) [`email`](#email) [`pw`](#pw) [`install-deps`](#install-deps) [`modules`](#modules) [`archives`](#archives) [`cache`](#cache) [`cache-key-prefix`](#cache-key-prefix) [`setup-python`](#setup-python) [`tools`](#tools) [`add-tools-to-path`](#add-tools-to-path) [`source`](#source) [`src-archives`](#src-archives) [`documentation`](#documentation) [`doc-archives`](#doc-archives) [`doc-modules`](#doc-modules) [`examples`](#examples) [`example-archives`](#example-archives) [`example-modules`](#example-modules) [`set-env`](#set-env) [`no-qt-binaries`](#no-qt-binaries) [`tools-only`](#tools-only) [`aqtversion`](#aqtversion) [`pz7zrvrsion`](#py7zrversion) [`extra`](#extra)
+
+Some inputs have default values and may be omitted.  
 
 ### `version`
 The desired version of Qt to install.
@@ -39,7 +51,6 @@ Defaults:
 - `all_os` when `target` is `android` or `wasm`, the resolved Qt version is 6.7.0 or newer, and `aqtinstall` is 3.2.0 or newer.
 - Otherwise, the platform on which the action is running.
 
-
 ### `target`
 This is the target platform that you will be building for. You will want to set this if you are building for iOS or Android. Please note that iOS builds are supported only on macOS hosts and Win RT builds are only supported on Windows hosts.
 
@@ -47,7 +58,6 @@ Possible values: `desktop`, `android`, `ios`, or `wasm`.
 `wasm` is used with `all_os`, and incompatible with `aqtinstall < 3.2.0`.  
 
 Default: `desktop`  
-
 
 ### `arch`
 This is the target architecture or build variant that your program will be built against.
@@ -298,9 +308,11 @@ This input can be used to append arguments to the end of the aqtinstall command 
 
 Example value: `--external 7z`
 
-## Outputs
 
-Some [options](#Options) have default values and may be omitted. The outputs below report the resulting resolved values, including the exact version selected from a SimpleSpec, for use in later workflow steps.
+## Outputs
+[`host`](#host-1) [`target`](#target-1) [`version`](#version-1) [`arch`](#arch-1) 
+
+Outputs report the resulting resolved values, including the exact version selected from a SimpleSpec, for use in later workflow steps.
 
 ### `host`
 Host platform of the installed Qt.
@@ -313,6 +325,7 @@ Exact version of the installed Qt. No SimpleSpec.
 
 ### `arch`
 Architecture or build variant of the installed Qt.
+
 
 ## Example with more arguments
 
@@ -353,7 +366,8 @@ Architecture or build variant of the installed Qt.
         ls "$QT_ROOT_DIR"
 ```
 
-## More info
+
+## More information
 For more in-depth and certifiably up-to-date documentation, check the documentation for aqtinstall [here](https://aqtinstall.readthedocs.io/en/latest/getting_started.html).
 
 Any tools you installed with the `tools` key will be added to the beginning of your `PATH` environment variable.
@@ -367,8 +381,8 @@ In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `PKG_CONFIG_PATH` and `LD_LIB
 Since the Qt bin directory is in your `path`, you will not need to set the `CMAKE_PREFIX_PATH` CMake variable.
 If you wish to do so, you can set it to either `${QT_ROOT_DIR}` or to `${QT_ROOT_DIR}/lib/cmake`.
 
-Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer for making this easy. Please go support [miurahr](https://github.com/miurahr/aqtinstall), he did all of the hard work here ([his liberapay](https://liberapay.com/miurahr)).
-
-This action is distributed under the [MIT license](LICENSE).
-
-By using this action, you agree to the terms of Qt's licensing. See [Qt licensing](https://www.qt.io/licensing/) and [Licenses used by Qt](https://doc.qt.io/qt-5/licenses-used-in-qt.html).
+> Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer for making this easy. Please go support [miurahr](https://github.com/miurahr/aqtinstall), he did all of the hard work here ([his liberapay](https://liberapay.com/miurahr)).
+>
+> This action is distributed under the [MIT license](LICENSE).
+>
+> By using this action, you agree to the terms of Qt's licensing. See [Qt licensing](https://www.qt.io/licensing/) and [Licenses used by Qt](https://doc.qt.io/qt-5/licenses-used-in-qt.html).
