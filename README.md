@@ -1,12 +1,4 @@
 # `install-qt-action`
-- [Installation](#installation)
-- [Inputs](#inputs)
-- [Outputs](#outputs)
-- [Example configuration](#example-with-more-arguments)
-- [More information](#more-information)
-
-
-## Installation
 
 Installing Qt on Github Actions workflows manually is the worst.
 
@@ -25,9 +17,7 @@ All done.
 > [Upgrade guide to newer major versions of `install-qt-action`](README_upgrade_guide.md)
 
 
-## Inputs
-[`version`](#version) [`host`](#host) [`target`](#target) [`arch`](#arch) [`dir`](#dir) [`use-official`](#use-official-since-v42) [`email`](#email) [`pw`](#pw) [`install-deps`](#install-deps) [`modules`](#modules) [`archives`](#archives) [`cache`](#cache) [`cache-key-prefix`](#cache-key-prefix) [`setup-python`](#setup-python) [`tools`](#tools) [`add-tools-to-path`](#add-tools-to-path) [`source`](#source) [`src-archives`](#src-archives) [`documentation`](#documentation) [`doc-archives`](#doc-archives) [`doc-modules`](#doc-modules) [`examples`](#examples) [`example-archives`](#example-archives) [`example-modules`](#example-modules) [`set-env`](#set-env) [`no-qt-binaries`](#no-qt-binaries) [`tools-only`](#tools-only) [`aqtversion`](#aqtversion) [`pz7zrvrsion`](#py7zrversion) [`extra`](#extra)
-
+## Options
 Some inputs have default values and may be omitted.  
 
 ### `version`
@@ -310,8 +300,6 @@ Example value: `--external 7z`
 
 
 ## Outputs
-[`host`](#host-1) [`target`](#target-1) [`version`](#version-1) [`arch`](#arch-1) 
-
 Outputs report the resulting resolved values, including the exact version selected from a SimpleSpec, for use in later workflow steps.
 
 ### `host`
