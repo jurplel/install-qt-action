@@ -174,6 +174,8 @@ the following paths will be prepended to the `PATH` variable:
 * `Tools/**/bin`
 * `*.app/Contents/MacOS`
 * `*.app/**/bin`
+* `Tools/*/*.app/Contents/MacOS`
+* `Tools/*/*.app/**/bin`
 
 Most tools end up in the `Tools` folder, and have a `bin` directory containing CLI tools.
 On MacOS, several tools are packaged in `.app` bundles, and CLI tools are spread out among various `bin` folders
@@ -271,6 +273,8 @@ Default: `false`
 
 ### `tools-only`
 
+DEPRECATED
+
 This is a synonym for `no-qt-binaries`. It only exists to preserve backwards compatibility.
 If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip installation of Qt.
 
@@ -294,7 +298,7 @@ Version of py7zr in the same style as the aqtversion and intended to be used for
 Default: `==1.1.0`
 
 ### `extra`
-This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
+This option can be used to append arguments to the end of the aqtinstall command for any special purpose.
 
 Example value: `--external 7z`
 
@@ -334,7 +338,7 @@ Architecture or build variant of the installed Qt.
         setup-python: 'true'
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'true'
-        tools-only: 'false'
+        no-qt-binaries: 'false'
         aqtversion: '==3.3.*'
         py7zrversion: '==1.1.0'
         extra: '--external 7z'
