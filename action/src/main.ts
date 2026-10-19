@@ -177,6 +177,7 @@ const checkQtArchDir = (installDir: string, qtArchDir: string): string => {
  * Qt 5 related content in this function is for notes only.
  *
  * See:
+ * - https://github.com/miurahr/aqtinstall/blob/076e1659807d0b362a3ed684d54c2e9c775eb9c7/aqt/installer.py#L1446-L1465
  * - Fix docs qt6 wasm mobile by ddalcino · Pull Request #638 · miurahr/aqtinstall
  *   https://github.com/miurahr/aqtinstall/pull/638
  */
@@ -212,15 +213,16 @@ const calculateParallelDesktopRequirement = (
   }
 
   // The "arch":
-  // On Windows x64, not "win64_msvc2022_arm64_cross_compiled" since Qt 6.8,
-  // but "win64_msvc2022_arm64" in Qt 6.2~6.7.
+  // On Windows x64:
+  // - "win64_msvc2022_arm64" in Qt 6.2~6.7.
+  // - "win64_msvc2022_arm64_cross_compiled" since Qt 6.8.
   //
   // Refs:
   // - Qt 6.2 LTS Released
   //   https://www.qt.io/blog/qt-6.2-lts-released
   // - Qt 6.8 LTS Released!
   //   https://www.qt.io/blog/qt-6.8-released
-  if (/^win64_msvc(?:\d{4})_arm64$/.test(arch) && host !== "windows_arm64") {
+  if (/^win64_msvc(?:\d{4})_arm64(?:_cross_compiled)?$/.test(arch) && host !== "windows_arm64") {
     return true;
   }
 
