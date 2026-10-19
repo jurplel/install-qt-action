@@ -338,6 +338,18 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     pw: core.getInput("pw"),
   };
 
+  // Deprecated options check.
+  {
+    if (parseBoolInput(rawInputs.toolsOnly)) {
+      core.warning(
+        'Option "tools-only" will be removed soon due to deprecation. Please switch to "no-qt-binaries".',
+        {
+          title: "install-qt-action",
+        }
+      );
+    }
+  }
+
   // The "version" property will be populated per remote data fetched by aqt,
   // so installing aqt and related packages is required here.
   await core.group("Install Python dependencies", async () => {

@@ -69,6 +69,7 @@ jobs:
         working-directory: "${{ env.IQTA_WORKING_DIR }}"
 
       - name: Install Qt with built action
+        id: install-qt
         uses: "./.iqta-action"  # env vars do not work here, so repeat the path.
         with:
           # Add the options you need.
