@@ -320,6 +320,7 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     addToolsToPath: core.getInput("add-tools-to-path"),
     setEnv: core.getInput("set-env"),
     noQtBinaries: core.getInput("no-qt-binaries"),
+    /** Deprecated. */
     toolsOnly: core.getInput("tools-only"),
     aqtSource: core.getInput("aqtsource"),
     aqtVersion: core.getInput("aqtversion"),

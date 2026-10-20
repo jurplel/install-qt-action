@@ -49,7 +49,7 @@ inputs:
     description: Turns off installation of Qt. Useful for installing tools, source, documentation, or examples.
     default: false
   tools-only:
-    description: Synonym for `no-qt-binaries`, used for backwards compatibility.
+    description: Synonym for `no-qt-binaries`, used for backwards compatibility. Deprecated.
     default: false
   aqtsource:
     description: Location to source aqtinstall from in case of issues
