@@ -16,13 +16,38 @@ const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean =
   return compare(v1, v2, op);
 };
 
+/**
+ * Set or append a string to environment variable and log it.
+ *
+ * Uses the platform-specific path delimiter.
+ */
 const setOrAppendEnvVar = (name: string, value: string): void => {
+  core.info(`Appending "${value}" to env "${name}"`);
+  // Be careful with empty string handling. `process.env[name] ? ...` is different from `process.env[name]?.`.
+  // We choose to treat an entirely empty initial value as an empty list, so no `LD_LIBRARY_PATH=":FOO"`
+  // will be produced to surprise users.
   const oldValue = process.env[name];
-  let newValue = value;
-  if (oldValue) {
-    newValue = `${oldValue}:${newValue}`;
-  }
-  core.exportVariable(name, newValue);
+  const entries = oldValue ? oldValue.split(path.delimiter) : [];
+  entries.push(value);
+  core.exportVariable(name, entries.join(path.delimiter));
+};
+
+/** Prepend a string to environment variable PATH and log it. */
+const prependPath = (value: string): void => {
+  core.info(`Prepending "${value}" to env "PATH"`);
+  core.addPath(value);
+};
+
+/** Set an output and log it. */
+const setOutput = (name: string, value: string): void => {
+  core.info(`Setting output "${name}" = "${value}"`);
+  core.setOutput(name, value);
+};
+
+/** Set an environment variable and log it. */
+const setEnv = (name: string, value: string): void => {
+  core.info(`Setting env "${name}" = "${value}"`);
+  core.exportVariable(name, value);
 };
 
 const dirExists = (dir: string): boolean => {
@@ -228,6 +253,12 @@ const calculateParallelDesktopRequirement = (
 
   return false;
 };
+
+const parseHostPrefix = async (qtPath: string): Promise<string | null> =>
+  fs.promises
+    .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
+    .then((data) => data.match(/^HostPrefix=(.+)$/m)?.[1].trim() ?? null)
+    .catch(() => null);
 
 const aqtinstallVersion = async (): Promise<string | null> => {
   const output = await getPythonOutput("aqt", ["version"]);
@@ -774,68 +805,108 @@ const run = async (): Promise<void> => {
     }
   }
 
-  // Add tools to path
-  if (inputs.addToolsToPath && inputs.tools.length) {
-    toolsPaths(inputs.dir).forEach(core.addPath);
+  // Environment for tools.
+  if (inputs.tools.length) {
+    await core.group("Post-process installed tools", async () =>
+      Promise.resolve().then(() => {
+        // Add tools to path
+        if (inputs.addToolsToPath) {
+          toolsPaths(inputs.dir).forEach(prependPath);
+        }
+
+        // Set environment variables/outputs for tools
+        if (inputs.setEnv) {
+          setEnv("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
+        }
+      })
+    );
   }
 
-  // Set environment variables/outputs for tools
-  if (inputs.tools.length && inputs.setEnv) {
-    core.exportVariable("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
-  }
-  // Check binaries and set environment variables/outputs
+  // Check binaries and set outputs and/or environment variables
   if (inputs.isInstallQtBinaries) {
     const qtArchDir = calculateQtArchDir(inputs.host, inputs.version, inputs.arch);
     const qtPath = checkQtArchDir(inputs.dir, qtArchDir);
+    const requiresParallelDesktop = calculateParallelDesktopRequirement(
+      inputs.host,
+      inputs.target,
+      inputs.version,
+      inputs.arch
+    );
 
-    // Set outputs
-    // - Resolved inputs
-    core.setOutput("host", inputs.host);
-    core.setOutput("target", inputs.target);
-    core.setOutput("version", inputs.version);
-    core.setOutput("arch", inputs.arch);
-    // - Calculated values
-    core.setOutput("qtPath", qtPath);
-
-    // Set env variables
-    if (inputs.setEnv) {
-      // Append to env vars.
-      if (process.platform === "linux") {
-        setOrAppendEnvVar("LD_LIBRARY_PATH", path.resolve(qtPath, "lib"));
+    /** Append to LD_LIBRARY_PATH. */
+    const libDir = process.platform === "linux" ? path.resolve(qtPath, "lib") : null;
+    /** Append to PKG_CONFIG_PATH. */
+    const pkgConfigDir =
+      process.platform !== "win32" ? path.resolve(qtPath, "lib", "pkgconfig") : null;
+    /** Set Qt5_DIR for Qt versions earlier than 6. */
+    const qt5Dir = compareVersions(inputs.version, "<", "6.0.0")
+      ? path.resolve(qtPath, "lib", "cmake")
+      : null;
+    /** Prepend to PATH. */
+    const binDir = path.resolve(qtPath, "bin");
+    /** Set QT_PLUGIN_PATH and its corresponding output. */
+    const qtPluginPath = path.resolve(qtPath, "plugins");
+    /** Set QML2_IMPORT_PATH and its corresponding output. */
+    const qml2ImportPath = path.resolve(qtPath, "qml");
+    /** Set QT_HOST_PATH and its corresponding output. */
+    const hostPath = await (async (): Promise<string | null> => {
+      if (!requiresParallelDesktop) {
+        return null;
       }
-      if (process.platform !== "win32") {
-        setOrAppendEnvVar("PKG_CONFIG_PATH", path.resolve(qtPath, "lib", "pkgconfig"));
+      const hostPrefix = await parseHostPrefix(qtPath);
+      if (!hostPrefix) {
+        core.warning(`Cannot find the host Qt installation path by parsing config files`, {
+          title: "install-qt-action",
+        });
+        return null;
       }
+      return path.resolve(qtPath, "bin", hostPrefix);
+    })();
 
-      // Create or overwrite env vars.
-      //
-      // If older than Qt 6, set Qt5_DIR variable
-      if (compareVersions(inputs.version, "<", "6.0.0")) {
-        core.exportVariable("Qt5_DIR", path.resolve(qtPath, "lib", "cmake"));
-      }
-      core.exportVariable("QT_ROOT_DIR", qtPath);
-      core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
-      core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
+    await core.group("Post-process installed Qt", async () =>
+      Promise.resolve().then(() => {
+        // Always set outputs.
+        {
+          // Resolved inputs.
+          setOutput("host", inputs.host);
+          setOutput("target", inputs.target);
+          setOutput("version", inputs.version);
+          setOutput("arch", inputs.arch);
 
-      const requiresParallelDesktop = calculateParallelDesktopRequirement(
-        inputs.host,
-        inputs.target,
-        inputs.version,
-        inputs.arch
-      );
-      if (requiresParallelDesktop) {
-        const hostPrefix = await fs.promises
-          .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
-          .then((data) => data.match(/^HostPrefix=(.+)$/m)?.[1].trim() ?? null)
-          .catch(() => null);
-        if (hostPrefix) {
-          core.exportVariable("QT_HOST_PATH", path.resolve(qtPath, "bin", hostPrefix));
-        } else {
-          core.warning(`Cannot set "QT_HOST_PATH" due to lack of required information`);
+          // Outputs corresponding to environment variables.
+          setOutput("qt-root-dir", qtPath);
+          setOutput("qt-plugin-path", qtPluginPath);
+          setOutput("qml2-import-path", qml2ImportPath);
+
+          if (hostPath) {
+            setOutput("qt-host-path", hostPath);
+          }
         }
-      }
-      core.addPath(path.resolve(qtPath, "bin"));
-    }
+
+        // Set env variables.
+        if (inputs.setEnv) {
+          prependPath(binDir);
+
+          if (libDir) {
+            setOrAppendEnvVar("LD_LIBRARY_PATH", libDir);
+          }
+          if (pkgConfigDir) {
+            setOrAppendEnvVar("PKG_CONFIG_PATH", pkgConfigDir);
+          }
+          if (qt5Dir) {
+            setEnv("Qt5_DIR", qt5Dir);
+          }
+
+          setEnv("QT_ROOT_DIR", qtPath);
+          setEnv("QT_PLUGIN_PATH", qtPluginPath);
+          setEnv("QML2_IMPORT_PATH", qml2ImportPath);
+
+          if (hostPath) {
+            setEnv("QT_HOST_PATH", hostPath);
+          }
+        }
+      })
+    );
   }
 
   // If everything goes well, save automatic cache.
