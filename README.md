@@ -137,7 +137,7 @@ Default: none
 
 ### `cache`
 
-Whether to cache Qt automatically. If it is set to `true`, then Qt won't be downloaded if a cached version is available, but the environment variables will always be set, and essential build tools will always be installed.
+Whether to cache Qt automatically. If it is set to `true`, then Qt won't be downloaded if a cached version is available, but the environment variables will always be set, and essential build tools will always be installed. You do not need a separate "actions/cache" step for this action's Qt installation.
 
 Default: `false`
 
