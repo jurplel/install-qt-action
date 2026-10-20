@@ -131,7 +131,7 @@ const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
   return listArgs.length ? [flag, ...listArgs] : [];
 };
 
-/** In installation of "linux desktop 6.4.2 gcc_64", for example, qmake is at '6.4.2/gcc_64/bin/qmake'. */
+/** In installation of "linux desktop 6.4.2 gcc_64", for example, qmake is in the "bin" dir under "6.4.2/gcc_64". */
 const calculateQtArchDir = (host: string, version: string, arch: string): string => {
   // These two blocks are written based on the logic in aqtinstall v3.3.0:
   // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/metadata.py#L485-L516
@@ -178,22 +178,18 @@ const calculateQtArchDir = (host: string, version: string, arch: string): string
   return path.join(versionDir, archDir);
 };
 
-/** A lightweight sanitize check that discovers malformed installation in which no qmake file is placed. */
-const checkQtArchDir = (installDir: string, qtArchDir: string): string => {
-  const qtPath = path.resolve(installDir, qtArchDir);
-  {
-    const qmakePaths = glob.sync(
-      [
-        ...["qmake", "qmake.exe", "qmake.bat"], // Both Qt 5 and Qt 6
-        ...["qmake6", "qmake6.exe", "qmake6.bat"], // Qt 6 only
-      ],
-      { cwd: path.resolve(qtPath, "bin") }
-    );
-    if (qmakePaths.length === 0) {
-      throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
-    }
+/** A lightweight sanity check that discovers malformed installation in which no qmake file is placed. */
+const checkQtPath = (qtPath: string): void => {
+  const qmakePaths = glob.sync(
+    [
+      ...["qmake", "qmake.exe", "qmake.bat"], // Both Qt 5 and Qt 6
+      ...["qmake6", "qmake6.exe", "qmake6.bat"], // Qt 6 only
+    ],
+    { cwd: path.resolve(qtPath, "bin") }
+  );
+  if (qmakePaths.length === 0) {
+    throw Error(`Failed to locate a Qt installation directory in  ${qtPath}`);
   }
-  return qtPath;
 };
 
 /**
@@ -416,23 +412,33 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     host: "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os";
     version: string | null;
   }> => {
+    // Do not handle "all_os" here; that's not a real platform.
+    const platformHost = ((): "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" => {
+      switch (process.platform) {
+        case "win32": {
+          return process.arch === "arm64" ? "windows_arm64" : "windows";
+        }
+        case "darwin": {
+          return "mac";
+        }
+        default: {
+          return process.arch === "arm64" ? "linux_arm64" : "linux";
+        }
+      }
+    })();
+
+    if (parseBoolInput(rawInputs.useOfficial)) {
+      if (rawInputs.host && rawInputs.host !== platformHost) {
+        core.warning(
+          `Specified host "${rawInputs.host}" is ignored when using the official installer.`,
+          { title: "install-qt-action" }
+        );
+      }
+      return { host: platformHost, version: null };
+    }
+
     // Set host automatically if omitted
     if (!rawInputs.host) {
-      // No "all_os".
-      const platformHost = ((): "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" => {
-        switch (process.platform) {
-          case "win32": {
-            return process.arch === "arm64" ? "windows_arm64" : "windows";
-          }
-          case "darwin": {
-            return "mac";
-          }
-          default: {
-            return process.arch === "arm64" ? "linux_arm64" : "linux";
-          }
-        }
-      })();
-
       const aqtVersion = await aqtinstallVersion();
 
       if (
@@ -656,6 +662,9 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
 const run = async (): Promise<void> => {
   const { inputs, cacheKey } = await resolveInputs();
 
+  const qtArchDir = calculateQtArchDir(inputs.host, inputs.version, inputs.arch);
+  const qtPath = path.resolve(inputs.dir, qtArchDir);
+
   // Qt installer assumes basic requirements that are not installed by
   // default on Ubuntu.
   if (process.platform === "linux") {
@@ -727,6 +736,13 @@ const run = async (): Promise<void> => {
 
     // Install Qt
     if (inputs.isInstallQtBinaries) {
+      if (dirExists(qtPath)) {
+        core.warning(
+          `The directory "${qtPath}" exists and content in it may be overwritten during installation`,
+          { title: "install-qt-action" }
+        );
+      }
+
       if (inputs.useOfficial && inputs.email && inputs.pw) {
         const qtArgs = [
           "install-qt-official",
@@ -824,8 +840,7 @@ const run = async (): Promise<void> => {
 
   // Check binaries and set outputs and/or environment variables
   if (inputs.isInstallQtBinaries) {
-    const qtArchDir = calculateQtArchDir(inputs.host, inputs.version, inputs.arch);
-    const qtPath = checkQtArchDir(inputs.dir, qtArchDir);
+    checkQtPath(qtPath);
     const requiresParallelDesktop = calculateParallelDesktopRequirement(
       inputs.host,
       inputs.target,
