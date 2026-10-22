@@ -46,7 +46,7 @@ inputs:
     description: Turns off installation of Qt. Useful for installing tools, source, documentation, or examples.
     default: false
   tools-only:
-    description: Synonym for `no-qt-binaries`, used for backwards compatibility.
+    description: Synonym for `no-qt-binaries`, used for backwards compatibility. Deprecated.
     default: false
   aqtsource:
     description: Location to source aqtinstall from in case of issues
@@ -96,6 +96,14 @@ outputs:
     description: Exact version of the installed Qt
   arch:
     description: Architecture or build variant of the installed Qt
+  qt-root-dir:
+    description: Absolute path to the base directory (installation prefix) of the installed Qt
+  qt-plugin-path:
+    description: Absolute path to the installed Qt plugins directory
+  qml2-import-path:
+    description: Absolute path to the installed Qt QML imports directory
+  qt-host-path:
+    description: Absolute path to the host Qt installation directory when required
 runs:
   using: node24
   main: lib/main.js

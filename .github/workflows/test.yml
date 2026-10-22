@@ -84,7 +84,7 @@ jobs:
           - version: "6.7.0"
             requested: "6.7.0"
             modules: qtwebengine qtpositioning qtwebchannel
-          - tools-only-build: true
+          - no-qt-binaries-build: true
             add-tools-to-path: true
         cache:
           - cached
@@ -124,7 +124,7 @@ jobs:
               modules: qtwebengine
           - os: ubuntu-24.04
             qt:
-              tools-only-build: true
+              no-qt-binaries-build: true
               add-tools-to-path: false
           - os: ubuntu-24.04-arm
             qt:
@@ -261,17 +261,17 @@ jobs:
           ls ${{ matrix.check }}
 
       - name: Install tools with options
-        if: ${{ matrix.qt.tools-only-build }}
+        if: ${{ matrix.qt.no-qt-binaries-build }}
         uses: ./
         with:
           dir: ${{ matrix.dir }}
-          tools-only: true
+          no-qt-binaries: true
           tools: tools_ifw tools_qtcreator_gui,qt.tools.qtcreator_gui tools_cmake tools_ninja tools_conan
           add-tools-to-path: ${{ matrix.qt.add-tools-to-path }}
           cache: ${{ matrix.cache == 'cached' }}
 
       - name: Test installed tools
-        if: ${{ matrix.qt.tools-only-build && matrix.qt.add-tools-to-path }}
+        if: ${{ matrix.qt.no-qt-binaries-build && matrix.qt.add-tools-to-path }}
         shell: bash
         run: |
           echo "Path: ${PATH}"
@@ -290,7 +290,7 @@ jobs:
           
 
       - name: Test that installed tools are not in the path
-        if: ${{ matrix.qt.tools-only-build && !matrix.qt.add-tools-to-path }}
+        if: ${{ matrix.qt.no-qt-binaries-build && !matrix.qt.add-tools-to-path }}
         shell: bash
         run: |
           echo "Path: ${PATH}"

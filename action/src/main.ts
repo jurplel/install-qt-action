@@ -16,13 +16,38 @@ const compareVersions = (v1: string, op: CompareOperator, v2: string): boolean =
   return compare(v1, v2, op);
 };
 
+/**
+ * Set or append a string to environment variable and log it.
+ *
+ * Uses the platform-specific path delimiter.
+ */
 const setOrAppendEnvVar = (name: string, value: string): void => {
+  core.info(`Appending "${value}" to env "${name}"`);
+  // Be careful with empty string handling. `process.env[name] ? ...` is different from `process.env[name]?.`.
+  // We choose to treat an entirely empty initial value as an empty list, so no `LD_LIBRARY_PATH=":FOO"`
+  // will be produced to surprise users.
   const oldValue = process.env[name];
-  let newValue = value;
-  if (oldValue) {
-    newValue = `${oldValue}:${newValue}`;
-  }
-  core.exportVariable(name, newValue);
+  const entries = oldValue ? oldValue.split(path.delimiter) : [];
+  entries.push(value);
+  core.exportVariable(name, entries.join(path.delimiter));
+};
+
+/** Prepend a string to environment variable PATH and log it. */
+const prependPath = (value: string): void => {
+  core.info(`Prepending "${value}" to env "PATH"`);
+  core.addPath(value);
+};
+
+/** Set an output and log it. */
+const setOutput = (name: string, value: string): void => {
+  core.info(`Setting output "${name}" = "${value}"`);
+  core.setOutput(name, value);
+};
+
+/** Set an environment variable and log it. */
+const setEnv = (name: string, value: string): void => {
+  core.info(`Setting env "${name}" = "${value}"`);
+  core.exportVariable(name, value);
 };
 
 const dirExists = (dir: string): boolean => {
@@ -106,7 +131,7 @@ const flaggedList = (flag: string, listArgs: readonly string[]): string[] => {
   return listArgs.length ? [flag, ...listArgs] : [];
 };
 
-/** In installation of "linux desktop 6.4.2 gcc_64", for example, qmake is at '6.4.2/gcc_64/bin/qmake'. */
+/** In installation of "linux desktop 6.4.2 gcc_64", for example, qmake is in the "bin" dir under "6.4.2/gcc_64". */
 const calculateQtArchDir = (host: string, version: string, arch: string): string => {
   // These two blocks are written based on the logic in aqtinstall v3.3.0:
   // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/metadata.py#L485-L516
@@ -153,22 +178,18 @@ const calculateQtArchDir = (host: string, version: string, arch: string): string
   return path.join(versionDir, archDir);
 };
 
-/** A lightweight sanitize check that discovers malformed installation in which no qmake file is placed. */
-const checkQtArchDir = (installDir: string, qtArchDir: string): string => {
-  const qtPath = path.resolve(installDir, qtArchDir);
-  {
-    const qmakePaths = glob.sync(
-      [
-        ...["qmake", "qmake.exe", "qmake.bat"], // Both Qt 5 and Qt 6
-        ...["qmake6", "qmake6.exe", "qmake6.bat"], // Qt 6 only
-      ],
-      { cwd: path.resolve(qtPath, "bin") }
-    );
-    if (qmakePaths.length === 0) {
-      throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
-    }
+/** A lightweight sanity check that discovers malformed installation in which no qmake file is placed. */
+const checkQtPath = (qtPath: string): void => {
+  const qmakePaths = glob.sync(
+    [
+      ...["qmake", "qmake.exe", "qmake.bat"], // Both Qt 5 and Qt 6
+      ...["qmake6", "qmake6.exe", "qmake6.bat"], // Qt 6 only
+    ],
+    { cwd: path.resolve(qtPath, "bin") }
+  );
+  if (qmakePaths.length === 0) {
+    throw Error(`Failed to locate a Qt installation directory in  ${qtPath}`);
   }
-  return qtPath;
 };
 
 /**
@@ -177,6 +198,7 @@ const checkQtArchDir = (installDir: string, qtArchDir: string): string => {
  * Qt 5 related content in this function is for notes only.
  *
  * See:
+ * - https://github.com/miurahr/aqtinstall/blob/076e1659807d0b362a3ed684d54c2e9c775eb9c7/aqt/installer.py#L1446-L1465
  * - Fix docs qt6 wasm mobile by ddalcino · Pull Request #638 · miurahr/aqtinstall
  *   https://github.com/miurahr/aqtinstall/pull/638
  */
@@ -212,20 +234,27 @@ const calculateParallelDesktopRequirement = (
   }
 
   // The "arch":
-  // On Windows x64, not "win64_msvc2022_arm64_cross_compiled" since Qt 6.8,
-  // but "win64_msvc2022_arm64" in Qt 6.2~6.7.
+  // On Windows x64:
+  // - "win64_msvc2022_arm64" in Qt 6.2~6.7.
+  // - "win64_msvc2022_arm64_cross_compiled" since Qt 6.8.
   //
   // Refs:
   // - Qt 6.2 LTS Released
   //   https://www.qt.io/blog/qt-6.2-lts-released
   // - Qt 6.8 LTS Released!
   //   https://www.qt.io/blog/qt-6.8-released
-  if (/^win64_msvc(?:\d{4})_arm64$/.test(arch) && host !== "windows_arm64") {
+  if (/^win64_msvc(?:\d{4})_arm64(?:_cross_compiled)?$/.test(arch) && host !== "windows_arm64") {
     return true;
   }
 
   return false;
 };
+
+const parseHostPrefix = async (qtPath: string): Promise<string | null> =>
+  fs.promises
+    .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
+    .then((data) => data.match(/^HostPrefix=(.+)$/m)?.[1].trim() ?? null)
+    .catch(() => null);
 
 const aqtinstallVersion = async (): Promise<string | null> => {
   const output = await getPythonOutput("aqt", ["version"]);
@@ -318,6 +347,7 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     addToolsToPath: core.getInput("add-tools-to-path"),
     setEnv: core.getInput("set-env"),
     noQtBinaries: core.getInput("no-qt-binaries"),
+    /** Deprecated. */
     toolsOnly: core.getInput("tools-only"),
     aqtSource: core.getInput("aqtsource"),
     aqtVersion: core.getInput("aqtversion"),
@@ -335,6 +365,18 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     email: core.getInput("email"),
     pw: core.getInput("pw"),
   };
+
+  // Deprecated options check.
+  {
+    if (parseBoolInput(rawInputs.toolsOnly)) {
+      core.warning(
+        'Option "tools-only" will be removed soon due to deprecation. Please switch to "no-qt-binaries".',
+        {
+          title: "install-qt-action",
+        }
+      );
+    }
+  }
 
   // The "version" property will be populated per remote data fetched by aqt,
   // so installing aqt and related packages is required here.
@@ -370,23 +412,33 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
     host: "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" | "all_os";
     version: string | null;
   }> => {
+    // Do not handle "all_os" here; that's not a real platform.
+    const platformHost = ((): "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" => {
+      switch (process.platform) {
+        case "win32": {
+          return process.arch === "arm64" ? "windows_arm64" : "windows";
+        }
+        case "darwin": {
+          return "mac";
+        }
+        default: {
+          return process.arch === "arm64" ? "linux_arm64" : "linux";
+        }
+      }
+    })();
+
+    if (parseBoolInput(rawInputs.useOfficial)) {
+      if (rawInputs.host && rawInputs.host !== platformHost) {
+        core.warning(
+          `Specified host "${rawInputs.host}" is ignored when using the official installer.`,
+          { title: "install-qt-action" }
+        );
+      }
+      return { host: platformHost, version: null };
+    }
+
     // Set host automatically if omitted
     if (!rawInputs.host) {
-      // No "all_os".
-      const platformHost = ((): "windows" | "windows_arm64" | "mac" | "linux" | "linux_arm64" => {
-        switch (process.platform) {
-          case "win32": {
-            return process.arch === "arm64" ? "windows_arm64" : "windows";
-          }
-          case "darwin": {
-            return "mac";
-          }
-          default: {
-            return process.arch === "arm64" ? "linux_arm64" : "linux";
-          }
-        }
-      })();
-
       const aqtVersion = await aqtinstallVersion();
 
       if (
@@ -610,6 +662,9 @@ const resolveInputs = async (): Promise<{ inputs: Inputs; cacheKey: string }> =>
 const run = async (): Promise<void> => {
   const { inputs, cacheKey } = await resolveInputs();
 
+  const qtArchDir = calculateQtArchDir(inputs.host, inputs.version, inputs.arch);
+  const qtPath = path.resolve(inputs.dir, qtArchDir);
+
   // Qt installer assumes basic requirements that are not installed by
   // default on Ubuntu.
   if (process.platform === "linux") {
@@ -681,6 +736,13 @@ const run = async (): Promise<void> => {
 
     // Install Qt
     if (inputs.isInstallQtBinaries) {
+      if (dirExists(qtPath)) {
+        core.warning(
+          `The directory "${qtPath}" exists and content in it may be overwritten during installation`,
+          { title: "install-qt-action" }
+        );
+      }
+
       if (inputs.useOfficial && inputs.email && inputs.pw) {
         const qtArgs = [
           "install-qt-official",
@@ -759,68 +821,107 @@ const run = async (): Promise<void> => {
     }
   }
 
-  // Add tools to path
-  if (inputs.addToolsToPath && inputs.tools.length) {
-    toolsPaths(inputs.dir).forEach(core.addPath);
-  }
-
-  // Set environment variables/outputs for tools
-  if (inputs.tools.length && inputs.setEnv) {
-    core.exportVariable("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
-  }
-  // Check binaries and set environment variables/outputs
-  if (inputs.isInstallQtBinaries) {
-    const qtArchDir = calculateQtArchDir(inputs.host, inputs.version, inputs.arch);
-    const qtPath = checkQtArchDir(inputs.dir, qtArchDir);
-
-    // Set outputs
-    // - Resolved inputs
-    core.setOutput("host", inputs.host);
-    core.setOutput("target", inputs.target);
-    core.setOutput("version", inputs.version);
-    core.setOutput("arch", inputs.arch);
-    // - Calculated values
-    core.setOutput("qtPath", qtPath);
-
-    // Set env variables
-    if (inputs.setEnv) {
-      // Append to env vars.
-      if (process.platform === "linux") {
-        setOrAppendEnvVar("LD_LIBRARY_PATH", path.resolve(qtPath, "lib"));
-      }
-      if (process.platform !== "win32") {
-        setOrAppendEnvVar("PKG_CONFIG_PATH", path.resolve(qtPath, "lib", "pkgconfig"));
-      }
-
-      // Create or overwrite env vars.
-      //
-      // If older than Qt 6, set Qt5_DIR variable
-      if (compareVersions(inputs.version, "<", "6.0.0")) {
-        core.exportVariable("Qt5_DIR", path.resolve(qtPath, "lib", "cmake"));
-      }
-      core.exportVariable("QT_ROOT_DIR", qtPath);
-      core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
-      core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
-
-      const requiresParallelDesktop = calculateParallelDesktopRequirement(
-        inputs.host,
-        inputs.target,
-        inputs.version,
-        inputs.arch
-      );
-      if (requiresParallelDesktop) {
-        const hostPrefix = await fs.promises
-          .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
-          .then((data) => data.match(/^HostPrefix=(.+)$/m)?.[1].trim() ?? null)
-          .catch(() => null);
-        if (hostPrefix) {
-          core.exportVariable("QT_HOST_PATH", path.resolve(qtPath, "bin", hostPrefix));
-        } else {
-          core.warning(`Cannot set "QT_HOST_PATH" due to lack of required information`);
+  // Environment for tools.
+  if (inputs.tools.length) {
+    await core.group("Post-process installed tools", async () =>
+      Promise.resolve().then(() => {
+        // Add tools to path
+        if (inputs.addToolsToPath) {
+          toolsPaths(inputs.dir).forEach(prependPath);
         }
+
+        // Set environment variables/outputs for tools
+        if (inputs.setEnv) {
+          setEnv("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
+        }
+      })
+    );
+  }
+
+  // Check binaries and set outputs and/or environment variables
+  if (inputs.isInstallQtBinaries) {
+    checkQtPath(qtPath);
+    const requiresParallelDesktop = calculateParallelDesktopRequirement(
+      inputs.host,
+      inputs.target,
+      inputs.version,
+      inputs.arch
+    );
+
+    /** Append to LD_LIBRARY_PATH. */
+    const libDir = process.platform === "linux" ? path.resolve(qtPath, "lib") : null;
+    /** Append to PKG_CONFIG_PATH. */
+    const pkgConfigDir =
+      process.platform !== "win32" ? path.resolve(qtPath, "lib", "pkgconfig") : null;
+    /** Set Qt5_DIR for Qt versions earlier than 6. */
+    const qt5Dir = compareVersions(inputs.version, "<", "6.0.0")
+      ? path.resolve(qtPath, "lib", "cmake")
+      : null;
+    /** Prepend to PATH. */
+    const binDir = path.resolve(qtPath, "bin");
+    /** Set QT_PLUGIN_PATH and its corresponding output. */
+    const qtPluginPath = path.resolve(qtPath, "plugins");
+    /** Set QML2_IMPORT_PATH and its corresponding output. */
+    const qml2ImportPath = path.resolve(qtPath, "qml");
+    /** Set QT_HOST_PATH and its corresponding output. */
+    const hostPath = await (async (): Promise<string | null> => {
+      if (!requiresParallelDesktop) {
+        return null;
       }
-      core.addPath(path.resolve(qtPath, "bin"));
-    }
+      const hostPrefix = await parseHostPrefix(qtPath);
+      if (!hostPrefix) {
+        core.warning(`Cannot find the host Qt installation path by parsing config files`, {
+          title: "install-qt-action",
+        });
+        return null;
+      }
+      return path.resolve(qtPath, "bin", hostPrefix);
+    })();
+
+    await core.group("Post-process installed Qt", async () =>
+      Promise.resolve().then(() => {
+        // Always set outputs.
+        {
+          // Resolved inputs.
+          setOutput("host", inputs.host);
+          setOutput("target", inputs.target);
+          setOutput("version", inputs.version);
+          setOutput("arch", inputs.arch);
+
+          // Outputs corresponding to environment variables.
+          setOutput("qt-root-dir", qtPath);
+          setOutput("qt-plugin-path", qtPluginPath);
+          setOutput("qml2-import-path", qml2ImportPath);
+
+          if (hostPath) {
+            setOutput("qt-host-path", hostPath);
+          }
+        }
+
+        // Set env variables.
+        if (inputs.setEnv) {
+          prependPath(binDir);
+
+          if (libDir) {
+            setOrAppendEnvVar("LD_LIBRARY_PATH", libDir);
+          }
+          if (pkgConfigDir) {
+            setOrAppendEnvVar("PKG_CONFIG_PATH", pkgConfigDir);
+          }
+          if (qt5Dir) {
+            setEnv("Qt5_DIR", qt5Dir);
+          }
+
+          setEnv("QT_ROOT_DIR", qtPath);
+          setEnv("QT_PLUGIN_PATH", qtPluginPath);
+          setEnv("QML2_IMPORT_PATH", qml2ImportPath);
+
+          if (hostPath) {
+            setEnv("QT_HOST_PATH", hostPath);
+          }
+        }
+      })
+    );
   }
 
   // If everything goes well, save automatic cache.

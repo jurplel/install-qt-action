@@ -137,7 +137,7 @@ Default: none
 
 ### `cache`
 
-Whether to cache Qt automatically. If it is set to `true`, then Qt won't be downloaded if a cached version is available, but the environment variables will always be set, and essential build tools will always be installed.
+Whether to cache Qt automatically. If it is set to `true`, then Qt won't be downloaded if a cached version is available, but the environment variables will always be set, and essential build tools will always be installed. You do not need a separate "actions/cache" step for this action's Qt installation.
 
 Default: `false`
 
@@ -174,6 +174,8 @@ the following paths will be prepended to the `PATH` variable:
 * `Tools/**/bin`
 * `*.app/Contents/MacOS`
 * `*.app/**/bin`
+* `Tools/*/*.app/Contents/MacOS`
+* `Tools/*/*.app/**/bin`
 
 Most tools end up in the `Tools` folder, and have a `bin` directory containing CLI tools.
 On MacOS, several tools are packaged in `.app` bundles, and CLI tools are spread out among various `bin` folders
@@ -271,6 +273,8 @@ Default: `false`
 
 ### `tools-only`
 
+DEPRECATED
+
 This is a synonym for `no-qt-binaries`. It only exists to preserve backwards compatibility.
 If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip installation of Qt.
 
@@ -294,25 +298,49 @@ Version of py7zr in the same style as the aqtversion and intended to be used for
 Default: `==1.1.0`
 
 ### `extra`
-This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
+This option can be used to append arguments to the end of the aqtinstall command for any special purpose.
 
 Example value: `--external 7z`
 
+## Outputs and Environment Variables
 
-## Outputs
-Outputs report the resulting resolved values, including the exact version selected from a SimpleSpec, for use in later workflow steps.
+This action exposes outputs so later workflow steps can use values from a specific invocation. Unlike environment variables, which a later invocation may overwrite, each output remains associated with the step that produced it.
 
-### `host`
-Host platform of the installed Qt.
+| Output | Environment variable | Description |
+|:-|:-:|:-|
+| - | `IQTA_TOOLS` | Absolute path to the top-level `Tools` directory for installed [`tools`](#tools). On macOS, some tools, such as Qt Creator, are installed as top-level app bundles outside this directory. The `Tools` directory may therefore not exist. |
+| `qt-root-dir` | `QT_ROOT_DIR` | Absolute path to the installed Qt root directory (installation prefix), containing directories such as `bin` and `lib` |
+| `qt-plugin-path` | `QT_PLUGIN_PATH` | Absolute path to the installed Qt plugins directory; `$QT_ROOT_DIR/plugins` |
+| `qml2-import-path` | `QML2_IMPORT_PATH` | Absolute path to the installed Qt QML imports directory; `$QT_ROOT_DIR/qml` |
+| `qt-host-path` | `QT_HOST_PATH` | Absolute path to the host Qt installation directory for cross-compiling to Android, iOS, WASM, and Windows ARM64 |
+| - | `Qt5_DIR` | `$QT_ROOT_DIR/lib/cmake`; deprecated |
 
-### `target`
-Target platform for build of the installed Qt.
+The following directories are appended to the corresponding environment variables:
 
-### `version`
-Exact version of the installed Qt. No SimpleSpec.
+| Environment variable | Path | Platform |
+|:-:|:-|:-|
+| `LD_LIBRARY_PATH` | `$QT_ROOT_DIR/lib` | Linux only |
+| `PKG_CONFIG_PATH` | `$QT_ROOT_DIR/lib/pkgconfig` | For Linux and macOS |
 
-### `arch`
-Architecture or build variant of the installed Qt.
+The following directories are prepended to `PATH`:
+
+| Directory | Description |
+|:-|:-|
+| Qt's `bin` | `$QT_ROOT_DIR/bin` |
+| Tool executable directories | When [`tools`](#tools) is non-empty; can be disabled by setting [`add-tools-to-path`](#add-tools-to-path) to `false` and is not affected by [`set-env`](#set-env) |
+
+Typically, when the Qt `bin` directory is in `PATH`, you do not need to modify `CMAKE_PREFIX_PATH`. If needed, you can include `$QT_ROOT_DIR` or `$QT_ROOT_DIR/lib/cmake` in it.
+
+The environment-variable changes listed above can be disabled by setting [`set-env`](#set-env) to `false`, unless otherwise specified.
+
+The outputs below report the resolved [options](#Options), including any defaults and the exact Qt version selected from a SimpleSpec:
+
+| Output | Description |
+|:-|:-|
+| `host` | Host platform of the installed Qt |
+| `target` | Target platform for the installed Qt |
+| `version` | Exact installed Qt version; not a SimpleSpec |
+| `arch` | Architecture or build variant of the installed Qt |
 
 
 ## Example with more arguments
@@ -335,7 +363,7 @@ Architecture or build variant of the installed Qt.
         setup-python: 'true'
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'true'
-        tools-only: 'false'
+        no-qt-binaries: 'false'
         aqtversion: '==3.3.*'
         py7zrversion: '==1.1.0'
         extra: '--external 7z'
@@ -349,26 +377,20 @@ Architecture or build variant of the installed Qt.
         QT_TARGET: ${{ steps.install-qt.outputs.target }}
         QT_ARCH:   ${{ steps.install-qt.outputs.arch }}
         QT_HOST:   ${{ steps.install-qt.outputs.host }}
+
+        # See also the automatically set environment variable "QT_ROOT_DIR"
+        ROOT_DIR:   ${{ steps.install-qt.outputs.qt-root-dir }}
       run: |
-        echo "Qt $QT_VER ($QT_TARGET/$QT_ARCH on $QT_HOST) has been installed in '$QT_ROOT_DIR':"
-        ls "$QT_ROOT_DIR"
+        echo "Qt $QT_VER ($QT_TARGET/$QT_ARCH on $QT_HOST) has been installed in '$ROOT_DIR':"
+        ls "$ROOT_DIR"
+
+        # Check PATH
+        command -v qmake
+      shell: bash
 ```
 
 
 ## More information
-For more in-depth and certifiably up-to-date documentation, check the documentation for aqtinstall [here](https://aqtinstall.readthedocs.io/en/latest/getting_started.html).
-
-Any tools you installed with the `tools` key will be added to the beginning of your `PATH` environment variable.
-Specifically, any `bin` directories within the tool's directory will be added.
-On MacOS, if the tool is an app bundle, then the `.app/Contents/MacOS` folder will also be added to your `PATH`.
-
-The Qt bin directory is prepended to your `path` environment variable.
-`Qt5_DIR` is also set appropriately for CMake if you are using Qt 5.
-In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` are set accordingly. `IQTA_TOOLS` is set to the "Tools" directory if tools are installed as well. `QT_HOST_PATH` is set if appropriate (Android, iOS, WASM, and Windows ARM64).
-
-Since the Qt bin directory is in your `path`, you will not need to set the `CMAKE_PREFIX_PATH` CMake variable.
-If you wish to do so, you can set it to either `${QT_ROOT_DIR}` or to `${QT_ROOT_DIR}/lib/cmake`.
-
 > Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer for making this easy. Please go support [miurahr](https://github.com/miurahr/aqtinstall), he did all of the hard work here ([his liberapay](https://liberapay.com/miurahr)).
 >
 > This action is distributed under the [MIT license](LICENSE).

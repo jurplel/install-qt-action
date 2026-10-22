@@ -49,7 +49,7 @@ inputs:
     description: Turns off installation of Qt. Useful for installing tools, source, documentation, or examples.
     default: false
   tools-only:
-    description: Synonym for `no-qt-binaries`, used for backwards compatibility.
+    description: Synonym for `no-qt-binaries`, used for backwards compatibility. Deprecated.
     default: false
   aqtsource:
     description: Location to source aqtinstall from in case of issues
@@ -103,6 +103,18 @@ outputs:
   arch:
     description: Architecture or build variant of the installed Qt
     value: ${{ steps.aqtinstall.outputs.arch }}
+  qt-root-dir:
+    description: Absolute path to the base directory (installation prefix) of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.qt-root-dir }}
+  qt-plugin-path:
+    description: Absolute path to the installed Qt plugins directory
+    value: ${{ steps.aqtinstall.outputs.qt-plugin-path }}
+  qml2-import-path:
+    description: Absolute path to the installed Qt QML imports directory
+    value: ${{ steps.aqtinstall.outputs.qml2-import-path }}
+  qt-host-path:
+    description: Absolute path to the host Qt installation directory when required
+    value: ${{ steps.aqtinstall.outputs.qt-host-path }}
 runs:
   using: "composite"
   steps:
