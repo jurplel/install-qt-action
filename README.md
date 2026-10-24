@@ -14,7 +14,7 @@ All done.
 > Each new major version of this project includes changes that can break workflows written to use an older version of
 > this project. These changes are summarized here, to help you upgrade your existing workflows.
 >
-> [Upgrade guide to newer major versions of `install-qt-action`](README_upgrade_guide.md)
+> [Upgrade guide](README_upgrade_guide.md) to newer major versions of `install-qt-action`
 
 
 ## Options
