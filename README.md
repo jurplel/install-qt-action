@@ -271,9 +271,7 @@ This option is useful if you want to install tools, source, documentation, or ex
 
 Default: `false`
 
-### `tools-only`
-
-DEPRECATED
+### ~~`tools-only`~~ <kbd>Deprecated</kbd> 
 
 This is a synonym for `no-qt-binaries`. It only exists to preserve backwards compatibility.
 If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip installation of Qt.
@@ -306,27 +304,27 @@ Example value: `--external 7z`
 
 This action exposes outputs so later workflow steps can use values from a specific invocation. Unlike environment variables, which a later invocation may overwrite, each output remains associated with the step that produced it.
 
-| Output | Environment variable | Description |
-|:-|:-:|:-|
-| - | `IQTA_TOOLS` | Absolute path to the top-level `Tools` directory for installed [`tools`](#tools). On macOS, some tools, such as Qt Creator, are installed as top-level app bundles outside this directory. The `Tools` directory may therefore not exist. |
-| `qt-root-dir` | `QT_ROOT_DIR` | Absolute path to the installed Qt root directory (installation prefix), containing directories such as `bin` and `lib` |
-| `qt-plugin-path` | `QT_PLUGIN_PATH` | Absolute path to the installed Qt plugins directory; `$QT_ROOT_DIR/plugins` |
-| `qml2-import-path` | `QML2_IMPORT_PATH` | Absolute path to the installed Qt QML imports directory; `$QT_ROOT_DIR/qml` |
-| `qt-host-path` | `QT_HOST_PATH` | Absolute path to the host Qt installation directory for cross-compiling to Android, iOS, WASM, and Windows ARM64 |
-| - | `Qt5_DIR` | `$QT_ROOT_DIR/lib/cmake`; deprecated |
+| Output             | Environment variable | Description                                                                                                            |
+| ------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| -                  | `IQTA_TOOLS`         | Absolute path to the top-level `Tools` directory for installed [`tools`](#tools). On macOS, some tools, such as Qt Creator, are installed as top-level app bundles outside this directory. The `Tools` directory may therefore not exist. |
+| `qt-root-dir`      | `QT_ROOT_DIR`        | Absolute path to the installed Qt root directory (installation prefix), containing directories such as `bin` and `lib` |
+| `qt-plugin-path`   | `QT_PLUGIN_PATH`     | Absolute path to the installed Qt plugins directory; `$QT_ROOT_DIR/plugins`                                            |
+| `qml2-import-path` | `QML2_IMPORT_PATH`   | Absolute path to the installed Qt QML imports directory; `$QT_ROOT_DIR/qml`                                            |
+| `qt-host-path`     | `QT_HOST_PATH`       | Absolute path to the host Qt installation directory for cross-compiling to Android, iOS, WASM, and Windows ARM64       |
+| -                  | ~~`Qt5_DIR`~~        | ~~`$QT_ROOT_DIR/lib/cmake`~~ <kbd>Deprecated</kbd>                                                                                   |
 
 The following directories are appended to the corresponding environment variables:
 
-| Environment variable | Path | Platform |
-|:-:|:-|:-|
-| `LD_LIBRARY_PATH` | `$QT_ROOT_DIR/lib` | Linux only |
-| `PKG_CONFIG_PATH` | `$QT_ROOT_DIR/lib/pkgconfig` | For Linux and macOS |
+| Environment variable | Path                         | Platform            |
+| -------------------- | ---------------------------- | ------------------- |
+| `LD_LIBRARY_PATH`    | `$QT_ROOT_DIR/lib`           | Linux only          |
+| `PKG_CONFIG_PATH`    | `$QT_ROOT_DIR/lib/pkgconfig` | For Linux and macOS |
 
 The following directories are prepended to `PATH`:
 
-| Directory | Description |
-|:-|:-|
-| Qt's `bin` | `$QT_ROOT_DIR/bin` |
+| Directory                   | Description                                                                                                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Qt's `bin`                  | `$QT_ROOT_DIR/bin`                                                                                                                                                |
 | Tool executable directories | When [`tools`](#tools) is non-empty; can be disabled by setting [`add-tools-to-path`](#add-tools-to-path) to `false` and is not affected by [`set-env`](#set-env) |
 
 Typically, when the Qt `bin` directory is in `PATH`, you do not need to modify `CMAKE_PREFIX_PATH`. If needed, you can include `$QT_ROOT_DIR` or `$QT_ROOT_DIR/lib/cmake` in it.
@@ -335,12 +333,12 @@ The environment-variable changes listed above can be disabled by setting [`set-e
 
 The outputs below report the resolved [options](#Options), including any defaults and the exact Qt version selected from a SimpleSpec:
 
-| Output | Description |
-|:-|:-|
-| `host` | Host platform of the installed Qt |
-| `target` | Target platform for the installed Qt |
-| `version` | Exact installed Qt version; not a SimpleSpec |
-| `arch` | Architecture or build variant of the installed Qt |
+| Output    | Description                                       |
+| --------- | ------------------------------------------------- |
+| `host`    | Host platform of the installed Qt                 |
+| `target`  | Target platform for the installed Qt              |
+| `version` | Exact installed Qt version; not a SimpleSpec      |
+| `arch`    | Architecture or build variant of the installed Qt |
 
 
 ## Example with more arguments
