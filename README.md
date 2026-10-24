@@ -271,7 +271,9 @@ This option is useful if you want to install tools, source, documentation, or ex
 
 Default: `false`
 
-### ~~`tools-only`~~ <kbd>Deprecated</kbd> 
+### ~~`tools-only`~~
+
+DEPRECATED
 
 This is a synonym for `no-qt-binaries`. It only exists to preserve backwards compatibility.
 If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip installation of Qt.
@@ -311,7 +313,7 @@ This action exposes outputs so later workflow steps can use values from a specif
 | `qt-plugin-path`   | `QT_PLUGIN_PATH`     | Absolute path to the installed Qt plugins directory; `$QT_ROOT_DIR/plugins`                                            |
 | `qml2-import-path` | `QML2_IMPORT_PATH`   | Absolute path to the installed Qt QML imports directory; `$QT_ROOT_DIR/qml`                                            |
 | `qt-host-path`     | `QT_HOST_PATH`       | Absolute path to the host Qt installation directory for cross-compiling to Android, iOS, WASM, and Windows ARM64       |
-| -                  | ~~`Qt5_DIR`~~        | ~~`$QT_ROOT_DIR/lib/cmake`~~ <kbd>Deprecated</kbd>                                                                     |
+| -                  | ~~`Qt5_DIR`~~        | ~~`$QT_ROOT_DIR/lib/cmake`~~ DEPRECATED                                                                                |
 
 The following directories are appended to the corresponding environment variables:
 
