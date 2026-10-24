@@ -391,8 +391,10 @@ The outputs below report the resolved [options](#Options), including any default
 
 
 ## More information
-> Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer for making this easy. Please go support [miurahr](https://github.com/miurahr/aqtinstall), he did all of the hard work here ([his liberapay](https://liberapay.com/miurahr)).
->
-> This action is distributed under the [MIT license](LICENSE).
->
-> By using this action, you agree to the terms of Qt's licensing. See [Qt licensing](https://www.qt.io/licensing/) and [Licenses used by Qt](https://doc.qt.io/qt-5/licenses-used-in-qt.html).
+For more in-depth and certifiably up-to-date documentation, check the documentation for aqtinstall [here](https://aqtinstall.readthedocs.io/en/latest/getting_started.html).
+
+Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer for making this easy. Please go support [miurahr](https://github.com/miurahr/aqtinstall), he did all of the hard work here ([his liberapay](https://liberapay.com/miurahr)).
+
+This action is distributed under the [MIT license](LICENSE).
+
+By using this action, you agree to the terms of Qt's licensing. See [Qt licensing](https://www.qt.io/licensing/) and [Licenses used by Qt](https://doc.qt.io/qt-5/licenses-used-in-qt.html).
