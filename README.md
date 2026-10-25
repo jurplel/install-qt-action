@@ -10,13 +10,15 @@ You know what's easier than dealing with that? Just using this:
 
 All done.
 
-## Upgrade Guides
-Each new major version of this project includes changes that can break workflows written to use an older version of
-this project. These changes are summarized here, to help you upgrade your existing workflows.
+> [!NOTE]
+> Each new major version of this project includes changes that can break workflows written to use an older version of
+> this project. These changes are summarized here, to help you upgrade your existing workflows.
+>
+> [Upgrade guide](README_upgrade_guide.md) to newer major versions of `install-qt-action`
 
-[Upgrading `install-qt-action`](README_upgrade_guide.md)
 
 ## Options
+Some inputs have default values and may be omitted.  
 
 ### `version`
 The desired version of Qt to install.
@@ -39,7 +41,6 @@ Defaults:
 - `all_os` when `target` is `android` or `wasm`, the resolved Qt version is 6.7.0 or newer, and `aqtinstall` is 3.2.0 or newer.
 - Otherwise, the platform on which the action is running.
 
-
 ### `target`
 This is the target platform that you will be building for. You will want to set this if you are building for iOS or Android. Please note that iOS builds are supported only on macOS hosts and Win RT builds are only supported on Windows hosts.
 
@@ -48,9 +49,8 @@ Possible values: `desktop`, `android`, `ios`, or `wasm`.
 
 Default: `desktop`  
 
-
 ### `arch`
-This is the target architecture that your program will be built for.
+This is the target architecture or build variant that your program will be built against.
 
 **Linux x86 packages are not supported by this action.** Qt does not offer pre-built Linux x86 packages. Please consider using your distro's repository or building from source manually.
 
@@ -58,21 +58,24 @@ This is the target architecture that your program will be built for.
 
 You can find a full list of architectures easily by using [this awesome website](https://ddalcino.github.io/aqt-list-server/).
 
-Default: A popular choice calculated from the host (`host`), Qt version (`version`), and target (`target`):
+Default: A popular and reasonable choice calculated from the host (`host`), Qt version (`version`), and target (`target`):
+- Linux x64 Host & Desktop Target
+  - Qt `>=6.7`: `linux_gcc_64`
+  - Qt `<6.7`: `gcc_64`
+- Linux ARM64 Host & Desktop Target: `linux_gcc_arm64`
+- macOS Host & Desktop Target: `clang_64`
+- macOS Host & iOS Target: `ios`
 - Android Target
-  - Qt >=6.0: `android_armv7`
-  - Qt >=5.14,<6.0: `android`
-- or:
-  - Windows x64 Host
-    - Qt >=6.8: `win64_msvc2022_64`
-    - Qt >=5.15,<6.8: `win64_msvc2019_64`
-    - Qt >=5.9,<5.15: `win64_msvc2017_64`
-    - Qt >=5.6,<5.9: `win64_msvc2015_64`
-    - Qt <5.6: `win64_msvc2013_64`
-  - Windows ARM64 Host
-    - Qt >=6.8: `win64_msvc2022_arm64`
- 
-For Linux and macOS, there are no defaults set. The value will be dynamically determined by aqtinstall if not provided.
+  - Qt `>=6.0`: `android_armv7`
+  - Qt `>=5.14,<6.0`: `android`
+  - Qt `<5.14`: `android_armv7`
+- Windows ARM64 Host & Desktop Target: `win64_msvc2022_arm64`
+- Windows x64 Host
+  - Qt `>=6.8`: `win64_msvc2022_64`
+  - Qt `>=5.15,<6.8`: `win64_msvc2019_64`
+  - Qt `>=5.9,<5.15`: `win64_msvc2017_64`
+  - Qt `>=5.6,<5.9`: `win64_msvc2015_64`
+  - Qt `<5.6`: `win64_msvc2013_64`
 
 ### `dir`
 This is the directory prefix that Qt will be installed to.
@@ -134,7 +137,7 @@ Default: none
 
 ### `cache`
 
-Whether to cache Qt automatically. If it is set to `true`, then Qt won't be downloaded if a cached version is available, but the environment variables will always be set, and essential build tools will always be installed.
+Whether to cache Qt automatically. If it is set to `true`, then Qt won't be downloaded if a cached version is available, but the environment variables will always be set, and essential build tools will always be installed. You do not need a separate "actions/cache" step for this action's Qt installation.
 
 Default: `false`
 
@@ -171,6 +174,8 @@ the following paths will be prepended to the `PATH` variable:
 * `Tools/**/bin`
 * `*.app/Contents/MacOS`
 * `*.app/**/bin`
+* `Tools/*/*.app/Contents/MacOS`
+* `Tools/*/*.app/**/bin`
 
 Most tools end up in the `Tools` folder, and have a `bin` directory containing CLI tools.
 On MacOS, several tools are packaged in `.app` bundles, and CLI tools are spread out among various `bin` folders
@@ -266,7 +271,9 @@ This option is useful if you want to install tools, source, documentation, or ex
 
 Default: `false`
 
-### `tools-only`
+### ~~`tools-only`~~
+
+DEPRECATED
 
 This is a synonym for `no-qt-binaries`. It only exists to preserve backwards compatibility.
 If you set either `no-qt-binaries` or `tools-only` to `true`, you will skip installation of Qt.
@@ -291,14 +298,56 @@ Version of py7zr in the same style as the aqtversion and intended to be used for
 Default: `==1.1.0`
 
 ### `extra`
-This input can be used to append arguments to the end of the aqtinstall command for any special purpose.
+This option can be used to append arguments to the end of the aqtinstall command for any special purpose.
 
 Example value: `--external 7z`
+
+## Outputs and Environment Variables
+
+This action exposes outputs so later workflow steps can use values from a specific invocation. Unlike environment variables, which a later invocation may overwrite, each output remains associated with the step that produced it.
+
+| Output             | Environment variable | Description                                                                                                            |
+| ------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| -                  | `IQTA_TOOLS`         | Absolute path to the top-level `Tools` directory for installed [`tools`](#tools). On macOS, some tools, such as Qt Creator, are installed as top-level app bundles outside this directory. The `Tools` directory may therefore not exist. |
+| `qt-root-dir`      | `QT_ROOT_DIR`        | Absolute path to the installed Qt root directory (installation prefix), containing directories such as `bin` and `lib` |
+| `qt-plugin-path`   | `QT_PLUGIN_PATH`     | Absolute path to the installed Qt plugins directory; `$QT_ROOT_DIR/plugins`                                            |
+| `qml2-import-path` | `QML2_IMPORT_PATH`   | Absolute path to the installed Qt QML imports directory; `$QT_ROOT_DIR/qml`                                            |
+| `qt-host-path`     | `QT_HOST_PATH`       | Absolute path to the host Qt installation directory for cross-compiling to Android, iOS, WASM, and Windows ARM64       |
+| -                  | ~~`Qt5_DIR`~~        | `$QT_ROOT_DIR/lib/cmake`; DEPRECATED                                                                                   |
+
+The following directories are appended to the corresponding environment variables:
+
+| Environment variable | Path                         | Platform            |
+| -------------------- | ---------------------------- | ------------------- |
+| `LD_LIBRARY_PATH`    | `$QT_ROOT_DIR/lib`           | Linux only          |
+| `PKG_CONFIG_PATH`    | `$QT_ROOT_DIR/lib/pkgconfig` | For Linux and macOS |
+
+The following directories are prepended to `PATH`:
+
+| Directory                   | Description                                                                                                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Qt's `bin`                  | `$QT_ROOT_DIR/bin`                                                                                                                                                |
+| Tool executable directories | When [`tools`](#tools) is non-empty; can be disabled by setting [`add-tools-to-path`](#add-tools-to-path) to `false` and is not affected by [`set-env`](#set-env) |
+
+Typically, when the Qt `bin` directory is in `PATH`, you do not need to modify `CMAKE_PREFIX_PATH`. If needed, you can include `$QT_ROOT_DIR` or `$QT_ROOT_DIR/lib/cmake` in it.
+
+The environment-variable changes listed above can be disabled by setting [`set-env`](#set-env) to `false`, unless otherwise specified.
+
+The outputs below report the resolved [options](#Options), including any defaults and the exact Qt version selected from a SimpleSpec:
+
+| Output    | Description                                       |
+| --------- | ------------------------------------------------- |
+| `host`    | Host platform of the installed Qt                 |
+| `target`  | Target platform for the installed Qt              |
+| `version` | Exact installed Qt version; not a SimpleSpec      |
+| `arch`    | Architecture or build variant of the installed Qt |
+
 
 ## Example with more arguments
 
 ```yml
     - name: Install Qt
+      id: install-qt
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.8.3'
@@ -314,28 +363,35 @@ Example value: `--external 7z`
         setup-python: 'true'
         tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'true'
-        tools-only: 'false'
+        no-qt-binaries: 'false'
         aqtversion: '==3.3.*'
         py7zrversion: '==1.1.0'
         extra: '--external 7z'
         use-official: false
         email: ${{ secrets.QT_EMAIL }}
         pw: ${{ secrets.QT_PW }}
+
+    - name: Check result
+      env:
+        QT_VER:    ${{ steps.install-qt.outputs.version }}
+        QT_TARGET: ${{ steps.install-qt.outputs.target }}
+        QT_ARCH:   ${{ steps.install-qt.outputs.arch }}
+        QT_HOST:   ${{ steps.install-qt.outputs.host }}
+
+        # See also the automatically set environment variable "QT_ROOT_DIR"
+        ROOT_DIR:   ${{ steps.install-qt.outputs.qt-root-dir }}
+      run: |
+        echo "Qt $QT_VER ($QT_TARGET/$QT_ARCH on $QT_HOST) has been installed in '$ROOT_DIR':"
+        ls "$ROOT_DIR"
+
+        # Check PATH
+        command -v qmake
+      shell: bash
 ```
 
-## More info
+
+## More information
 For more in-depth and certifiably up-to-date documentation, check the documentation for aqtinstall [here](https://aqtinstall.readthedocs.io/en/latest/getting_started.html).
-
-Any tools you installed with the `tools` key will be added to the beginning of your `PATH` environment variable.
-Specifically, any `bin` directories within the tool's directory will be added.
-On MacOS, if the tool is an app bundle, then the `.app/Contents/MacOS` folder will also be added to your `PATH`.
-
-The Qt bin directory is prepended to your `path` environment variable.
-`Qt5_DIR` is also set appropriately for CMake if you are using Qt 5.
-In addition, `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` are set accordingly. `IQTA_TOOLS` is set to the "Tools" directory if tools are installed as well. `QT_HOST_PATH` is set if appropriate (Android, iOS, WASM, and Windows ARM64).
-
-Since the Qt bin directory is in your `path`, you will not need to set the `CMAKE_PREFIX_PATH` CMake variable.
-If you wish to do so, you can set it to either `${QT_ROOT_DIR}` or to `${QT_ROOT_DIR}/lib/cmake`.
 
 Big thanks to the [aqtinstall](https://github.com/miurahr/aqtinstall/) developer for making this easy. Please go support [miurahr](https://github.com/miurahr/aqtinstall), he did all of the hard work here ([his liberapay](https://liberapay.com/miurahr)).
 

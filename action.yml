@@ -16,7 +16,7 @@ inputs:
     description: Target platform for build
     default: desktop
   arch:
-    description: Architecture for Windows/Android
+    description: Architecture or build variant
   install-deps:
     description: Whether or not to install Qt dependencies on Linux
     default: true
@@ -49,7 +49,7 @@ inputs:
     description: Turns off installation of Qt. Useful for installing tools, source, documentation, or examples.
     default: false
   tools-only:
-    description: Synonym for `no-qt-binaries`, used for backwards compatibility.
+    description: Synonym for `no-qt-binaries`, used for backwards compatibility. Deprecated.
     default: false
   aqtsource:
     description: Location to source aqtinstall from in case of issues
@@ -90,6 +90,31 @@ inputs:
   pw:
     default: ''
     description: Your Qt password
+outputs:
+  host:
+    description: Host platform of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.host }}
+  target:
+    description: Target platform for build of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.target }}
+  version:
+    description: Exact version of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.version }}
+  arch:
+    description: Architecture or build variant of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.arch }}
+  qt-root-dir:
+    description: Absolute path to the base directory (installation prefix) of the installed Qt
+    value: ${{ steps.aqtinstall.outputs.qt-root-dir }}
+  qt-plugin-path:
+    description: Absolute path to the installed Qt plugins directory
+    value: ${{ steps.aqtinstall.outputs.qt-plugin-path }}
+  qml2-import-path:
+    description: Absolute path to the installed Qt QML imports directory
+    value: ${{ steps.aqtinstall.outputs.qml2-import-path }}
+  qt-host-path:
+    description: Absolute path to the host Qt installation directory when required
+    value: ${{ steps.aqtinstall.outputs.qt-host-path }}
 runs:
   using: "composite"
   steps:
@@ -152,6 +177,7 @@ runs:
       python-version: '>=3.14.0'
 
   - name: Setup and run aqtinstall
+    id: aqtinstall
     # The dollar sign:
     # - Reference same-repository actions with self-repository syntax - GitHub Changelog
     #   https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/

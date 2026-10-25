@@ -23,6 +23,8 @@
     any clobbered tools are added to the path later than the ones added by this action.
   * If the added tool paths are still causing trouble, you can remove them from the `PATH` by setting
     `add-tools-to-path: false`. 
+* Added the `no-qt-binaries` option to replace the deprecated option `tools-only`, as the latter's name does not
+  accurately convey its intention.
 
 ## v3
 * Updated `aqtinstall` to version 2.1.* by default.

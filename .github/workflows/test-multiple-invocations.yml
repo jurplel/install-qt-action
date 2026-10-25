@@ -1,0 +1,170 @@
+name: Test outputs and environment across multiple invocations
+
+# You should NOT run this action multiple times in a single job in production like this workflow,
+# otherwise the resulting environment may become very chaotic.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      # The following input and its usage are based on the "rclone/rclone" project.
+      # https://github.com/rclone/rclone/blob/c1f5df209024c79028c98134b703b31d599befac/.github/workflows/build.yml#L24
+      # Copyright (C) 2012 by Nick Craig-Wood http://www.craig-wood.com/nick/. Licensed under MIT.
+      manual:
+        description: Manual run (bypass default conditions)
+        required: true
+        type: choice
+        default: 'TRUE'
+        options:
+          - 'TRUE'
+
+jobs:
+  test:
+    name: Multiple invocations (${{ matrix.os }})
+    if: >-
+      inputs.manual || (
+        github.repository == 'jurplel/install-qt-action' && (
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name ||
+          github.event.pull_request.user.login == 'dependabot[bot]'
+        )
+      )
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-26.04
+            cross-compiling:
+              qt:
+                host: all_os
+                target: android
+                arch: android_arm64_v8a
+              host-arch-dir-name: gcc_64
+            native:
+              qt:
+                host: linux
+                target: desktop
+                arch: linux_gcc_64
+          - os: macos-26
+            cross-compiling:
+              qt:
+                host: all_os
+                target: wasm
+                arch: wasm_singlethread
+              host-arch-dir-name: macos
+            native:
+              qt:
+                host: mac
+                target: desktop
+                arch: clang_64
+          - os: windows-2025
+            cross-compiling:
+              qt:
+                host: windows
+                target: desktop
+                arch: win64_msvc2022_arm64_cross_compiled
+              host-arch-dir-name: msvc2022_64
+            native:
+              qt:
+                host: windows
+                target: desktop
+                arch: win64_msvc2022_64
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: action/
+
+      - name: Build action
+        run: |
+          set -ex
+
+          cd action
+          npm ci
+          npm run build
+        shell: bash
+
+      # See the root "action.yml" file.
+      - name: Use local built internal action (hack)
+        run: |
+          sed -i.bak 's|uses: $/action|uses: ./action|' action.yml
+          diff -u action.yml.bak action.yml || true
+          git status --porcelain
+        shell: bash
+
+      - name: Install cross-compiling and native Qt 6.8.1
+        id: install-qt-both-0
+        uses: ./
+        with:
+          dir: "${{ github.workspace }}"
+          host: ${{ matrix.cross-compiling.qt.host }}
+          target: ${{ matrix.cross-compiling.qt.target }}
+          arch: ${{ matrix.cross-compiling.qt.arch }}
+          version: "6.8.1"
+
+      - name: Verify initial host path
+        shell: bash
+        env:
+          ENV_QT_HOST_PATH: ${{ env.QT_HOST_PATH }}
+          OUTPUT_QT_HOST_PATH: ${{ steps.install-qt-both-0.outputs.qt-host-path }}
+          EXPECTED_HOST_PATH: "${{ github.workspace }}/Qt/6.8.1/${{ matrix.cross-compiling.host-arch-dir-name }}"
+        run: |
+          set -ex
+
+          [[ "$ENV_QT_HOST_PATH" == "$OUTPUT_QT_HOST_PATH" ]]
+          [[ "$(realpath "$ENV_QT_HOST_PATH")" == "$(realpath "$EXPECTED_HOST_PATH")" ]]
+
+      - name: Install native Qt 6.8.2
+        id: install-qt-host
+        uses: ./
+        with:
+          dir: "${{ github.workspace }}"
+          host: ${{ matrix.native.qt.host }}
+          target: ${{ matrix.native.qt.target }}
+          arch: ${{ matrix.native.qt.arch }}
+          version: "6.8.2"
+
+      - name: Verify native installation preserves QT_HOST_PATH
+        shell: bash
+        env:
+          ENV_QT_HOST_PATH: ${{ env.QT_HOST_PATH }}
+          OUTPUT_BOTH_0_QT_HOST_PATH: ${{ steps.install-qt-both-0.outputs.qt-host-path }}
+          OUTPUT_HOST_QT_HOST_PATH: ${{ steps.install-qt-host.outputs.qt-host-path }}
+        run: |
+          set -ex
+
+          [[ "$ENV_QT_HOST_PATH" == "$OUTPUT_BOTH_0_QT_HOST_PATH" ]]
+          [[ "$ENV_QT_HOST_PATH" != '' ]]
+
+          [[ "$OUTPUT_HOST_QT_HOST_PATH" == '' ]]
+
+      - name: Install cross-compiling and native Qt 6.8.3
+        id: install-qt-both-1
+        uses: ./
+        with:
+          dir: "${{ github.workspace }}"
+          host: ${{ matrix.cross-compiling.qt.host }}
+          target: ${{ matrix.cross-compiling.qt.target }}
+          arch: ${{ matrix.cross-compiling.qt.arch }}
+          version: "6.8.3"
+
+      - name: Verify QT_HOST_PATH updates and earlier output is preserved
+        shell: bash
+        env:
+          ENV_QT_HOST_PATH: ${{ env.QT_HOST_PATH }}
+          OUTPUT_BOTH_0_QT_HOST_PATH: ${{ steps.install-qt-both-0.outputs.qt-host-path }}
+          OUTPUT_BOTH_1_QT_HOST_PATH: ${{ steps.install-qt-both-1.outputs.qt-host-path }}
+          EXPECTED_HOST_PATH: "${{ github.workspace }}/Qt/6.8.3/${{ matrix.cross-compiling.host-arch-dir-name }}"
+        run: |
+          set -ex
+
+          [[ "$ENV_QT_HOST_PATH" == "$OUTPUT_BOTH_1_QT_HOST_PATH" ]]
+          [[ "$(realpath "$ENV_QT_HOST_PATH")" == "$(realpath "$EXPECTED_HOST_PATH")" ]]
+          [[ "$OUTPUT_BOTH_0_QT_HOST_PATH" != "$OUTPUT_BOTH_1_QT_HOST_PATH" ]]

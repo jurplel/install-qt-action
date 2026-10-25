@@ -173,7 +173,7 @@ jobs:
 
           git switch --no-track -c "$TARGET_BRANCH" "origin/$SOURCE_BRANCH"
 
-      # Do NOT cache anything.
+      # Do NOT cache anything; start from a clean environment.
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24

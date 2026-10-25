@@ -21,13 +21,35 @@ import "source-map-support/register.js";
 const compareVersions = (v1, op, v2) => {
     return compare(v1, v2, op);
 };
+/**
+ * Set or append a string to environment variable and log it.
+ *
+ * Uses the platform-specific path delimiter.
+ */
 const setOrAppendEnvVar = (name, value) => {
+    core.info(`Appending "${value}" to env "${name}"`);
+    // Be careful with empty string handling. `process.env[name] ? ...` is different from `process.env[name]?.`.
+    // We choose to treat an entirely empty initial value as an empty list, so no `LD_LIBRARY_PATH=":FOO"`
+    // will be produced to surprise users.
     const oldValue = process.env[name];
-    let newValue = value;
-    if (oldValue) {
-        newValue = `${oldValue}:${newValue}`;
-    }
-    core.exportVariable(name, newValue);
+    const entries = oldValue ? oldValue.split(path.delimiter) : [];
+    entries.push(value);
+    core.exportVariable(name, entries.join(path.delimiter));
+};
+/** Prepend a string to environment variable PATH and log it. */
+const prependPath = (value) => {
+    core.info(`Prepending "${value}" to env "PATH"`);
+    core.addPath(value);
+};
+/** Set an output and log it. */
+const setOutput = (name, value) => {
+    core.info(`Setting output "${name}" = "${value}"`);
+    core.setOutput(name, value);
+};
+/** Set an environment variable and log it. */
+const setEnv = (name, value) => {
+    core.info(`Setting env "${name}" = "${value}"`);
+    core.exportVariable(name, value);
 };
 const dirExists = (dir) => {
     try {
@@ -90,34 +112,120 @@ const tryRunPython = (command, args) => __awaiter(void 0, void 0, void 0, functi
 const flaggedList = (flag, listArgs) => {
     return listArgs.length ? [flag, ...listArgs] : [];
 };
-const locateQtArchDir = (installDir, host) => {
-    // For 6.4.2/gcc, qmake is at 'installDir/6.4.2/gcc_64/bin/qmake'.
-    // This makes a list of all the viable arch directories that contain a qmake file.
-    const qtArchDirs = glob
-        .sync(`${installDir}/[0-9]*/*/bin/qmake*`)
-        .map((s) => path.resolve(s, "..", ".."));
-    // For Qt6 mobile and wasm installations, and Qt6 Windows on ARM cross-compiled installations,
-    // a standard desktop Qt installation must exist alongside the requested architecture.
-    // In these cases, we must select the first item that ends with 'android*', 'ios', 'wasm*' or 'msvc*_arm64'.
-    const requiresParallelDesktop = qtArchDirs.filter((archPath) => {
-        var _a;
-        const archDir = path.basename(archPath);
-        const versionDir = path.basename(path.join(archPath, ".."));
-        return (versionDir.match(/^6\.\d+\.\d+$/) &&
-            ((_a = archDir.match(/^(android.*|ios|wasm.*)$/) /* Was "||", @typescript-eslint/prefer-nullish-coalescing */) !== null && _a !== void 0 ? _a : (archDir.match(/^msvc.*_arm64$/) && host !== "windows_arm64")));
-    });
-    if (requiresParallelDesktop.length) {
-        // NOTE: if multiple mobile/wasm installations coexist, this may not select the desired directory
-        return [requiresParallelDesktop[0], true];
+/** In installation of "linux desktop 6.4.2 gcc_64", for example, qmake is in the "bin" dir under "6.4.2/gcc_64". */
+const calculateQtArchDir = (host, version, arch) => {
+    // These two blocks are written based on the logic in aqtinstall v3.3.0:
+    // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/metadata.py#L485-L516
+    // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/metadata.py#L529-L531
+    let versionDir = version;
+    if (compareVersions(version, "=", "5.9.0")) {
+        // Changing dir name between patch versions? You've got to be kidding me.
+        versionDir = "5.9";
     }
-    else if (!qtArchDirs.length) {
-        throw Error(`Failed to locate a Qt installation directory in  ${installDir}`);
+    let archDir = arch;
+    if (["linux", "linux_arm64"].includes(host) && arch.startsWith("linux_")) {
+        // "linux_gcc_arm64" -> "gcc_arm64"
+        archDir = arch.substring("linux_".length);
+    }
+    else if (host === "mac" && compareVersions(version, ">=", "6.1.2") && arch === "clang_64") {
+        // Changing dir name between patch versions, again?
+        archDir = "macos";
     }
     else {
-        // NOTE: if multiple Qt installations exist, this may not select the desired directory
-        return [qtArchDirs[0], false];
+        const matchWhole = arch.match(/^win(32|64)_(\w+)$/);
+        if (matchWhole) {
+            const [bits, name] = matchWhole.slice(1);
+            if (name.startsWith("llvm_")) {
+                // "win64_llvm_mingw" -> "llvm-mingw_64"
+                const tail = name.substring("llvm_".length);
+                archDir = `llvm-${tail}_${bits}`;
+            }
+            else if (name.startsWith("msvc")) {
+                if (name.endsWith("_cross_compiled")) {
+                    // "win64_msvc2022_arm64_cross_compiled" -> "msvc2022_arm64"
+                    archDir = name.substring(0, name.length - "_cross_compiled".length);
+                }
+                else {
+                    // "win32_msvc2015" -> "msvc2015"
+                    // "win64_msvc2019_arm64" -> "msvc2019_arm64"
+                    // "win64_msvc2022_64" -> "msvc2022_64"
+                    archDir = name;
+                }
+            }
+            else {
+                // "win32_mingw53" -> "mingw53_32"
+                // "win64_mingw" -> "mingw_64"
+                archDir = `${name}_${bits}`;
+            }
+        }
+    }
+    return path.join(versionDir, archDir);
+};
+/** A lightweight sanity check that discovers malformed installation in which no qmake file is placed. */
+const checkQtPath = (qtPath) => {
+    const qmakePaths = glob.sync([
+        ...["qmake", "qmake.exe", "qmake.bat"], // Both Qt 5 and Qt 6
+        ...["qmake6", "qmake6.exe", "qmake6.bat"], // Qt 6 only
+    ], { cwd: path.resolve(qtPath, "bin") });
+    if (qmakePaths.length === 0) {
+        throw Error(`Failed to locate a Qt installation directory in  ${qtPath}`);
     }
 };
+/**
+ * For Qt 6 mobile and wasm installations, and Qt 6 Windows on ARM cross-compiled installations,
+ * a standard desktop Qt installation must exist alongside the requested architecture.
+ * Qt 5 related content in this function is for notes only.
+ *
+ * See:
+ * - https://github.com/miurahr/aqtinstall/blob/076e1659807d0b362a3ed684d54c2e9c775eb9c7/aqt/installer.py#L1446-L1465
+ * - Fix docs qt6 wasm mobile by ddalcino · Pull Request #638 · miurahr/aqtinstall
+ *   https://github.com/miurahr/aqtinstall/pull/638
+ */
+const calculateParallelDesktopRequirement = (host, target, version, arch) => {
+    // Coarse-grained check; should not hurt due to subsequent checks.
+    if (compareVersions(version, "<", "6.0.0")) {
+        return false;
+    }
+    // The "arch":
+    // - Android:
+    //   - "android" in Qt 5.14~5.15. It contains all four architectures.
+    //   - "android_arm64_v8a", "android_armv7", "android_x86", and "android_x86_64" in other versions.
+    // - iOS is "ios".
+    // - WASM:
+    //   - "wasm_32" in Qt 5.13~5.15 & Qt 6.2~6.4.
+    //   - "wasm_singlethread" and "wasm_multithread" since Qt 6.5.
+    //
+    // Refs:
+    // - New Features in Qt 5.13 - Qt Wiki
+    //   https://wiki.qt.io/New_Features_in_Qt_5.13
+    // - Qt 6.2 LTS Released
+    //   https://www.qt.io/blog/qt-6.2-lts-released
+    // - Qt for WebAssembly | Qt 6.5
+    //   https://doc.qt.io/qt-6.5/wasm.html
+    if (["android", "ios", "wasm"].includes(target) || /^wasm_.+$/.test(arch)) {
+        return true;
+    }
+    // The "arch":
+    // On Windows x64:
+    // - "win64_msvc2022_arm64" in Qt 6.2~6.7.
+    // - "win64_msvc2022_arm64_cross_compiled" since Qt 6.8.
+    //
+    // Refs:
+    // - Qt 6.2 LTS Released
+    //   https://www.qt.io/blog/qt-6.2-lts-released
+    // - Qt 6.8 LTS Released!
+    //   https://www.qt.io/blog/qt-6.8-released
+    if (/^win64_msvc(?:\d{4})_arm64(?:_cross_compiled)?$/.test(arch) && host !== "windows_arm64") {
+        return true;
+    }
+    return false;
+};
+const parseHostPrefix = (qtPath) => __awaiter(void 0, void 0, void 0, function* () {
+    return fs.promises
+        .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
+        .then((data) => { var _a, _b; return (_b = (_a = data.match(/^HostPrefix=(.+)$/m)) === null || _a === void 0 ? void 0 : _a[1].trim()) !== null && _b !== void 0 ? _b : null; })
+        .catch(() => null);
+});
 const aqtinstallVersion = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const output = yield getPythonOutput("aqt", ["version"]);
@@ -140,15 +248,7 @@ const resolveInputs = () => __awaiter(void 0, void 0, void 0, function* () {
     };
     const fetchRequestedQtVersion = (host, target, version) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
-        core.info(`Resolving Qt version "${version}" with host "${host}" and target "${target}"...`);
-        const result = yield tryRunPython("aqt", [
-            "list-qt",
-            host,
-            target,
-            "--spec",
-            version,
-            "--latest-version",
-        ]);
+        const result = yield core.group(`Resolve available Qt version "${version}" with host "${host}" and target "${target}"`, () => __awaiter(void 0, void 0, void 0, function* () { return tryRunPython("aqt", ["list-qt", host, target, "--spec", version, "--latest-version"]); }));
         const match = result.stdout.trim().match(/^\d+\.\d+\.\d+$/);
         return (_a = match === null || match === void 0 ? void 0 : match[0]) !== null && _a !== void 0 ? _a : null;
     });
@@ -169,6 +269,7 @@ const resolveInputs = () => __awaiter(void 0, void 0, void 0, function* () {
         addToolsToPath: core.getInput("add-tools-to-path"),
         setEnv: core.getInput("set-env"),
         noQtBinaries: core.getInput("no-qt-binaries"),
+        /** Deprecated. */
         toolsOnly: core.getInput("tools-only"),
         aqtSource: core.getInput("aqtsource"),
         aqtVersion: core.getInput("aqtversion"),
@@ -186,9 +287,17 @@ const resolveInputs = () => __awaiter(void 0, void 0, void 0, function* () {
         email: core.getInput("email"),
         pw: core.getInput("pw"),
     };
+    // Deprecated options check.
+    {
+        if (parseBoolInput(rawInputs.toolsOnly)) {
+            core.warning('Option "tools-only" will be removed soon due to deprecation. Please switch to "no-qt-binaries".', {
+                title: "install-qt-action",
+            });
+        }
+    }
     // The "version" property will be populated per remote data fetched by aqt,
     // so installing aqt and related packages is required here.
-    {
+    yield core.group("Install Python dependencies", () => __awaiter(void 0, void 0, void 0, function* () {
         // Install dependencies via pip
         yield execPython("pip install", ["setuptools>=70.1.0", `"py7zr${rawInputs.py7zrVersion}"`]);
         // Install aqtinstall separately: allows aqtinstall to override py7zr if required
@@ -198,7 +307,7 @@ const resolveInputs = () => __awaiter(void 0, void 0, void 0, function* () {
         else {
             yield execPython("pip install", [`"aqtinstall${rawInputs.aqtVersion}"`]);
         }
-    }
+    }));
     const target = (() => {
         // Make sure target is one of the allowed values
         if (rawInputs.target === "desktop" ||
@@ -212,22 +321,28 @@ const resolveInputs = () => __awaiter(void 0, void 0, void 0, function* () {
         }
     })();
     const { host, version: requestedQtVersion } = yield (() => __awaiter(void 0, void 0, void 0, function* () {
+        // Do not handle "all_os" here; that's not a real platform.
+        const platformHost = (() => {
+            switch (process.platform) {
+                case "win32": {
+                    return process.arch === "arm64" ? "windows_arm64" : "windows";
+                }
+                case "darwin": {
+                    return "mac";
+                }
+                default: {
+                    return process.arch === "arm64" ? "linux_arm64" : "linux";
+                }
+            }
+        })();
+        if (parseBoolInput(rawInputs.useOfficial)) {
+            if (rawInputs.host && rawInputs.host !== platformHost) {
+                core.warning(`Specified host "${rawInputs.host}" is ignored when using the official installer.`, { title: "install-qt-action" });
+            }
+            return { host: platformHost, version: null };
+        }
         // Set host automatically if omitted
         if (!rawInputs.host) {
-            // No "all_os".
-            const platformHost = (() => {
-                switch (process.platform) {
-                    case "win32": {
-                        return process.arch === "arm64" ? "windows_arm64" : "windows";
-                    }
-                    case "darwin": {
-                        return "mac";
-                    }
-                    default: {
-                        return process.arch === "arm64" ? "linux_arm64" : "linux";
-                    }
-                }
-            })();
             const aqtVersion = yield aqtinstallVersion();
             if (
             /* Neither Android nor WASM */
@@ -267,39 +382,67 @@ const resolveInputs = () => __awaiter(void 0, void 0, void 0, function* () {
         throw Error("No available Qt version found by specified inputs.");
     }
     const arch = (() => {
+        if (rawInputs.arch) {
+            return rawInputs.arch;
+        }
         // Set arch automatically if omitted.
         // Don't forget to update docs when new default arch is being added.
-        if (!rawInputs.arch) {
-            if (target === "android") {
-                if (compareVersions(version, ">=", "5.14.0") && compareVersions(version, "<", "6.0.0")) {
-                    return "android";
-                }
-                else {
-                    return "android_armv7";
-                }
+        //
+        // This block should provide at least the same functionality as aqtinstall.
+        // We've added more branches to provide more default values based on v3.3.0:
+        // - https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/aqt/installer.py#L246-L273
+        //   https://github.com/miurahr/aqtinstall/blob/b22c86daef2ceeab6635ee0851e089f7346ec286/tests/test_cli.py#L131-L160
+        // Our downstream patches will be marked with comments.
+        if (host === "linux" && target === "desktop") {
+            if (compareVersions(version, ">=", "6.7.0")) {
+                return "linux_gcc_64";
             }
-            else if (host === "windows") {
-                if (compareVersions(version, ">=", "6.8.0")) {
-                    return "win64_msvc2022_64";
-                }
-                else if (compareVersions(version, ">=", "5.15.0")) {
-                    return "win64_msvc2019_64";
-                }
-                else if (compareVersions(version, "<", "5.6.0")) {
-                    return "win64_msvc2013_64";
-                }
-                else if (compareVersions(version, "<", "5.9.0")) {
-                    return "win64_msvc2015_64";
-                }
-                else {
-                    return "win64_msvc2017_64";
-                }
-            }
-            else if (host === "windows_arm64") {
-                return "win64_msvc2022_arm64";
+            else {
+                return "gcc_64";
             }
         }
-        return rawInputs.arch;
+        else if (host === "linux_arm64" && target === "desktop") {
+            return "linux_gcc_arm64";
+        }
+        else if (host === "mac" && target === "desktop") {
+            return "clang_64";
+        }
+        else if (host === "mac" && target === "ios") {
+            return "ios";
+        }
+        else if (target === "android") {
+            if (compareVersions(version, ">=", "5.14.0") &&
+                /* ADD */ compareVersions(version, "<", "6.0.0")) {
+                return "android";
+            }
+            else {
+                /* ADD */ return "android_armv7";
+            }
+        }
+        else if (host === "windows_arm64" && target === "desktop") {
+            /* FIX */ return "win64_msvc2022_arm64";
+        }
+        // ADD begin
+        else if (host === "windows") {
+            if (compareVersions(version, ">=", "6.8.0")) {
+                return "win64_msvc2022_64";
+            }
+            else if (compareVersions(version, ">=", "5.15.0")) {
+                return "win64_msvc2019_64";
+            }
+            else if (compareVersions(version, ">=", "5.9.0")) {
+                return "win64_msvc2017_64";
+            }
+            else if (compareVersions(version, ">=", "5.6.0")) {
+                return "win64_msvc2015_64";
+            }
+            else {
+                return "win64_msvc2013_64";
+            }
+        }
+        // ADD end
+        throw new Error(`Unable to provide an "arch" based on inputs, please specify one. 
+        Feel free to open issues to ask if you are uncertain of the proper value.`);
     })();
     const inputs = {
         host: host,
@@ -397,6 +540,8 @@ const resolveInputs = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const { inputs, cacheKey } = yield resolveInputs();
+    const qtArchDir = calculateQtArchDir(inputs.host, inputs.version, inputs.arch);
+    const qtPath = path.resolve(inputs.dir, qtArchDir);
     // Qt installer assumes basic requirements that are not installed by
     // default on Ubuntu.
     if (process.platform === "linux") {
@@ -431,27 +576,32 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             }
             const updateCommand = "apt-get update";
             const installCommand = `apt-get install ${dependencies.join(" ")} -y`;
-            if (inputs.installDeps === "nosudo") {
-                yield exec(updateCommand);
-                yield exec(installCommand);
-            }
-            else {
-                yield exec(`sudo ${updateCommand}`);
-                yield exec(`sudo ${installCommand}`);
-            }
+            yield core.group("Install Linux system dependencies", () => __awaiter(void 0, void 0, void 0, function* () {
+                if (inputs.installDeps === "nosudo") {
+                    yield exec(updateCommand);
+                    yield exec(installCommand);
+                }
+                else {
+                    yield exec(`sudo ${updateCommand}`);
+                    yield exec(`sudo ${installCommand}`);
+                }
+            }));
         }
     }
-    // Restore internal cache
+    // Restore automatic cache
     let internalCacheHit = false;
     if (inputs.cache) {
-        const cacheHitKey = yield cache.restoreCache([inputs.dir], cacheKey);
-        if (cacheHitKey) {
-            core.info(`Automatic cache hit with key "${cacheHitKey}"`);
-            internalCacheHit = true;
-        }
-        else {
-            core.info("Automatic cache miss, will cache this run");
-        }
+        internalCacheHit = yield core.group("Check and restore cache", () => __awaiter(void 0, void 0, void 0, function* () {
+            const cacheHitKey = yield cache.restoreCache([inputs.dir], cacheKey);
+            if (cacheHitKey) {
+                core.info(`Automatic cache hit with key "${cacheHitKey}"`);
+                return true;
+            }
+            else {
+                core.info("Automatic cache miss, will cache this run");
+                return false;
+            }
+        }));
     }
     // Install Qt and tools if not cached
     if (!internalCacheHit) {
@@ -460,11 +610,14 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
         const autodesktop = (yield isAutodesktopSupported()) ? ["--autodesktop"] : [];
         // Install Qt
         if (inputs.isInstallQtBinaries) {
+            if (dirExists(qtPath)) {
+                core.warning(`The directory "${qtPath}" exists and content in it may be overwritten during installation`, { title: "install-qt-action" });
+            }
             if (inputs.useOfficial && inputs.email && inputs.pw) {
                 const qtArgs = [
                     "install-qt-official",
                     inputs.target,
-                    ...(inputs.arch ? [inputs.arch] : []),
+                    inputs.arch,
                     inputs.version,
                     ...["--outputdir", inputs.dir],
                     ...["--email", inputs.email],
@@ -472,7 +625,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     ...flaggedList("--modules", inputs.modules),
                     ...inputs.extra,
                 ];
-                yield execPython("aqt", qtArgs);
+                yield core.group("Install Qt via the official installer", () => __awaiter(void 0, void 0, void 0, function* () { return execPython("aqt", qtArgs); }));
             }
             else {
                 const qtArgs = [
@@ -480,17 +633,22 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     inputs.host,
                     inputs.target,
                     inputs.version,
-                    ...(inputs.arch ? [inputs.arch] : []),
+                    inputs.arch,
                     ...autodesktop,
                     ...["--outputdir", inputs.dir],
                     ...flaggedList("--modules", inputs.modules),
                     ...flaggedList("--archives", inputs.archives),
                     ...inputs.extra,
                 ];
-                yield execPython("aqt", qtArgs);
+                yield core.group("Install Qt", () => __awaiter(void 0, void 0, void 0, function* () { return execPython("aqt", qtArgs); }));
             }
         }
         const installSrcDocExamples = (flavor, archives, modules) => __awaiter(void 0, void 0, void 0, function* () {
+            const fullnames = {
+                src: "source",
+                doc: "documentation",
+                example: "examples",
+            };
             const qtArgs = [
                 inputs.host,
                 // Aqtinstall < 2.0.4 requires `inputs.target` here, but that's deprecated
@@ -500,7 +658,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                 ...flaggedList("--modules", modules),
                 ...inputs.extra,
             ];
-            yield execPython(`aqt install-${flavor}`, qtArgs);
+            yield core.group(`Install ${fullnames[flavor]}`, () => __awaiter(void 0, void 0, void 0, function* () { return execPython(`aqt install-${flavor}`, qtArgs); }));
         });
         // Install source, docs, & examples
         if (inputs.src) {
@@ -517,53 +675,101 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             const toolArgs = [inputs.host, inputs.target, tool];
             toolArgs.push("--outputdir", inputs.dir);
             toolArgs.push(...inputs.extra);
-            yield execPython("aqt install-tool", toolArgs);
+            yield core.group(`Install tool "${tool}"`, () => __awaiter(void 0, void 0, void 0, function* () { return execPython("aqt install-tool", toolArgs); }));
         }
     }
-    // Save automatic cache
-    if (!internalCacheHit && inputs.cache) {
-        const cacheId = yield cache.saveCache([inputs.dir], cacheKey);
-        core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
-    }
-    // Add tools to path
-    if (inputs.addToolsToPath && inputs.tools.length) {
-        toolsPaths(inputs.dir).forEach(core.addPath);
-    }
-    // Set environment variables/outputs for tools
-    if (inputs.tools.length && inputs.setEnv) {
-        core.exportVariable("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
-    }
-    // Set environment variables/outputs for binaries
-    if (inputs.isInstallQtBinaries) {
-        const [qtPath, requiresParallelDesktop] = locateQtArchDir(inputs.dir, inputs.host);
-        // Set outputs
-        core.setOutput("qtPath", qtPath);
-        // Set env variables
-        if (inputs.setEnv) {
-            if (process.platform === "linux") {
-                setOrAppendEnvVar("LD_LIBRARY_PATH", path.resolve(qtPath, "lib"));
-            }
-            if (process.platform !== "win32") {
-                setOrAppendEnvVar("PKG_CONFIG_PATH", path.resolve(qtPath, "lib", "pkgconfig"));
-            }
-            // If less than qt6, set Qt5_DIR variable
-            if (compareVersions(inputs.version, "<", "6.0.0")) {
-                core.exportVariable("Qt5_DIR", path.resolve(qtPath, "lib", "cmake"));
-            }
-            core.exportVariable("QT_ROOT_DIR", qtPath);
-            core.exportVariable("QT_PLUGIN_PATH", path.resolve(qtPath, "plugins"));
-            core.exportVariable("QML2_IMPORT_PATH", path.resolve(qtPath, "qml"));
-            if (requiresParallelDesktop) {
-                const hostPrefix = yield fs.promises
-                    .readFile(path.join(qtPath, "bin", "target_qt.conf"), "utf8")
-                    .then((data) => { var _a, _b; return (_b = (_a = data.match(/^HostPrefix=(.*)$/m)) === null || _a === void 0 ? void 0 : _a[1].trim()) !== null && _b !== void 0 ? _b : ""; })
-                    .catch(() => "");
-                if (hostPrefix) {
-                    core.exportVariable("QT_HOST_PATH", path.resolve(qtPath, "bin", hostPrefix));
+    // Environment for tools.
+    if (inputs.tools.length) {
+        yield core.group("Post-process installed tools", () => __awaiter(void 0, void 0, void 0, function* () {
+            return Promise.resolve().then(() => {
+                // Add tools to path
+                if (inputs.addToolsToPath) {
+                    toolsPaths(inputs.dir).forEach(prependPath);
                 }
+                // Set environment variables/outputs for tools
+                if (inputs.setEnv) {
+                    setEnv("IQTA_TOOLS", path.resolve(inputs.dir, "Tools"));
+                }
+            });
+        }));
+    }
+    // Check binaries and set outputs and/or environment variables
+    if (inputs.isInstallQtBinaries) {
+        checkQtPath(qtPath);
+        const requiresParallelDesktop = calculateParallelDesktopRequirement(inputs.host, inputs.target, inputs.version, inputs.arch);
+        /** Append to LD_LIBRARY_PATH. */
+        const libDir = process.platform === "linux" ? path.resolve(qtPath, "lib") : null;
+        /** Append to PKG_CONFIG_PATH. */
+        const pkgConfigDir = process.platform !== "win32" ? path.resolve(qtPath, "lib", "pkgconfig") : null;
+        /** Set Qt5_DIR for Qt versions earlier than 6. */
+        const qt5Dir = compareVersions(inputs.version, "<", "6.0.0")
+            ? path.resolve(qtPath, "lib", "cmake")
+            : null;
+        /** Prepend to PATH. */
+        const binDir = path.resolve(qtPath, "bin");
+        /** Set QT_PLUGIN_PATH and its corresponding output. */
+        const qtPluginPath = path.resolve(qtPath, "plugins");
+        /** Set QML2_IMPORT_PATH and its corresponding output. */
+        const qml2ImportPath = path.resolve(qtPath, "qml");
+        /** Set QT_HOST_PATH and its corresponding output. */
+        const hostPath = yield (() => __awaiter(void 0, void 0, void 0, function* () {
+            if (!requiresParallelDesktop) {
+                return null;
             }
-            core.addPath(path.resolve(qtPath, "bin"));
-        }
+            const hostPrefix = yield parseHostPrefix(qtPath);
+            if (!hostPrefix) {
+                core.warning(`Cannot find the host Qt installation path by parsing config files`, {
+                    title: "install-qt-action",
+                });
+                return null;
+            }
+            return path.resolve(qtPath, "bin", hostPrefix);
+        }))();
+        yield core.group("Post-process installed Qt", () => __awaiter(void 0, void 0, void 0, function* () {
+            return Promise.resolve().then(() => {
+                // Always set outputs.
+                {
+                    // Resolved inputs.
+                    setOutput("host", inputs.host);
+                    setOutput("target", inputs.target);
+                    setOutput("version", inputs.version);
+                    setOutput("arch", inputs.arch);
+                    // Outputs corresponding to environment variables.
+                    setOutput("qt-root-dir", qtPath);
+                    setOutput("qt-plugin-path", qtPluginPath);
+                    setOutput("qml2-import-path", qml2ImportPath);
+                    if (hostPath) {
+                        setOutput("qt-host-path", hostPath);
+                    }
+                }
+                // Set env variables.
+                if (inputs.setEnv) {
+                    prependPath(binDir);
+                    if (libDir) {
+                        setOrAppendEnvVar("LD_LIBRARY_PATH", libDir);
+                    }
+                    if (pkgConfigDir) {
+                        setOrAppendEnvVar("PKG_CONFIG_PATH", pkgConfigDir);
+                    }
+                    if (qt5Dir) {
+                        setEnv("Qt5_DIR", qt5Dir);
+                    }
+                    setEnv("QT_ROOT_DIR", qtPath);
+                    setEnv("QT_PLUGIN_PATH", qtPluginPath);
+                    setEnv("QML2_IMPORT_PATH", qml2ImportPath);
+                    if (hostPath) {
+                        setEnv("QT_HOST_PATH", hostPath);
+                    }
+                }
+            });
+        }));
+    }
+    // If everything goes well, save automatic cache.
+    if (!internalCacheHit && inputs.cache) {
+        yield core.group("Save cache", () => __awaiter(void 0, void 0, void 0, function* () {
+            const cacheId = yield cache.saveCache([inputs.dir], cacheKey);
+            core.info(`Automatic cache saved with key "${cacheKey}", cache id is "${cacheId}"`);
+        }));
     }
 });
 void run()
@@ -581,4 +787,4 @@ void run()
     .then(() => {
     process.exit(0);
 });
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibWFpbi5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uL3NyYy9tYWluLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7OztBQUFBLE9BQU8sS0FBSyxNQUFNLE1BQU0sUUFBUSxDQUFDO0FBQ2pDLE9BQU8sS0FBSyxFQUFFLE1BQU0sSUFBSSxDQUFDO0FBQ3pCLE9BQU8sS0FBSyxFQUFFLE1BQU0sSUFBSSxDQUFDO0FBQ3pCLE9BQU8sS0FBSyxJQUFJLE1BQU0sTUFBTSxDQUFDO0FBQzdCLE9BQU8sS0FBSyxPQUFPLE1BQU0sU0FBUyxDQUFDO0FBRW5DLE9BQU8sS0FBSyxLQUFLLE1BQU0sZ0JBQWdCLENBQUM7QUFDeEMsT0FBTyxLQUFLLElBQUksTUFBTSxlQUFlLENBQUM7QUFDdEMsT0FBTyxFQUFFLElBQUksRUFBRSxhQUFhLEVBQUUsTUFBTSxlQUFlLENBQUM7QUFFcEQsT0FBTyxLQUFLLElBQUksTUFBTSxNQUFNLENBQUM7QUFDN0IsT0FBTyxFQUFFLE9BQU8sRUFBbUIsTUFBTSxrQkFBa0IsQ0FBQztBQUM1RCxPQUFPLGdDQUFnQyxDQUFDO0FBRXhDLE1BQU0sZUFBZSxHQUFHLENBQUMsRUFBVSxFQUFFLEVBQW1CLEVBQUUsRUFBVSxFQUFXLEVBQUU7SUFDL0UsT0FBTyxPQUFPLENBQUMsRUFBRSxFQUFFLEVBQUUsRUFBRSxFQUFFLENBQUMsQ0FBQztBQUM3QixDQUFDLENBQUM7QUFFRixNQUFNLGlCQUFpQixHQUFHLENBQUMsSUFBWSxFQUFFLEtBQWEsRUFBUSxFQUFFO0lBQzlELE1BQU0sUUFBUSxHQUFHLE9BQU8sQ0FBQyxHQUFHLENBQUMsSUFBSSxDQUFDLENBQUM7SUFDbkMsSUFBSSxRQUFRLEdBQUcsS0FBSyxDQUFDO0lBQ3JCLElBQUksUUFBUSxFQUFFLENBQUM7UUFDYixRQUFRLEdBQUcsR0FBRyxRQUFRLElBQUksUUFBUSxFQUFFLENBQUM7SUFDdkMsQ0FBQztJQUNELElBQUksQ0FBQyxjQUFjLENBQUMsSUFBSSxF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
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibWFpbi5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uL3NyYy9tYWluLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7OztBQUFBLE9BQU8sS0FBSyxNQUFNLE1BQU0sUUFBUSxDQUFDO0FBQ2pDLE9BQU8sS0FBSyxFQUFFLE1BQU0sSUFBSSxDQUFDO0FBQ3pCLE9BQU8sS0FBSyxFQUFFLE1BQU0sSUFBSSxDQUFDO0FBQ3pCLE9BQU8sS0FBSyxJQUFJLE1BQU0sTUFBTSxDQUFDO0FBQzdCLE9BQU8sS0FBSyxPQUFPLE1BQU0sU0FBUyxDQUFDO0FBRW5DLE9BQU8sS0FBSyxLQUFLLE1BQU0sZ0JBQWdCLENBQUM7QUFDeEMsT0FBTyxLQUFLLElBQUksTUFBTSxlQUFlLENBQUM7QUFDdEMsT0FBTyxFQUFFLElBQUksRUFBRSxhQUFhLEVBQUUsTUFBTSxlQUFlLENBQUM7QUFFcEQsT0FBTyxLQUFLLElBQUksTUFBTSxNQUFNLENBQUM7QUFDN0IsT0FBTyxFQUFFLE9BQU8sRUFBbUIsTUFBTSxrQkFBa0IsQ0FBQztBQUM1RCxPQUFPLGdDQUFnQyxDQUFDO0FBRXhDLE1BQU0sZUFBZSxHQUFHLENBQUMsRUFBVSxFQUFFLEVBQW1CLEVBQUUsRUFBVSxFQUFXLEVBQUU7SUFDL0UsT0FBTyxPQUFPLENBQUMsRUFBRSxFQUFFLEVBQUUsRUFBRSxFQUFFLENBQUMsQ0FBQztBQUM3QixDQUFDLENBQUM7QUFFRjs7OztHQUlHO0FBQ0gsTUFBTSxpQkFBaUIsR0FBRyxDQUFDLElBQVksRUFBRSxLQUFhLEVBQVEsRUFBRTtJQUM5RCxJQUFJLENBQUMsSUFBSSxDQUFDLGNBQWMsS0FBSyxhQUFhLElBQUksR0FBRyxDQUFDLENBQUM7SUFDbkQsNEdBQTRHO0lBQzVHLHNHQUFzRztJQUN0RyxzQ0FBc0M7SUFDdEMsTUFBTSxRQUFRLEdBQUcsT0FBTyxDQUFDLEdBQUcsQ0FBQyxJQUFJLENBQUMsQ0FBQztJQUNuQyxNQUFNLE9BQU8sR0FBRyxRQUFRLENBQUMs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
